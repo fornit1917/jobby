@@ -15,7 +15,7 @@ public class JobsClient : IJobsClient
 
     public async Task<long> EnqueueAsync(JobModel job)
     {
-        job.Status = JobStatus.Waiting;
+        job.Status = JobStatus.Scheduled;
         job.CreatedAt = DateTime.UtcNow;
         if (job.ScheduledStartAt == default)
         {

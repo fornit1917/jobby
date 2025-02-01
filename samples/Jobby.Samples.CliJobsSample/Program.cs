@@ -1,6 +1,8 @@
 ﻿using Jobby.Abstractions.Models;
+using Jobby.Abstractions.Server;
 using Jobby.Core.Client;
-using Jobby.Postgres.Client;
+using Jobby.Core.Server;
+using Jobby.Postgres.CommonServices;
 using Npgsql;
 using System.Text.Json;
 
@@ -15,7 +17,7 @@ internal class Program
         var pgJobsStorage = new PgJobsStorage(dataSource);
         var jobsClient = new JobsClient(pgJobsStorage);
 
-        for (int i = 1; i <= 100; i++)
+        for (int i = 1; i <= 10; i++)
         {
             var jobParam = new TestJobParam { Id = i, Name = "SomeValue" };
             var job = new JobModel
@@ -24,11 +26,65 @@ internal class Program
                 JobParam = JsonSerializer.Serialize(jobParam),
             };
             await jobsClient.EnqueueAsync(job);
-            Console.WriteLine(job.Id);
+            Console.WriteLine($"Enqueued {jobParam.Id}");
         }
 
+        Console.WriteLine("Start polling service");
+
+        var jobbySettings = new JobbySettings
+        {
+            PollingIntervalMs = 1000,
+            DbErrorPauseMs = 5000,
+            MaxDegreeOfParallelism = 5,
+        };
+        var scopeFactory = new TestJobExecutionScopeFactory();
+        var jobsProcessor = new JobProcessor(scopeFactory, pgJobsStorage, jobbySettings);
+        var pollingService = new JobsPollingService(pgJobsStorage, jobsProcessor, jobbySettings);
+        pollingService.StartBackgroundService();
 
         Console.ReadLine();
+        pollingService.SendStopSignal();
+        await Task.Delay(2000);
+    }
+
+    private class TestJobExecutor : IJobExecutor
+    {
+        public Task ExecuteAsync(JobModel job)
+        {
+            var param = JsonSerializer.Deserialize<TestJobParam>(job.JobParam);
+            Console.WriteLine($"Executed {param.Id}");
+            return Task.CompletedTask;
+        }
+    }
+
+    private class TestJobExecutionScope : IJobExecutionScope
+    {
+        private readonly IJobExecutor _executor;
+
+        public TestJobExecutionScope(IJobExecutor executor)
+        {
+            _executor = executor;
+        }
+
+        public void Dispose()
+        {
+            Console.WriteLine("Scope disposed");
+        }
+
+        public IJobExecutor GetJobExecutor(string jobName)
+        {
+            return _executor;
+        }
+    }
+
+    private class TestJobExecutionScopeFactory : IJobExecutionScopeFactory
+    {
+        private readonly IJobExecutor _executor = new TestJobExecutor();
+
+        public IJobExecutionScope CreateJobExecutionScope()
+        {
+            return new TestJobExecutionScope(_executor);
+        }
     }
 
     private class TestJobParam

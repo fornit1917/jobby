@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 	id int8 NOT NULL PRIMARY KEY DEFAULT nextval('jobby_jobs_id_seq'),
 	job_name TEXT NOT NULL,
 	job_param TEXT DEFAULT NULL,
-	job_status int NOT NULL,
+	status int NOT NULL,
 	created_at timestamptz NOT NULL,
 	scheduled_start_at timestamptz NOT NULL,
 	last_started_at timestamptz DEFAULT NULL,
@@ -15,4 +15,4 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_recurrent_job_key_idx ON jobby_jobs(recurrent_job_key);
-CREATE INDEX IF NOT EXISTS jobby_jobs_job_status_id_idx ON jobby_jobs(job_status, id);
+CREATE INDEX IF NOT EXISTS jobby_jobs_status_scheduled_start_at_idx ON jobby_jobs(status, scheduled_start_at);
