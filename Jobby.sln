@@ -13,11 +13,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Core", "src\Jobby.Cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Core.Tests", "tests\Jobby.Core.Tests\Jobby.Core.Tests.csproj", "{D2578D1D-8D8F-422D-BAC4-DA8CA259BA9F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jobby.Samples.CliJobsSample", "samples\Jobby.Samples.CliJobsSample\Jobby.Samples.CliJobsSample.csproj", "{8CDAE691-0E98-48B1-830A-77ED6DBF540C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.CliJobsSample", "samples\Jobby.Samples.CliJobsSample\Jobby.Samples.CliJobsSample.csproj", "{8CDAE691-0E98-48B1-830A-77ED6DBF540C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jobby.Abstractions", "src\Jobby.Abstractions\Jobby.Abstractions.csproj", "{CFC118E5-3774-451A-8722-AE861DCDAE20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Abstractions", "src\Jobby.Abstractions\Jobby.Abstractions.csproj", "{CFC118E5-3774-451A-8722-AE861DCDAE20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jobby.Postgres", "src\Jobby.Postgres\Jobby.Postgres.csproj", "{CD553FDC-9DF2-4E14-BEAF-03246C8B222D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Postgres", "src\Jobby.Postgres\Jobby.Postgres.csproj", "{CD553FDC-9DF2-4E14-BEAF-03246C8B222D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jobby.Samples.Benchmarks", "samples\Jobby.Samples.Benchmarks\Jobby.Samples.Benchmarks.csproj", "{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{CD553FDC-9DF2-4E14-BEAF-03246C8B222D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD553FDC-9DF2-4E14-BEAF-03246C8B222D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD553FDC-9DF2-4E14-BEAF-03246C8B222D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -55,6 +61,7 @@ Global
 		{8CDAE691-0E98-48B1-830A-77ED6DBF540C} = {83E0937E-5C14-4AE9-92D9-6C82E51794F5}
 		{CFC118E5-3774-451A-8722-AE861DCDAE20} = {53C087B0-B962-4304-9BAB-CF97AA54467C}
 		{CD553FDC-9DF2-4E14-BEAF-03246C8B222D} = {53C087B0-B962-4304-9BAB-CF97AA54467C}
+		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8} = {83E0937E-5C14-4AE9-92D9-6C82E51794F5}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {23088ACE-0F91-45A0-AA33-62075083224F}

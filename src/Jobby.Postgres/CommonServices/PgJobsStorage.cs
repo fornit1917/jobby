@@ -162,4 +162,27 @@ public class PgJobsStorage : IJobsStorage
         };
         await cmd.ExecuteNonQueryAsync();
     }
+
+    public long Insert(JobModel job)
+    {
+        using var conn = _dataSource.OpenConnection();
+        using var cmd = new NpgsqlCommand(InsertSql, conn)
+        {
+            Parameters =
+            {
+                new("job_name", job.JobName),
+                new("job_param", (object?)job.JobParam ?? DBNull.Value),
+                new("status", (int)job.Status),
+                new("created_at", job.CreatedAt),
+                new("scheduled_start_at", job.ScheduledStartAt),
+                new("last_started_at", (object?)job.LastStartedAt ?? DBNull.Value),
+                new("last_finished_at", (object?)job.LastFinishedAt ?? DBNull.Value),
+                new("recurrent_job_key", (object?)job.RecurrentJobKey ?? DBNull.Value),
+                new("cron", (object?)job.Cron ?? DBNull.Value),
+            }
+        };
+
+        object? id = cmd.ExecuteScalar();
+        return id != null ? (long)id : 0;
+    }
 }

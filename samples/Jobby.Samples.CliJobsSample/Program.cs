@@ -16,8 +16,18 @@ internal class Program
         using var dataSource = NpgsqlDataSource.Create(connectionString);
         var pgJobsStorage = new PgJobsStorage(dataSource);
         var jobsClient = new JobsClient(pgJobsStorage);
+        var jobbySettings = new JobbySettings
+        {
+            PollingIntervalMs = 1000,
+            DbErrorPauseMs = 5000,
+            MaxDegreeOfParallelism = 10,
+        };
+        var scopeFactory = new TestJobExecutionScopeFactory();
+        var jobsProcessor = new JobProcessor(scopeFactory, pgJobsStorage, jobbySettings);
+        var pollingService = new JobsPollingService(pgJobsStorage, jobsProcessor, jobbySettings);
+        pollingService.StartBackgroundService();
 
-        for (int i = 1; i <= 10; i++)
+        for (int i = 1; i <= 20000; i++)
         {
             var jobParam = new TestJobParam { Id = i, Name = "SomeValue" };
             var job = new JobModel
@@ -26,21 +36,7 @@ internal class Program
                 JobParam = JsonSerializer.Serialize(jobParam),
             };
             await jobsClient.EnqueueAsync(job);
-            Console.WriteLine($"Enqueued {jobParam.Id}");
         }
-
-        Console.WriteLine("Start polling service");
-
-        var jobbySettings = new JobbySettings
-        {
-            PollingIntervalMs = 1000,
-            DbErrorPauseMs = 5000,
-            MaxDegreeOfParallelism = 5,
-        };
-        var scopeFactory = new TestJobExecutionScopeFactory();
-        var jobsProcessor = new JobProcessor(scopeFactory, pgJobsStorage, jobbySettings);
-        var pollingService = new JobsPollingService(pgJobsStorage, jobsProcessor, jobbySettings);
-        pollingService.StartBackgroundService();
 
         Console.ReadLine();
         pollingService.SendStopSignal();
@@ -49,11 +45,11 @@ internal class Program
 
     private class TestJobExecutor : IJobExecutor
     {
-        public Task ExecuteAsync(JobModel job)
+        public async Task ExecuteAsync(JobModel job)
         {
             var param = JsonSerializer.Deserialize<TestJobParam>(job.JobParam);
-            Console.WriteLine($"Executed {param.Id}");
-            return Task.CompletedTask;
+            await Task.Delay(50);
+            //return Task.CompletedTask;
         }
     }
 
@@ -68,7 +64,6 @@ internal class Program
 
         public void Dispose()
         {
-            Console.WriteLine("Scope disposed");
         }
 
         public IJobExecutor GetJobExecutor(string jobName)

@@ -5,6 +5,7 @@ namespace Jobby.Abstractions.CommonServices;
 public interface IJobsStorage
 {
     Task<long> InsertAsync(JobModel job);
+    long Insert(JobModel job);
     Task<JobModel?> TakeToProcessingAsync();
     Task MarkCompletedAsync(long jobId);
     Task MarkFailedAsync(long jobId);

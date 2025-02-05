@@ -13,6 +13,19 @@ public class JobsClient : IJobsClient
         _jobsStorage = jobsStorage;
     }
 
+    public long Enqueue(JobModel job)
+    {
+        job.Status = JobStatus.Scheduled;
+        job.CreatedAt = DateTime.UtcNow;
+        if (job.ScheduledStartAt == default)
+        {
+            job.ScheduledStartAt = job.CreatedAt;
+        }
+        var id = _jobsStorage.Insert(job);
+        job.Id = id;
+        return job.Id;
+    }
+
     public async Task<long> EnqueueAsync(JobModel job)
     {
         job.Status = JobStatus.Scheduled;
