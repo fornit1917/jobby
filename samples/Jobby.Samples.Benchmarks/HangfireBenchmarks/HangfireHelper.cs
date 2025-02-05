@@ -20,14 +20,14 @@ internal static class HangfireHelper
 
     public static void DropHangfireTables(NpgsqlDataSource dataSource)
     {
-        using var conn = dataSource.CreateConnection();
+        using var conn = dataSource.OpenConnection();
         using var cmd = dataSource.CreateCommand($"DROP SCHEMA hangfire CASCADE;");
         cmd.ExecuteNonQuery();
     }
 
     public static bool HasNotCompletedJobs(NpgsqlDataSource dataSource)
     {
-        using var conn = dataSource.CreateConnection();
+        using var conn = dataSource.OpenConnection();
         using var cmd = dataSource.CreateCommand($"SELECT id FROM hangfire.job WHERE statename='Enqueued' LIMIT 1");
         var res = cmd.ExecuteReader();
         return res.HasRows;
