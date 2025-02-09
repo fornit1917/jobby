@@ -76,6 +76,25 @@ public class PgJobsStorage : IJobsStorage
         RETURNING *;
     ";
 
+    private readonly string TakeBatchToProcessingSql = $@"
+        WITH ready_jobs AS (
+	        SELECT id FROM jobby_jobs 
+	        WHERE
+                status = {(int)JobStatus.Scheduled}
+                AND scheduled_start_at <= @now
+	        ORDER BY scheduled_start_at
+	        LIMIT @max_batch_size
+	        FOR UPDATE SKIP LOCKED
+        )
+        UPDATE jobby_jobs
+        SET
+	        status = {(int)JobStatus.Processing},
+	        last_started_at = @now,
+	        started_count = started_count + 1
+        WHERE id IN (SELECT id FROM ready_jobs)
+        RETURNING *;
+    ";
+
     public async Task<long> InsertAsync(JobModel job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
@@ -109,13 +128,44 @@ public class PgJobsStorage : IJobsStorage
         {
             Parameters =
             {
-                new("now", now),
+                new("now", now)
             }
         };
 
         await using var reader = await cmd.ExecuteReaderAsync();
         var job = await reader.GetJobAsync();
         return job;
+    }
+
+    public async Task TakeBatchToProcessingAsync(int maxBatchSize, List<JobModel> result)
+    {
+        // todo: maybe it will be better to return some other model from this method
+
+        result.Clear();
+
+        var now = DateTime.UtcNow;
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = new NpgsqlCommand(TakeBatchToProcessingSql, conn)
+        {
+            Parameters =
+            {
+                new("now", now),
+                new("max_batch_size", maxBatchSize)
+            }
+        };
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        
+
+        while (true)
+        {
+            var job = await reader.GetJobAsync();
+            if (job == null)
+            {
+                return;
+            }
+            result.Add(job);
+        }
     }
 
     public Task MarkCompletedAsync(long jobId)

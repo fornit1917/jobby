@@ -4,6 +4,7 @@ using Jobby.Abstractions.Server;
 
 namespace Jobby.Core.Server;
 
+// todo: move this code into JobsPollingService
 public class JobProcessor : IJobProcessor
 {
     private readonly IJobExecutionScopeFactory _scopeFactory;
@@ -15,6 +16,11 @@ public class JobProcessor : IJobProcessor
         _scopeFactory = scopeFactory;
         _storage = storage;
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
+    }
+
+    public int GetFreeProcessingSlotsCount()
+    {
+        return _semaphore.CurrentCount;
     }
 
     public Task LockProcessingSlot()
@@ -62,5 +68,13 @@ public class JobProcessor : IJobProcessor
                 _semaphore.Release();
             }
         });
+    }
+
+    public void StartProcessing(IReadOnlyList<JobModel> jobs)
+    {
+        for (int i = 0; i < jobs.Count; i++)
+        {
+            StartProcessing(jobs[i]);
+        }
     }
 }

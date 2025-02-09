@@ -21,13 +21,13 @@ internal class Program
             PollingIntervalMs = 1000,
             DbErrorPauseMs = 5000,
             MaxDegreeOfParallelism = 10,
+            UseBatches = true,
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
         var jobsProcessor = new JobProcessor(scopeFactory, pgJobsStorage, jobbySettings);
         var pollingService = new JobsPollingService(pgJobsStorage, jobsProcessor, jobbySettings);
-        pollingService.StartBackgroundService();
 
-        for (int i = 1; i <= 20000; i++)
+        for (int i = 1; i <= 1000; i++)
         {
             var jobParam = new TestJobParam { Id = i, Name = "SomeValue" };
             var job = new JobModel
@@ -38,6 +38,8 @@ internal class Program
             await jobsClient.EnqueueAsync(job);
         }
 
+        pollingService.StartBackgroundService();
+
         Console.ReadLine();
         pollingService.SendStopSignal();
         await Task.Delay(2000);
@@ -45,11 +47,11 @@ internal class Program
 
     private class TestJobExecutor : IJobExecutor
     {
-        public async Task ExecuteAsync(JobModel job)
+        public Task ExecuteAsync(JobModel job)
         {
             var param = JsonSerializer.Deserialize<TestJobParam>(job.JobParam);
-            await Task.Delay(50);
-            //return Task.CompletedTask;
+            // await Task.Delay(50);
+            return Task.CompletedTask;
         }
     }
 

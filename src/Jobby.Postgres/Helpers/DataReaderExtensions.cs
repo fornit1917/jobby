@@ -11,7 +11,13 @@ internal static class DataReaderExtensions
         {
             return null;
         }
-        await reader.ReadAsync();
+
+        var hasRow = await reader.ReadAsync();
+        if (!hasRow)
+        {
+            return null;
+        }
+
         var job = new JobModel
         {
             Id = reader.GetInt64(reader.GetOrdinal("id")),

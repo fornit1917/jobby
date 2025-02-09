@@ -24,7 +24,8 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         var jobbySettings = new JobbySettings
         {
             MaxDegreeOfParallelism = 10,
-            PollingIntervalMs = 1000
+            PollingIntervalMs = 1000,
+            UseBatches = true,
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
         var jobProcessor = new JobProcessor(scopeFactory, jobsStorage, jobbySettings);

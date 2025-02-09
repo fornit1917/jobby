@@ -5,6 +5,9 @@ namespace Jobby.Abstractions.Server;
 public interface IJobProcessor
 {
     Task LockProcessingSlot();
-    void StartProcessing(JobModel job);
+    int GetFreeProcessingSlotsCount();
     void ReleaseProcessingSlot();
+
+    void StartProcessing(JobModel job);
+    void StartProcessing(IReadOnlyList<JobModel> jobs);
 }
