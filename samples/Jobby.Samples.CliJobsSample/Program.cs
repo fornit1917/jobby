@@ -24,8 +24,7 @@ internal class Program
             UseBatches = true,
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
-        var jobsProcessor = new JobProcessor(scopeFactory, pgJobsStorage, jobbySettings);
-        var pollingService = new JobsPollingService(pgJobsStorage, jobsProcessor, jobbySettings);
+        var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, jobbySettings);
 
         for (int i = 1; i <= 1000; i++)
         {
@@ -38,10 +37,10 @@ internal class Program
             await jobsClient.EnqueueAsync(job);
         }
 
-        pollingService.StartBackgroundService();
+        jobsServer.StartBackgroundService();
 
         Console.ReadLine();
-        pollingService.SendStopSignal();
+        jobsServer.SendStopSignal();
         await Task.Delay(2000);
     }
 

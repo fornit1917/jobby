@@ -28,8 +28,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
             UseBatches = true,
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
-        var jobProcessor = new JobProcessor(scopeFactory, jobsStorage, jobbySettings);
-        var jobsPollingService = new JobsPollingService(jobsStorage, jobProcessor, jobbySettings);
+        var jobsServer = new JobsServer(jobsStorage, scopeFactory, jobbySettings);
         var jobsClient = new JobsClient(jobsStorage);
 
         Console.WriteLine("Clear jobs database");
@@ -55,7 +54,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         Console.WriteLine("Start jobby server");
         
         Stopwatch stopwatch = Stopwatch.StartNew();
-        jobsPollingService.StartBackgroundService();
+        jobsServer.StartBackgroundService();
         var hasNotCompletedJobs = true;
         while (hasNotCompletedJobs)
         {
