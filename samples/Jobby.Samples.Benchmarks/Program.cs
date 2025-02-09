@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Running;
 using Jobby.Samples.Benchmarks.HangfireBenchmarks;
 using Jobby.Samples.Benchmarks.JobbyBenchmarks;
+using Jobby.Samples.Benchmarks.QuartzBenchmarks;
 
 namespace Jobby.Samples.Benchmarks
 {
@@ -14,6 +15,7 @@ namespace Jobby.Samples.Benchmarks
                 new JobbyExecuteJobsBenchmark(),
                 new HangfireCreateJobsBenchmark(),
                 new HangfireExecuteJobsBenchmark(),
+                new QuartzCreateJobsBenchmark(),
             };
 
             for (int i = 0; i < benchmarks.Length; i++)
