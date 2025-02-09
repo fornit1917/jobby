@@ -2,7 +2,7 @@ using BenchmarkDotNet.Attributes;
 using Jobby.Abstractions.Models;
 using Jobby.Core.Client;
 using Jobby.Core.Server;
-using Jobby.Postgres.CommonServices;
+using Jobby.Postgres;
 using System.Diagnostics;
 using System.Text.Json;
 
