@@ -41,6 +41,7 @@ public class JobbyCreateJobsBenchmarkAction
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),
+                DelayMs = 0,
             };
             var job = new JobModel
             {

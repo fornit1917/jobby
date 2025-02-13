@@ -16,6 +16,7 @@ namespace Jobby.Samples.Benchmarks
                 new HangfireCreateJobsBenchmark(),
                 new HangfireExecuteJobsBenchmark(),
                 new QuartzCreateJobsBenchmark(),
+                new QuartzExecuteJobsBenchmark(),
             };
 
             for (int i = 0; i < benchmarks.Length; i++)
