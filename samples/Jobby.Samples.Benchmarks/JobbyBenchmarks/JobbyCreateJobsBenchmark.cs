@@ -3,6 +3,7 @@ using BenchmarkDotNet.Running;
 using Jobby.Abstractions.Client;
 using Jobby.Abstractions.Models;
 using Jobby.Core.Client;
+using Jobby.Core.CommonServices;
 using Jobby.Postgres;
 using System.Text.Json;
 
@@ -22,13 +23,15 @@ public class JobbyCreateJobsBenchmark : IBenchmark
 [MemoryDiagnoser]
 public class JobbyCreateJobsBenchmarkAction
 {
-    private readonly IJobsClient _jobsClient;
+    private readonly IJobsMediator _jobsClient;
 
     public JobbyCreateJobsBenchmarkAction()
     {
         var dataSource = DataSourceFactory.Create();
         var jobsStorage = new PgJobsStorage(dataSource);
-        _jobsClient = new JobsClient(jobsStorage);
+        var jsonOptions = new JsonSerializerOptions();
+        var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
+        _jobsClient = new JobsClient(jobsStorage, serializer);
     }
 
     [Benchmark]
@@ -37,18 +40,14 @@ public class JobbyCreateJobsBenchmarkAction
         const int jobsCount = 5;
         for (int i = 1; i <= jobsCount; i++)
         {
-            var jobParam = new TestJobParam
+            var jobCommand = new JobbyTestJobCommand
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),
                 DelayMs = 0,
             };
-            var job = new JobModel
-            {
-                JobName = "TestJob",
-                JobParam = JsonSerializer.Serialize(jobParam)
-            };
-            await _jobsClient.EnqueueAsync(job);
+
+            await _jobsClient.EnqueueCommandAsync(jobCommand);
         }
     }
 }

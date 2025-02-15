@@ -31,7 +31,7 @@ public class QuartzCreateJobsBenchmarkAction
         const int jobsCount = 5;
         for (int i = 1; i <= jobsCount; i++) 
         {
-            var jobParam = new TestJobParam
+            var jobParam = new QuartzTestJobParam
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),

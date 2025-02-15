@@ -47,7 +47,7 @@ public static class QuartzHelper
             .BuildScheduler();
     }
 
-    public static Task CreateTestJob(IScheduler scheduler, TestJobParam jobParam)
+    public static Task CreateTestJob(IScheduler scheduler, QuartzTestJobParam jobParam)
     {
         var trigger = TriggerBuilder.Create()
             .WithIdentity(Guid.NewGuid().ToString())
@@ -56,9 +56,9 @@ public static class QuartzHelper
 
         var job = JobBuilder.Create<QuartzTestJob>()
             .WithIdentity(Guid.NewGuid().ToString())
-            .UsingJobData(nameof(TestJobParam.Id), jobParam.Id)
-            .UsingJobData(nameof(TestJobParam.Value), jobParam.Value)
-            .UsingJobData(nameof(TestJobParam.DelayMs), jobParam.DelayMs)
+            .UsingJobData(nameof(QuartzTestJobParam.Id), jobParam.Id)
+            .UsingJobData(nameof(QuartzTestJobParam.Value), jobParam.Value)
+            .UsingJobData(nameof(QuartzTestJobParam.DelayMs), jobParam.DelayMs)
             .Build();
 
         return scheduler.ScheduleJob(job, trigger);

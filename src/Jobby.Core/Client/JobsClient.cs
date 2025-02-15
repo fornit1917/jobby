@@ -4,13 +4,15 @@ using Jobby.Abstractions.Models;
 
 namespace Jobby.Core.Client;
 
-public class JobsClient : IJobsClient
+public class JobsClient : IJobsClient, IJobsMediator
 {
     private readonly IJobsStorage _jobsStorage;
+    private readonly IJobParamSerializer _serializer;
 
-    public JobsClient(IJobsStorage jobsStorage)
+    public JobsClient(IJobsStorage jobsStorage, IJobParamSerializer serializer)
     {
         _jobsStorage = jobsStorage;
+        _serializer = serializer;
     }
 
     public long Enqueue(JobModel job)
@@ -37,5 +39,25 @@ public class JobsClient : IJobsClient
         var id = await _jobsStorage.InsertAsync(job);
         job.Id = id;
         return job.Id;
+    }
+
+    public void EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand
+    {
+        var job = new JobModel
+        {
+            JobName = TCommand.GetJobName(),
+            JobParam = _serializer.SerializeJobParam(command),
+        };
+        Enqueue(job);
+    }
+
+    public Task EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand
+    {
+        var job = new JobModel
+        {
+            JobName = TCommand.GetJobName(),
+            JobParam = _serializer.SerializeJobParam(command),
+        };
+        return EnqueueAsync(job);
     }
 }

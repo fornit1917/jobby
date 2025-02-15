@@ -9,9 +9,7 @@ public class HangfireExecuteJobsBenchmark : IBenchmark
 
     public async Task Run()
     {
-        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000,
-            defaultJobName: TestJob.JobName,
-            defaultJobDelayMs: 0);
+        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
 
         var dataSource = DataSourceFactory.Create();
 
@@ -21,16 +19,16 @@ public class HangfireExecuteJobsBenchmark : IBenchmark
         Console.WriteLine("Configure hangfire");
         HangfireHelper.ConfigureGlobal(dataSource);
 
-        Console.WriteLine($"Create {benchmarkParams.JobsCount} {benchmarkParams.JobName}");
+        Console.WriteLine($"Create {benchmarkParams.JobsCount} jobs");
         for (int i = 1; i <= benchmarkParams.JobsCount; i++)
         {
-            var jobParam = new TestJobParam
+            var jobParam = new HangfireTestJobParam
             {
                 Id = i,
                 DelayMs = benchmarkParams.JobDelayMs,
                 Value = Guid.NewGuid().ToString(),
             };
-            BackgroundJob.Enqueue<TestJob>(x => x.Execute(jobParam));
+            BackgroundJob.Enqueue<HangfireTestJob>(x => x.Execute(jobParam));
         }
 
         Console.WriteLine("Start hangfire server");

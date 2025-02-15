@@ -134,8 +134,7 @@ public class JobsServer : IJobsServer
             using var scope = _scopeFactory.CreateJobExecutionScope();
             try
             {
-                var executor = scope.GetJobExecutor(job.JobName);
-                await executor.ExecuteAsync(job);
+                await scope.ExecuteAsync(job);
             }
             catch (Exception ex)
             {

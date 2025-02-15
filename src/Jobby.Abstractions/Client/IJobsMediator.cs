@@ -4,5 +4,6 @@ namespace Jobby.Abstractions.Client;
 
 public interface IJobsMediator
 {
-    Task<long> EnqueueAsync<T>(T command) where T : IJobCommand;
+    Task EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand;
+    void EnqueueCommand<TCommand>(TCommand command) where TCommand: IJobCommand;
 }

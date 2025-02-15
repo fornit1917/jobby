@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace Jobby.Core.CommonServices;
 
-internal class SystemTextJsonJobParamSerializer : IJobParamSerializer
+public class SystemTextJsonJobParamSerializer : IJobParamSerializer
 {
     private readonly JsonSerializerOptions _opts;
 
@@ -13,9 +13,11 @@ internal class SystemTextJsonJobParamSerializer : IJobParamSerializer
         _opts = opts;
     }
 
-    public T? DeserializeJobParam<T>(string serializedJobParam) where T : IJobCommand
+    public object? DeserializeJobParam(string? json, Type jobParamType)
     {
-        return JsonSerializer.Deserialize<T>(serializedJobParam, _opts);
+        return json == null
+            ? null
+            : JsonSerializer.Deserialize(json, jobParamType, _opts);
     }
 
     public string SerializeJobParam<T>(T command) where T : IJobCommand

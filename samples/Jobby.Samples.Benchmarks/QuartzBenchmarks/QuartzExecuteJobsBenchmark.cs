@@ -1,7 +1,4 @@
-﻿
-using Jobby.Core.Server;
-using Jobby.Samples.Benchmarks.JobbyBenchmarks;
-using Quartz;
+﻿using Jobby.Samples.Benchmarks.HangfireBenchmarks;
 using System.Diagnostics;
 
 namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
@@ -12,22 +9,20 @@ public class QuartzExecuteJobsBenchmark : IBenchmark
 
     public async Task Run()
     {
-        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000,
-            defaultJobName: TestJob.JobName,
-            defaultJobDelayMs: 0);
+        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
 
         var dataSource = DataSourceFactory.Create();
 
         Console.WriteLine("Clear jobs database");
         QuartzHelper.RemoveAllJobs(dataSource);
 
-        Console.WriteLine($"Create {benchmarkParams.JobsCount} {benchmarkParams.JobName}");
+        Console.WriteLine($"Create {benchmarkParams.JobsCount} jobs");
 
         var scheduler = await QuartzHelper.CreateScheduler();
 
         for (int i = 1; i <= benchmarkParams.JobsCount; i++)
         {
-            var jobParam = new TestJobParam
+            var jobParam = new QuartzTestJobParam
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),

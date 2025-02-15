@@ -1,6 +1,8 @@
-﻿using Jobby.Abstractions.Models;
+﻿using Jobby.Abstractions.CommonServices;
+using Jobby.Abstractions.Models;
 using Jobby.Abstractions.Server;
 using Jobby.Core.Client;
+using Jobby.Core.CommonServices;
 using Jobby.Core.Server;
 using Jobby.Postgres;
 using Npgsql;
@@ -14,8 +16,12 @@ internal class Program
     {
         var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
         using var dataSource = NpgsqlDataSource.Create(connectionString);
+
+        var jsonOptions = new JsonSerializerOptions();
+        var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
+
         var pgJobsStorage = new PgJobsStorage(dataSource);
-        var jobsClient = new JobsClient(pgJobsStorage);
+        var jobsClient = new JobsClient(pgJobsStorage, serializer);
         var jobbySettings = new JobbySettings
         {
             PollingIntervalMs = 1000,
@@ -23,69 +29,83 @@ internal class Program
             MaxDegreeOfParallelism = 10,
             UseBatches = true,
         };
-        var scopeFactory = new TestJobExecutionScopeFactory();
+        var scopeFactory = new TestJobExecutionScopeFactory(serializer);
         var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, jobbySettings);
 
-        for (int i = 1; i <= 1000; i++)
+        for (int i = 1; i <= 5; i++)
         {
             var jobParam = new TestJobParam { Id = i, Name = "SomeValue" };
-            var job = new JobModel
-            {
-                JobName = "TestJob",
-                JobParam = JsonSerializer.Serialize(jobParam),
-            };
-            await jobsClient.EnqueueAsync(job);
+            await jobsClient.EnqueueCommandAsync(jobParam);
         }
 
         jobsServer.StartBackgroundService();
 
         Console.ReadLine();
         jobsServer.SendStopSignal();
-        await Task.Delay(2000);
     }
 
-    private class TestJobExecutor : IJobExecutor
+    private class TestJobExecutionScope : JobExecutionScopeBase
     {
-        public Task ExecuteAsync(JobModel job)
-        {
-            var param = JsonSerializer.Deserialize<TestJobParam>(job.JobParam);
-            // await Task.Delay(50);
-            return Task.CompletedTask;
-        }
-    }
-
-    private class TestJobExecutionScope : IJobExecutionScope
-    {
-        private readonly IJobExecutor _executor;
-
-        public TestJobExecutionScope(IJobExecutor executor)
-        {
-            _executor = executor;
-        }
-
-        public void Dispose()
+        public TestJobExecutionScope(IReadOnlyDictionary<string, Type> jobCommandTypesByName,
+            IReadOnlyDictionary<Type, Type> handlerTypesByCommandType,
+            IJobParamSerializer serializer) : base(jobCommandTypesByName, handlerTypesByCommandType, serializer)
         {
         }
 
-        public IJobExecutor GetJobExecutor(string jobName)
+        public override void Dispose()
         {
-            return _executor;
+           
+        }
+
+        protected override object? CreateService(Type t)
+        {
+            if (t == typeof(IJobCommandHandler<TestJobParam>))
+            {
+                return new TestJobHandler();
+            }
+            return null;
         }
     }
 
     private class TestJobExecutionScopeFactory : IJobExecutionScopeFactory
     {
-        private readonly IJobExecutor _executor = new TestJobExecutor();
+        private readonly IJobParamSerializer _serializer;
+        private readonly Dictionary<string, Type> _jobCommandTypesByName;
+        private readonly Dictionary<Type, Type> _jobHandlerTypesByCommandTypes;
+
+        public TestJobExecutionScopeFactory(IJobParamSerializer serializer)
+        {
+            _serializer = serializer;
+            _jobCommandTypesByName = new Dictionary<string, Type>()
+            {
+                ["TestJob"] = typeof(TestJobParam)
+            };
+            _jobHandlerTypesByCommandTypes = new Dictionary<Type, Type>()
+            {
+                [typeof(TestJobParam)] = typeof(IJobCommandHandler<TestJobParam>)
+            };
+        }
 
         public IJobExecutionScope CreateJobExecutionScope()
         {
-            return new TestJobExecutionScope(_executor);
+            return new TestJobExecutionScope(_jobCommandTypesByName, _jobHandlerTypesByCommandTypes, _serializer);
         }
     }
 
-    private class TestJobParam
+    private class TestJobParam : IJobCommand
     {
         public int Id { get; set; }
         public string Name { get; set; }
+
+        public static string GetJobName() => "TestJob";
+    }
+
+    private class TestJobHandler : IJobCommandHandler<TestJobParam>
+    {
+        public Task ExecuteAsync(TestJobParam command)
+        {
+            Console.WriteLine($"Executed, Id = {command.Id}");
+            return Task.CompletedTask;
+        }
     }
 }

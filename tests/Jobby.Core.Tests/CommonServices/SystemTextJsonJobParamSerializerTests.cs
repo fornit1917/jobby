@@ -17,7 +17,7 @@ public class SystemTextJsonJobParamSerializerTests
         };
 
         var serializedParam = serializer.SerializeJobParam(param);
-        var deserializedParam = serializer.DeserializeJobParam<TestParam>(serializedParam);
+        var deserializedParam = serializer.DeserializeJobParam(serializedParam, typeof(TestParam)) as TestParam;
 
         Assert.NotNull(deserializedParam);
         Assert.Equal(param.Id, deserializedParam.Id);
@@ -29,6 +29,6 @@ public class SystemTextJsonJobParamSerializerTests
         public int Id { get; set; }
         public string? Name { get; set; }
 
-        public string GetJobName() => "TestJobName";
+        public static string GetJobName() => "TestJobName";
     }
 }

@@ -1,10 +1,10 @@
-﻿namespace Jobby.Samples.Benchmarks;
+﻿namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
 
-internal class TestJob
+internal class HangfireTestJob
 {
     public const string JobName = "TestJob";
 
-    public async Task Execute(TestJobParam? jobParam)
+    public async Task Execute(HangfireTestJobParam? jobParam)
     {
         if (jobParam?.DelayMs > 0)
         {

@@ -1,6 +1,8 @@
-﻿namespace Jobby.Abstractions.Server;
+﻿using Jobby.Abstractions.Models;
+
+namespace Jobby.Abstractions.Server;
 
 public interface IJobExecutionScope : IDisposable
 {
-    IJobExecutor GetJobExecutor(string jobName);
+    Task ExecuteAsync(JobModel jobModel);
 }

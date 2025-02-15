@@ -30,12 +30,12 @@ public class HangfireCreateJobsBenchmarkAction
         const int jobsCount = 5;
         for (int i = 1; i <= jobsCount; i++)
         {
-            var jobParam = new TestJobParam
+            var jobParam = new HangfireTestJobParam
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),
             };
-            BackgroundJob.Enqueue<TestJob>(x => x.Execute(jobParam));
+            BackgroundJob.Enqueue<HangfireTestJob>(x => x.Execute(jobParam));
         }
     }
 }

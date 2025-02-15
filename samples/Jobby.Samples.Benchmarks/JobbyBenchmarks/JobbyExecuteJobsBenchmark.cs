@@ -1,8 +1,10 @@
 using BenchmarkDotNet.Attributes;
 using Jobby.Abstractions.Models;
 using Jobby.Core.Client;
+using Jobby.Core.CommonServices;
 using Jobby.Core.Server;
 using Jobby.Postgres;
+using Jobby.Samples.Benchmarks.HangfireBenchmarks;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -15,9 +17,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 
     public async Task Run()
     {
-        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, 
-            defaultJobName: TestJob.JobName,
-            defaultJobDelayMs: 0);
+        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
 
         var dataSource = DataSourceFactory.Create();
         var jobsStorage = new PgJobsStorage(dataSource);
@@ -27,28 +27,25 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
             PollingIntervalMs = 1000,
             UseBatches = true,
         };
-        var scopeFactory = new JobbyTestExecutionScopeFactory();
+        var jsonOptions = new JsonSerializerOptions();
+        var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
+        var scopeFactory = new JobbyTestExecutionScopeFactory(serializer);
         var jobsServer = new JobsServer(jobsStorage, scopeFactory, jobbySettings);
-        var jobsClient = new JobsClient(jobsStorage);
+        var jobsClient = new JobsClient(jobsStorage, serializer);
 
         Console.WriteLine("Clear jobs database");
         JobbyHelper.RemoveAllJobs(dataSource);
 
-        Console.WriteLine($"Create {benchmarkParams.JobsCount} {benchmarkParams.JobName}");
+        Console.WriteLine($"Create {benchmarkParams.JobsCount} jobs");
         for (int i = 1; i <= benchmarkParams.JobsCount; i++)
         {
-            var jobParam = new TestJobParam
+            var jobCommand = new JobbyTestJobCommand
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),
-                DelayMs = benchmarkParams.JobDelayMs,
+                DelayMs = 0,
             };
-            var job = new JobModel
-            {
-                JobName = benchmarkParams.JobName,
-                JobParam = JsonSerializer.Serialize(jobParam)
-            };
-            jobsClient.Enqueue(job);
+            jobsClient.EnqueueCommand(jobCommand);
         }
 
         Console.WriteLine("Start jobby server");

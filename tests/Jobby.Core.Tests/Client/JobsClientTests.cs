@@ -8,12 +8,14 @@ namespace Jobby.Core.Tests.Client;
 public class JobsClientTests
 {
     private readonly Mock<IJobsStorage> _jobsStorageMock;
+    private readonly Mock<IJobParamSerializer> _serializerMock;
     private readonly JobsClient _jobsClient;
 
     public JobsClientTests()
     {
         _jobsStorageMock = new Mock<IJobsStorage>();
-        _jobsClient = new JobsClient(_jobsStorageMock.Object);
+        _serializerMock = new Mock<IJobParamSerializer>();
+        _jobsClient = new JobsClient(_jobsStorageMock.Object, _serializerMock.Object);
     }
 
     [Fact]

@@ -5,5 +5,5 @@ namespace Jobby.Abstractions.CommonServices;
 public interface IJobParamSerializer
 {
     string SerializeJobParam<T>(T command) where T : IJobCommand;
-    T? DeserializeJobParam<T>(string serializedJobParam) where T : IJobCommand;
+    object? DeserializeJobParam(string? json, Type jobParamType);
 }

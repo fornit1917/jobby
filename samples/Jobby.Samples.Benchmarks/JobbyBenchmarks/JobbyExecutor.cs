@@ -1,50 +1,53 @@
 using System.Text.Json;
+using Jobby.Abstractions.CommonServices;
 using Jobby.Abstractions.Models;
 using Jobby.Abstractions.Server;
+using Jobby.Core.Server;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
-public class JobbyTestExecutor : IJobExecutor
+public class JobbyTestExecutionScope : JobExecutionScopeBase
 {
-    public Task ExecuteAsync(JobModel job)
+    public JobbyTestExecutionScope(IReadOnlyDictionary<string, Type> jobCommandTypesByName, IReadOnlyDictionary<Type, Type> handlerTypesByCommandType, IJobParamSerializer serializer) 
+        : base(jobCommandTypesByName, handlerTypesByCommandType, serializer)
     {
-        if (job.JobName == TestJob.JobName)
+    }
+
+    public override void Dispose()
+    {
+    }
+
+    protected override object? CreateService(Type t)
+    {
+        if (t == typeof(IJobCommandHandler<JobbyTestJobCommand>))
         {
-            var jobHandler = new TestJob();
-            var jobParam = job.JobParam != null 
-                ? JsonSerializer.Deserialize<TestJobParam>(job.JobParam)
-                : null;
-            return jobHandler.Execute(jobParam);
+            return new JobbyTestJobCommandHandler();
         }
-        return Task.CompletedTask;
-    }
-}
-
-public class JobbyTestExecutionScope : IJobExecutionScope
-{
-    private readonly IJobExecutor _executor;
-
-    public JobbyTestExecutionScope(IJobExecutor executor)
-    {
-        _executor = executor;
-    }
-
-    public void Dispose()
-    {
-    }
-
-    public IJobExecutor GetJobExecutor(string jobName)
-    {
-        return _executor;
+        return null;
     }
 }
 
 public class JobbyTestExecutionScopeFactory : IJobExecutionScopeFactory
 {
-    private readonly IJobExecutor _executor = new JobbyTestExecutor();
+    private readonly IJobParamSerializer _serializer;
+    private readonly Dictionary<string, Type> _jobCommandTypesByName;
+    private readonly Dictionary<Type, Type> _jobHandlerTypesByCommandTypes;
+
+    public JobbyTestExecutionScopeFactory(IJobParamSerializer serializer) 
+    {
+        _serializer = serializer;
+        _jobCommandTypesByName = new Dictionary<string, Type>()
+        {
+            ["TestJob"] = typeof(JobbyTestJobCommand)
+        };
+        _jobHandlerTypesByCommandTypes = new Dictionary<Type, Type>()
+        {
+            [typeof(JobbyTestJobCommand)] = typeof(IJobCommandHandler<JobbyTestJobCommand>)
+        };
+    }
 
     public IJobExecutionScope CreateJobExecutionScope()
     {
-        return new JobbyTestExecutionScope(_executor);
+        return new JobbyTestExecutionScope(_jobCommandTypesByName, _jobHandlerTypesByCommandTypes, _serializer);
     }
 }

@@ -2,5 +2,5 @@
 
 public interface IJobCommand
 {
-    string GetJobName();
+    static abstract string GetJobName();
 }
