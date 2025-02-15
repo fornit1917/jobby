@@ -34,7 +34,7 @@ public abstract class JobExecutionScopeBase : IJobExecutionScope
                 var handler = CreateService(handlerType);
                 if (handler == null)
                 {
-                    throw new InvalidJobHandlerException($"Could not create an instance of {handlerType}");
+                    throw new InvalidJobHandlerException($"Could not create a service {handlerType}");
                 }
 
                 // todo: use more strict search criteria for the method ExecuteAsync
