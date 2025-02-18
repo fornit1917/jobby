@@ -1,4 +1,4 @@
-﻿using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Interfaces;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 

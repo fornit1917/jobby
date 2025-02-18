@@ -1,6 +1,4 @@
-﻿using Jobby.Abstractions.Models;
-
-namespace Jobby.Abstractions.CommonServices;
+﻿namespace Jobby.Core.Interfaces;
 
 public interface IJobParamSerializer
 {

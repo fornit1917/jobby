@@ -1,6 +1,6 @@
-﻿using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Models;
 
-namespace Jobby.Abstractions.Client;
+namespace Jobby.Core.Interfaces;
 
 public interface IJobFactory
 {

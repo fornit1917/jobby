@@ -1,4 +1,4 @@
-﻿namespace Jobby.Abstractions.Models;
+﻿namespace Jobby.Core.Interfaces;
 
 public interface IJobCommand
 {

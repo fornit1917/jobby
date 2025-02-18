@@ -1,4 +1,4 @@
-﻿using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Models;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;

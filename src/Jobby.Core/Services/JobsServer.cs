@@ -1,8 +1,7 @@
-﻿using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
-using Jobby.Abstractions.Server;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
 
-namespace Jobby.Core.Server;
+namespace Jobby.Core.Services;
 
 public class JobsServer : IJobsServer
 {
@@ -50,14 +49,14 @@ public class JobsServer : IJobsServer
             {
                 job = await _storage.TakeToProcessingAsync();
             }
-            catch 
-            { 
+            catch
+            {
                 _semaphore.Release();
                 // todo: log error
                 await Task.Delay(_settings.DbErrorPauseMs);
                 continue;
             }
-            
+
             if (job == null)
             {
                 _semaphore.Release();
@@ -76,7 +75,7 @@ public class JobsServer : IJobsServer
     private async Task PollByBatches()
     {
         var jobs = new List<JobModel>(capacity: _settings.MaxDegreeOfParallelism);
-        while (_running) 
+        while (_running)
         {
             await _semaphore.WaitAsync();
             var maxBatchSize = _semaphore.CurrentCount + 1;

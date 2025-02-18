@@ -1,6 +1,5 @@
 ﻿using Hangfire;
 using Hangfire.PostgreSql;
-using Jobby.Abstractions.Models;
 using Npgsql;
 
 namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;

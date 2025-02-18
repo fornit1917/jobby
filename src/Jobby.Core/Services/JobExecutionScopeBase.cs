@@ -1,10 +1,9 @@
-﻿using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
-using Jobby.Abstractions.Server;
-using Jobby.Core.Exceptions;
+﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
 using System.Reflection;
 
-namespace Jobby.Core.Server;
+namespace Jobby.Core.Services;
 
 public abstract class JobExecutionScopeBase : IJobExecutionScope
 {

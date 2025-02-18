@@ -4,7 +4,4 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    <ItemGroup>
-      <ProjectReference Include="..\Jobby.Abstractions\Jobby.Abstractions.csproj" />
-    </ItemGroup>
 </Project>

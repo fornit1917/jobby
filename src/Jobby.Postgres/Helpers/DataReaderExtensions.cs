@@ -1,4 +1,4 @@
-﻿using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Models;
 using System.Data.Common;
 
 namespace Jobby.Postgres.Helpers;

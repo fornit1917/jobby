@@ -1,9 +1,9 @@
-﻿using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
-using Jobby.Core.Client;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
+using Jobby.Core.Services;
 using Moq;
 
-namespace Jobby.Core.Tests.Client;
+namespace Jobby.Core.Tests.Services;
 
 public class JobsClientTests
 {

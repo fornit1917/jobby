@@ -1,8 +1,7 @@
-﻿using Jobby.Abstractions.Client;
-using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
 
-namespace Jobby.Core.Client;
+namespace Jobby.Core.Services;
 
 public class JobsClient : IJobsClient, IJobsMediator
 {

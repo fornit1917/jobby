@@ -1,8 +1,7 @@
-﻿using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Interfaces;
 using System.Text.Json;
 
-namespace Jobby.Core.CommonServices;
+namespace Jobby.Core.Services;
 
 public class SystemTextJsonJobParamSerializer : IJobParamSerializer
 {

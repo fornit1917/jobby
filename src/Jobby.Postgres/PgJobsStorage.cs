@@ -1,5 +1,5 @@
-﻿using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
 using Jobby.Postgres.Commands;
 using Npgsql;
 

@@ -1,4 +1,4 @@
-﻿namespace Jobby.Abstractions.Models;
+﻿namespace Jobby.Core.Models;
 
 public class JobbySettings
 {

@@ -1,9 +1,6 @@
-﻿using Jobby.Abstractions.CommonServices;
-using Jobby.Abstractions.Models;
-using Jobby.Abstractions.Server;
-using Jobby.Core.Client;
-using Jobby.Core.CommonServices;
-using Jobby.Core.Server;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
+using Jobby.Core.Services;
 using Jobby.Postgres;
 using Npgsql;
 using System.Text.Json;
@@ -95,7 +92,7 @@ internal class Program
     private class TestJobParam : IJobCommand
     {
         public int Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         public static string GetJobName() => "TestJob";
     }

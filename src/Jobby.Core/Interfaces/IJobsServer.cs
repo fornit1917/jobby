@@ -1,4 +1,4 @@
-﻿namespace Jobby.Abstractions.Server;
+﻿namespace Jobby.Core.Interfaces;
 
 public interface IJobsServer
 {
