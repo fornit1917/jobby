@@ -37,11 +37,12 @@ public class RetryPolicyService : IRetryPolicyService
             return null;
         }
 
-        var intervalSeconds = 1;
+        var intervalSeconds = 10;
+        var intervalIndex = job.StartedCount > 0 ? job.StartedCount - 1 : 0;
         if (retryPolicy.IntervalsSeconds.Count > 0) 
         {
-            intervalSeconds = retryPolicy.IntervalsSeconds.Count >= job.StartedCount
-                ? retryPolicy.IntervalsSeconds[job.StartedCount - 1] 
+            intervalSeconds = retryPolicy.IntervalsSeconds.Count > intervalIndex
+                ? retryPolicy.IntervalsSeconds[intervalIndex] 
                 : retryPolicy.IntervalsSeconds[retryPolicy.IntervalsSeconds.Count - 1];
         }
 
