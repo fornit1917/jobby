@@ -7,17 +7,23 @@ public class JobsServer : IJobsServer
 {
     private readonly IJobsStorage _storage;
     private readonly IJobExecutionScopeFactory _scopeFactory;
+    private readonly IRetryPolicyService _retryPolicyService;
+
     private readonly JobbySettings _settings;
 
     private readonly SemaphoreSlim _semaphore;
 
     private bool _running;
 
-    public JobsServer(IJobsStorage storage, IJobExecutionScopeFactory scopeFactory, JobbySettings settings)
+    public JobsServer(IJobsStorage storage,
+        IJobExecutionScopeFactory scopeFactory,
+        IRetryPolicyService retryPolicyService,
+        JobbySettings settings)
     {
         _storage = storage;
         _scopeFactory = scopeFactory;
         _settings = settings;
+        _retryPolicyService = retryPolicyService;
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
     }
 
@@ -131,27 +137,32 @@ public class JobsServer : IJobsServer
         try
         {
             using var scope = _scopeFactory.CreateJobExecutionScope();
+
+            var completed = false;
             try
             {
                 await scope.ExecuteAsync(job);
+                completed = true;
             }
             catch (Exception ex)
             {
-                // todo: do not use hardcoded retry policy
-                if (job.StartedCount >= 10)
+                TimeSpan? retryInterval = _retryPolicyService.GetRetryInterval(job);
+
+                if (retryInterval.HasValue)
                 {
-                    await _storage.MarkFailedAsync(job.Id);
+                    var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
+                    await _storage.RescheduleAsync(job.Id, sheduledStartTime);
                 }
                 else
                 {
-                    var sheduledStartTime = DateTime.UtcNow.AddMinutes(10);
-                    await _storage.RescheduleAsync(job.Id, sheduledStartTime);
+                    await _storage.MarkFailedAsync(job.Id);
                 }
-                return;
             }
 
-            //todo: log if error
-            await _storage.MarkCompletedAsync(job.Id);
+            if (completed)
+            {
+                await _storage.MarkCompletedAsync(job.Id);
+            }
         }
         finally
         {

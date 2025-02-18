@@ -27,11 +27,24 @@ internal class Program
             UseBatches = true,
         };
         var scopeFactory = new TestJobExecutionScopeFactory(serializer);
-        var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, jobbySettings);
 
-        for (int i = 1; i <= 5; i++)
+        var defaultRetryPolicy = new RetryPolicy
         {
-            var jobParam = new TestJobParam { Id = i, Name = "SomeValue" };
+            MaxCount = 3,
+            IntervalsSeconds = [1]
+        };
+        var retryPolicyService = new RetryPolicyService(defaultRetryPolicy);
+        
+        var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, retryPolicyService, jobbySettings);
+
+        for (int i = 1; i <= 1; i++)
+        {
+            var jobParam = new TestJobParam 
+            { 
+                Id = i, 
+                ShouldBeFailed = true,
+                Name = "SomeValue" 
+            };
             await jobsClient.EnqueueCommandAsync(jobParam);
         }
 
@@ -93,6 +106,7 @@ internal class Program
     {
         public int Id { get; set; }
         public string? Name { get; set; }
+        public bool ShouldBeFailed { get; set; }
 
         public static string GetJobName() => "TestJob";
     }
@@ -101,6 +115,12 @@ internal class Program
     {
         public Task ExecuteAsync(TestJobParam command)
         {
+            if (command.ShouldBeFailed)
+            {
+                Console.WriteLine($"Exception will be thrown, Id = {command.Id}");
+                throw new Exception("Error message");
+            }
+
             Console.WriteLine($"Executed, Id = {command.Id}");
             return Task.CompletedTask;
         }

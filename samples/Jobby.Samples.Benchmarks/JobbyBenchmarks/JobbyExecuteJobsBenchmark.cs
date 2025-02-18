@@ -27,7 +27,8 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         var jsonOptions = new JsonSerializerOptions();
         var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
         var scopeFactory = new JobbyTestExecutionScopeFactory(serializer);
-        var jobsServer = new JobsServer(jobsStorage, scopeFactory, jobbySettings);
+        var retryPolicyService = new RetryPolicyService();
+        var jobsServer = new JobsServer(jobsStorage, scopeFactory, retryPolicyService, jobbySettings);
         var jobsClient = new JobsClient(jobsStorage, serializer);
 
         Console.WriteLine("Clear jobs database");

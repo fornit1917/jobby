@@ -20,7 +20,7 @@ internal static class UpdateStatusCommand
         {
             Parameters =
             {
-                new("status", (int)JobStatus.Completed),
+                new("status", (int)newStatus),
                 new("last_finished_at", finishedAt),
                 new("id", jobId)
             }
