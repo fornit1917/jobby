@@ -4,5 +4,5 @@ namespace Jobby.Core.Interfaces;
 
 public interface IRetryPolicyService
 {
-    TimeSpan? GetRetryInterval(JobModel job);
+    RetryPolicy GetRetryPolicy(JobModel job);
 }

@@ -1,6 +1,8 @@
-﻿namespace Jobby.Core.Interfaces;
+﻿using Jobby.Core.Models;
+
+namespace Jobby.Core.Interfaces;
 
 public interface IJobCommandHandler<TCommand> where TCommand : IJobCommand
 {
-    Task ExecuteAsync(TCommand command);
+    Task ExecuteAsync(TCommand command, JobExecutionContext ctx);
 }

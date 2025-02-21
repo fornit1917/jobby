@@ -1,4 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
@@ -13,7 +14,7 @@ public class JobbyTestJobCommand : IJobCommand
 
 public class JobbyTestJobCommandHandler : IJobCommandHandler<JobbyTestJobCommand>
 {
-    public async Task ExecuteAsync(JobbyTestJobCommand command)
+    public async Task ExecuteAsync(JobbyTestJobCommand command, JobExecutionContext ctx)
     {
         if (command?.DelayMs > 0)
         {

@@ -144,7 +144,7 @@ public class JobsServer : IJobsServer
         try
         {
             using var scope = _scopeFactory.CreateJobExecutionScope();
-
+            var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
             var completed = false;
             try
             {
@@ -166,8 +166,13 @@ public class JobsServer : IJobsServer
                     throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
                 }
 
-                // todo: add executionContext parameter
-                var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command]);
+                var ctx = new JobExecutionContext
+                {
+                    JobName = job.JobName,
+                    StartedCount = job.StartedCount,
+                    IsLastAttempt = retryPolicy.IsLastAttempt(job)
+                };
+                var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
                 if (result is Task)
                 {
                     await (Task)result;
@@ -177,7 +182,7 @@ public class JobsServer : IJobsServer
             }
             catch (Exception ex)
             {
-                TimeSpan? retryInterval = _retryPolicyService.GetRetryInterval(job);
+                TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
 
                 if (retryInterval.HasValue)
                 {

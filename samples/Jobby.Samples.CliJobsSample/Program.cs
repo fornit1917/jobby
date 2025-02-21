@@ -41,12 +41,12 @@ internal class Program
 
         var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
 
-        for (int i = 1; i <= 5; i++)
+        for (int i = 1; i <= 1; i++)
         {
             var jobParam = new TestJobParam 
             { 
                 Id = i, 
-                ShouldBeFailed = false,
+                ShouldBeFailed = true,
                 Name = "SomeValue" 
             };
             await jobsClient.EnqueueCommandAsync(jobParam);
@@ -93,7 +93,7 @@ internal class Program
 
     private class TestJobHandler : IJobCommandHandler<TestJobParam>
     {
-        public Task ExecuteAsync(TestJobParam command)
+        public Task ExecuteAsync(TestJobParam command, JobExecutionContext ctx)
         {
             if (command.ShouldBeFailed)
             {
