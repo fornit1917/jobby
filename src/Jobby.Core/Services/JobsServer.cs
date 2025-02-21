@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
@@ -8,6 +9,8 @@ public class JobsServer : IJobsServer
     private readonly IJobsStorage _storage;
     private readonly IJobExecutionScopeFactory _scopeFactory;
     private readonly IRetryPolicyService _retryPolicyService;
+    private readonly IJobsRegistry _jobsRegistry;
+    private readonly IJobParamSerializer _serializer;
 
     private readonly JobbySettings _settings;
 
@@ -18,12 +21,16 @@ public class JobsServer : IJobsServer
     public JobsServer(IJobsStorage storage,
         IJobExecutionScopeFactory scopeFactory,
         IRetryPolicyService retryPolicyService,
+        IJobsRegistry jobsRegistry,
+        IJobParamSerializer serializer,
         JobbySettings settings)
     {
         _storage = storage;
         _scopeFactory = scopeFactory;
         _settings = settings;
         _retryPolicyService = retryPolicyService;
+        _jobsRegistry = jobsRegistry;
+        _serializer = serializer;
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
     }
 
@@ -141,7 +148,31 @@ public class JobsServer : IJobsServer
             var completed = false;
             try
             {
-                await scope.ExecuteAsync(job);
+                var execMetadata = _jobsRegistry.GetJobExecutionMetadata(job.JobName);
+                if (execMetadata == null)
+                {
+                    throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
+                }
+
+                var handlerInstance = scope.GetService(execMetadata.HandlerType);
+                if (handlerInstance == null)
+                {
+                    throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
+                }
+
+                var command = _serializer.DeserializeJobParam(job.JobParam, execMetadata.CommandType);
+                if (command == null)
+                {
+                    throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
+                }
+
+                // todo: add executionContext parameter
+                var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command]);
+                if (result is Task)
+                {
+                    await (Task)result;
+                }
+
                 completed = true;
             }
             catch (Exception ex)

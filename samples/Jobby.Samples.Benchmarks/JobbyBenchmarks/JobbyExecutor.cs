@@ -1,22 +1,16 @@
 using Jobby.Core.Interfaces;
-using Jobby.Core.Services;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
-public class JobbyTestExecutionScope : JobExecutionScopeBase
+public class JobbyTestExecutionScope : IJobExecutionScope
 {
-    public JobbyTestExecutionScope(IReadOnlyDictionary<string, Type> jobCommandTypesByName, IReadOnlyDictionary<Type, Type> handlerTypesByCommandType, IJobParamSerializer serializer) 
-        : base(jobCommandTypesByName, handlerTypesByCommandType, serializer)
+    public void Dispose()
     {
     }
 
-    public override void Dispose()
+    public object? GetService(Type type)
     {
-    }
-
-    protected override object? CreateService(Type t)
-    {
-        if (t == typeof(IJobCommandHandler<JobbyTestJobCommand>))
+        if (type == typeof(IJobCommandHandler<JobbyTestJobCommand>))
         {
             return new JobbyTestJobCommandHandler();
         }
@@ -26,25 +20,8 @@ public class JobbyTestExecutionScope : JobExecutionScopeBase
 
 public class JobbyTestExecutionScopeFactory : IJobExecutionScopeFactory
 {
-    private readonly IJobParamSerializer _serializer;
-    private readonly Dictionary<string, Type> _jobCommandTypesByName;
-    private readonly Dictionary<Type, Type> _jobHandlerTypesByCommandTypes;
-
-    public JobbyTestExecutionScopeFactory(IJobParamSerializer serializer) 
-    {
-        _serializer = serializer;
-        _jobCommandTypesByName = new Dictionary<string, Type>()
-        {
-            ["TestJob"] = typeof(JobbyTestJobCommand)
-        };
-        _jobHandlerTypesByCommandTypes = new Dictionary<Type, Type>()
-        {
-            [typeof(JobbyTestJobCommand)] = typeof(IJobCommandHandler<JobbyTestJobCommand>)
-        };
-    }
-
     public IJobExecutionScope CreateJobExecutionScope()
     {
-        return new JobbyTestExecutionScope(_jobCommandTypesByName, _jobHandlerTypesByCommandTypes, _serializer);
+        return new JobbyTestExecutionScope();
     }
 }

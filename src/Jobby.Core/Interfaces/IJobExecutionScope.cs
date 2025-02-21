@@ -4,5 +4,5 @@ namespace Jobby.Core.Interfaces;
 
 public interface IJobExecutionScope : IDisposable
 {
-    Task ExecuteAsync(JobModel jobModel);
+    object? GetService(Type type);
 }

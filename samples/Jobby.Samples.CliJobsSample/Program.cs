@@ -26,7 +26,7 @@ internal class Program
             MaxDegreeOfParallelism = 10,
             UseBatches = true,
         };
-        var scopeFactory = new TestJobExecutionScopeFactory(serializer);
+        var scopeFactory = new TestJobExecutionScopeFactory();
 
         var defaultRetryPolicy = new RetryPolicy
         {
@@ -35,14 +35,18 @@ internal class Program
         };
         var retryPolicyService = new RetryPolicyService(defaultRetryPolicy);
         
-        var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, retryPolicyService, jobbySettings);
+        var jobsRegistry = new JobsRegistryBuilder()
+            .AddJob<TestJobParam, TestJobHandler>()
+            .Build();
 
-        for (int i = 1; i <= 1; i++)
+        var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
+
+        for (int i = 1; i <= 5; i++)
         {
             var jobParam = new TestJobParam 
             { 
                 Id = i, 
-                ShouldBeFailed = true,
+                ShouldBeFailed = false,
                 Name = "SomeValue" 
             };
             await jobsClient.EnqueueCommandAsync(jobParam);
@@ -54,22 +58,15 @@ internal class Program
         jobsServer.SendStopSignal();
     }
 
-    private class TestJobExecutionScope : JobExecutionScopeBase
+    private class TestJobExecutionScope : IJobExecutionScope
     {
-        public TestJobExecutionScope(IReadOnlyDictionary<string, Type> jobCommandTypesByName,
-            IReadOnlyDictionary<Type, Type> handlerTypesByCommandType,
-            IJobParamSerializer serializer) : base(jobCommandTypesByName, handlerTypesByCommandType, serializer)
+        public void Dispose()
         {
         }
 
-        public override void Dispose()
+        public object? GetService(Type type)
         {
-           
-        }
-
-        protected override object? CreateService(Type t)
-        {
-            if (t == typeof(IJobCommandHandler<TestJobParam>))
+            if (type == typeof(IJobCommandHandler<TestJobParam>))
             {
                 return new TestJobHandler();
             }
@@ -79,26 +76,9 @@ internal class Program
 
     private class TestJobExecutionScopeFactory : IJobExecutionScopeFactory
     {
-        private readonly IJobParamSerializer _serializer;
-        private readonly Dictionary<string, Type> _jobCommandTypesByName;
-        private readonly Dictionary<Type, Type> _jobHandlerTypesByCommandTypes;
-
-        public TestJobExecutionScopeFactory(IJobParamSerializer serializer)
-        {
-            _serializer = serializer;
-            _jobCommandTypesByName = new Dictionary<string, Type>()
-            {
-                ["TestJob"] = typeof(TestJobParam)
-            };
-            _jobHandlerTypesByCommandTypes = new Dictionary<Type, Type>()
-            {
-                [typeof(TestJobParam)] = typeof(IJobCommandHandler<TestJobParam>)
-            };
-        }
-
         public IJobExecutionScope CreateJobExecutionScope()
         {
-            return new TestJobExecutionScope(_jobCommandTypesByName, _jobHandlerTypesByCommandTypes, _serializer);
+            return new TestJobExecutionScope();
         }
     }
 
