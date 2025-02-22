@@ -37,7 +37,7 @@ internal class Program
         var retryPolicyService = new RetryPolicyService(defaultRetryPolicy);
         
         var jobsRegistry = new JobsRegistryBuilder()
-            .AddJob<TestJobParam, TestJobHandler>()
+            .AddCommand<TestJobParam, TestJobHandler>()
             .AddRecurrentJob<TestRecurrentJobHandler>()
             .Build();
 

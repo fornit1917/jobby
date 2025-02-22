@@ -16,7 +16,7 @@ internal class JobsRegistry : IJobsRegistry
         _recurrentExecMetadataByJobName = recurrentExecMetadataByJobName;
     }
 
-    public CommandExecutionMetadata? GetJobExecutionMetadata(string jobName)
+    public CommandExecutionMetadata? GetCommandExecutionMetadata(string jobName)
     {
         _cmdExecMetadataByJobName.TryGetValue(jobName, out CommandExecutionMetadata? jobExecutionMetadata);
         return jobExecutionMetadata;

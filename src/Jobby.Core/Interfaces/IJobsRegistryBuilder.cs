@@ -2,7 +2,7 @@
 
 public interface IJobsRegistryBuilder
 {
-    IJobsRegistryBuilder AddJob<TCommand, THandler>() 
+    IJobsRegistryBuilder AddCommand<TCommand, THandler>() 
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>;
 

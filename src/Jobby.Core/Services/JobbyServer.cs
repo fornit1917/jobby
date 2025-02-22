@@ -166,7 +166,7 @@ public class JobbyServer : IJobbyServer
         var completed = false;
         try
         {
-            var execMetadata = _jobsRegistry.GetJobExecutionMetadata(job.JobName);
+            var execMetadata = _jobsRegistry.GetCommandExecutionMetadata(job.JobName);
             if (execMetadata == null)
             {
                 throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");

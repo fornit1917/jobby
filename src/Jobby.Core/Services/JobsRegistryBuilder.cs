@@ -9,7 +9,7 @@ public class JobsRegistryBuilder : IJobsRegistryBuilder
     private readonly Dictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName = new();
     private readonly Dictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName = new();
 
-    public IJobsRegistryBuilder AddJob<TCommand, THandler>()
+    public IJobsRegistryBuilder AddCommand<TCommand, THandler>()
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>
     {

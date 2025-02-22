@@ -29,7 +29,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         var scopeFactory = new JobbyTestExecutionScopeFactory();
         var retryPolicyService = new RetryPolicyService();
         var jobsRegistry = new JobsRegistryBuilder()
-            .AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>()
+            .AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>()
             .Build();
         var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, serverSettings);
         var jobsFactory = new JobsFactory(serializer);
