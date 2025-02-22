@@ -3,60 +3,38 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
 
-public class JobsClient : IJobsClient, IJobsMediator
+public class JobsClient : IJobsClient
 {
+    private readonly IJobsFactory _jobFactory;
     private readonly IJobsStorage _jobsStorage;
-    private readonly IJobParamSerializer _serializer;
 
-    public JobsClient(IJobsStorage jobsStorage, IJobParamSerializer serializer)
+    public JobsClient(IJobsFactory jobFactory, IJobsStorage jobsStorage)
     {
+        _jobFactory = jobFactory;
         _jobsStorage = jobsStorage;
-        _serializer = serializer;
-    }
-
-    public long Enqueue(JobModel job)
-    {
-        job.Status = JobStatus.Scheduled;
-        job.CreatedAt = DateTime.UtcNow;
-        if (job.ScheduledStartAt == default)
-        {
-            job.ScheduledStartAt = job.CreatedAt;
-        }
-        var id = _jobsStorage.Insert(job);
-        job.Id = id;
-        return job.Id;
-    }
-
-    public async Task<long> EnqueueAsync(JobModel job)
-    {
-        job.Status = JobStatus.Scheduled;
-        job.CreatedAt = DateTime.UtcNow;
-        if (job.ScheduledStartAt == default)
-        {
-            job.ScheduledStartAt = job.CreatedAt;
-        }
-        var id = await _jobsStorage.InsertAsync(job);
-        job.Id = id;
-        return job.Id;
     }
 
     public void EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand
     {
-        var job = new JobModel
-        {
-            JobName = TCommand.GetJobName(),
-            JobParam = _serializer.SerializeJobParam(command),
-        };
-        Enqueue(job);
+        var job = _jobFactory.Create(command);
+        _jobsStorage.Insert(job);
+    }
+
+    public void EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
+    {
+        var job = _jobFactory.Create(command, startTime);
+        _jobsStorage.Insert(job);
     }
 
     public Task EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand
     {
-        var job = new JobModel
-        {
-            JobName = TCommand.GetJobName(),
-            JobParam = _serializer.SerializeJobParam(command),
-        };
-        return EnqueueAsync(job);
+        var job = _jobFactory.Create(command);
+        return _jobsStorage.InsertAsync(job);
+    }
+
+    public Task EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
+    {
+        var job = _jobFactory.Create(command, startTime);
+        return _jobsStorage.InsertAsync(job);
     }
 }

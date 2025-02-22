@@ -5,7 +5,7 @@ namespace Jobby.Postgres.Helpers;
 
 internal static class DataReaderExtensions
 {
-    public static async Task<JobModel?> GetJobAsync(this DbDataReader reader)
+    public static async Task<Job?> GetJobAsync(this DbDataReader reader)
     {
         if (!reader.HasRows)
         {
@@ -18,7 +18,7 @@ internal static class DataReaderExtensions
             return null;
         }
 
-        var job = new JobModel
+        var job = new Job
         {
             Id = reader.GetInt64(reader.GetOrdinal("id")),
             JobName = reader.GetString(reader.GetOrdinal("job_name")),

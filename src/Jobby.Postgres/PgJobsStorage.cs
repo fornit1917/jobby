@@ -14,21 +14,21 @@ public class PgJobsStorage : IJobsStorage
         _dataSource = dataSource;
     }
 
-    public async Task<long> InsertAsync(JobModel job)
+    public async Task<long> InsertAsync(Job job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         var id = await InsertJobCommand.ExecuteAndGetIdAsync(conn, job);
         return id;
     }
 
-    public long Insert(JobModel job)
+    public long Insert(Job job)
     {
         using var conn = _dataSource.OpenConnection();
         var id = InsertJobCommand.ExecuteAndGetId(conn, job);
         return id;
     }
 
-    public async Task<JobModel?> TakeToProcessingAsync()
+    public async Task<Job?> TakeToProcessingAsync()
     {
         // todo: maybe it will be better to return some other model from this method
         var now = DateTime.UtcNow;
@@ -37,7 +37,7 @@ public class PgJobsStorage : IJobsStorage
         return job;
     }
 
-    public async Task TakeBatchToProcessingAsync(int maxBatchSize, List<JobModel> result)
+    public async Task TakeBatchToProcessingAsync(int maxBatchSize, List<Job> result)
     {
         // todo: maybe it will be better to return some other model from this method
         var now = DateTime.UtcNow;

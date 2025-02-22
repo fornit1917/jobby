@@ -6,7 +6,7 @@ namespace Jobby.Core.Services;
 
 public class JobsRegistryBuilder : IJobsRegistryBuilder
 {
-    private readonly Dictionary<string, JobExecutionMetadata> _cmdExecMetadataByJobName = new();
+    private readonly Dictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName = new();
     private readonly Dictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName = new();
 
     public IJobsRegistryBuilder AddJob<TCommand, THandler>()
@@ -22,7 +22,7 @@ public class JobsRegistryBuilder : IJobsRegistryBuilder
             throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
         }
 
-        var execMetadata = new JobExecutionMetadata
+        var execMetadata = new CommandExecutionMetadata
         {
             CommandType = typeof(TCommand),
             HandlerType = handlerType,

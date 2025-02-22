@@ -2,7 +2,7 @@
 
 namespace Jobby.Core.Models;
 
-public class JobExecutionMetadata
+public class CommandExecutionMetadata
 {
     public required Type CommandType { get; init; }
     public required Type HandlerType { get; init; }

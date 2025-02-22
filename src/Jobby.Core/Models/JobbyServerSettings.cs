@@ -1,6 +1,6 @@
 ﻿namespace Jobby.Core.Models;
 
-public class JobbySettings
+public class JobbyServerSettings
 {
     public int PollingIntervalMs { get; set; } = 1000;
     public int DbErrorPauseMs { get; set; } = 5000;

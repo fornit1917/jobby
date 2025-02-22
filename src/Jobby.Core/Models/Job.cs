@@ -1,6 +1,6 @@
 ﻿namespace Jobby.Core.Models;
 
-public class JobModel
+public class Job
 {
     public long Id { get; set; }
 

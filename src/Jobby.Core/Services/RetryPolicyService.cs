@@ -21,7 +21,7 @@ public class RetryPolicyService : IRetryPolicyService
     }
 
 
-    public RetryPolicy GetRetryPolicy(JobModel job)
+    public RetryPolicy GetRetryPolicy(Job job)
     {
         RetryPolicy? retryPolicy = null;
 

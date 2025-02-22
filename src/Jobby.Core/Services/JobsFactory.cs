@@ -3,18 +3,18 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
 
-public class JobFactory : IJobFactory
+public class JobsFactory : IJobsFactory
 {
     private readonly IJobParamSerializer _serializer;
 
-    public JobFactory(IJobParamSerializer serializer)
+    public JobsFactory(IJobParamSerializer serializer)
     {
         _serializer = serializer;
     }
 
-    public JobModel Create<TCommand>(TCommand command) where TCommand : IJobCommand
+    public Job Create<TCommand>(TCommand command) where TCommand : IJobCommand
     {
-        return new JobModel
+        return new Job
         {
             CreatedAt = DateTime.UtcNow,
             JobName = TCommand.GetJobName(),
@@ -24,9 +24,9 @@ public class JobFactory : IJobFactory
         };
     }
 
-    public JobModel Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
+    public Job Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
-        return new JobModel
+        return new Job
         {
             CreatedAt = DateTime.UtcNow,
             JobName = TCommand.GetJobName(),

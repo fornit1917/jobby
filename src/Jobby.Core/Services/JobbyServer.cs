@@ -5,7 +5,7 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
 
-public class JobsServer : IJobsServer
+public class JobbyServer : IJobbyServer
 {
     private readonly IJobsStorage _storage;
     private readonly IJobExecutionScopeFactory _scopeFactory;
@@ -13,18 +13,18 @@ public class JobsServer : IJobsServer
     private readonly IJobsRegistry _jobsRegistry;
     private readonly IJobParamSerializer _serializer;
 
-    private readonly JobbySettings _settings;
+    private readonly JobbyServerSettings _settings;
 
     private readonly SemaphoreSlim _semaphore;
 
     private bool _running;
 
-    public JobsServer(IJobsStorage storage,
+    public JobbyServer(IJobsStorage storage,
         IJobExecutionScopeFactory scopeFactory,
         IRetryPolicyService retryPolicyService,
         IJobsRegistry jobsRegistry,
         IJobParamSerializer serializer,
-        JobbySettings settings)
+        JobbyServerSettings settings)
     {
         _storage = storage;
         _scopeFactory = scopeFactory;
@@ -57,7 +57,7 @@ public class JobsServer : IJobsServer
     {
         while (_running)
         {
-            JobModel? job = null;
+            Job? job = null;
             await _semaphore.WaitAsync();
             try
             {
@@ -88,7 +88,7 @@ public class JobsServer : IJobsServer
 
     private async Task PollByBatches()
     {
-        var jobs = new List<JobModel>(capacity: _settings.MaxDegreeOfParallelism);
+        var jobs = new List<Job>(capacity: _settings.MaxDegreeOfParallelism);
         while (_running)
         {
             await _semaphore.WaitAsync();
@@ -127,12 +127,12 @@ public class JobsServer : IJobsServer
         }
     }
 
-    private void StartProcessing(JobModel job)
+    private void StartProcessing(Job job)
     {
         Task.Run(() => Process(job));
     }
 
-    private void StartProcessing(IReadOnlyList<JobModel> jobs)
+    private void StartProcessing(IReadOnlyList<Job> jobs)
     {
         for (int i = 0; i < jobs.Count; i++)
         {
@@ -140,7 +140,7 @@ public class JobsServer : IJobsServer
         }
     }
 
-    private async Task Process(JobModel job)
+    private async Task Process(Job job)
     {
         try
         {
@@ -159,7 +159,7 @@ public class JobsServer : IJobsServer
         }
     }
 
-    private async Task ProcessCommand(JobModel job)
+    private async Task ProcessCommand(Job job)
     {
         using var scope = _scopeFactory.CreateJobExecutionScope();
         var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
@@ -184,7 +184,7 @@ public class JobsServer : IJobsServer
                 throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
             }
 
-            var ctx = new JobExecutionContext
+            var ctx = new CommandExecutionContext
             {
                 JobName = job.JobName,
                 StartedCount = job.StartedCount,
@@ -221,7 +221,7 @@ public class JobsServer : IJobsServer
         // todo: retry status update queue
     }
 
-    private async Task ProcessRecurrent(JobModel job)
+    private async Task ProcessRecurrent(Job job)
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
 

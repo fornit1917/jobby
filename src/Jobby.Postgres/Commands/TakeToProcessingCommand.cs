@@ -25,7 +25,7 @@ internal static class TakeToProcessingCommand
         RETURNING *;
     ";
 
-    public static async Task<JobModel?> ExecuteAsync(NpgsqlConnection conn, DateTime now)
+    public static async Task<Job?> ExecuteAsync(NpgsqlConnection conn, DateTime now)
     {
         await using var cmd = new NpgsqlCommand(CommandText, conn)
         {

@@ -37,9 +37,9 @@ public class RecurrentJobsClient : IRecurrentJobsClient
         return _storage.InsertAsync(job);
     }
 
-    private JobModel CreateRecurrentJob(string jobName, string cron)
+    private Job CreateRecurrentJob(string jobName, string cron)
     {
-        return new JobModel
+        return new Job
         {
             JobName = jobName,
             Cron = cron,

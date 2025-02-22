@@ -16,11 +16,11 @@ internal class Program
 
         var jsonOptions = new JsonSerializerOptions();
         var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
-
-        var pgJobsStorage = new PgJobsStorage(dataSource);
-        var jobsClient = new JobsClient(pgJobsStorage, serializer);
-        var recurrentJobsClient = new RecurrentJobsClient(pgJobsStorage);
-        var jobbySettings = new JobbySettings
+        var jobsStorage = new PgJobsStorage(dataSource);
+        var jobsFactory = new JobsFactory(serializer);
+        var jobsClient = new JobsClient(jobsFactory, jobsStorage);
+        var recurrentJobsClient = new RecurrentJobsClient(jobsStorage);
+        var jobbySettings = new JobbyServerSettings
         {
             PollingIntervalMs = 1000,
             DbErrorPauseMs = 5000,
@@ -41,7 +41,7 @@ internal class Program
             .AddRecurrentJob<TestRecurrentJobHandler>()
             .Build();
 
-        var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
+        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
 
         Console.WriteLine("1. Demo success jobs");
         Console.WriteLine("2. Demo failed job");
@@ -62,13 +62,13 @@ internal class Program
                 break;
         }
 
-        jobsServer.StartBackgroundService();
+        jobbyServer.StartBackgroundService();
 
         Console.ReadLine();
-        jobsServer.SendStopSignal();
+        jobbyServer.SendStopSignal();
     }
 
-    private static void CreateSuccess(IJobsMediator jobsMediator, int count)
+    private static void CreateSuccess(IJobsClient client, int count)
     {
         for (int i = 1; i <= count; i++)
         {
@@ -78,11 +78,11 @@ internal class Program
                 ShouldBeFailed = false,
                 Name = "SomeValue"
             };
-            jobsMediator.EnqueueCommand(jobParam);
+            client.EnqueueCommand(jobParam);
         }
     }
 
-    private static void CreateFailed(IJobsMediator jobsMediator)
+    private static void CreateFailed(IJobsClient client)
     {
         var jobParam = new TestJobParam
         {
@@ -90,7 +90,7 @@ internal class Program
             ShouldBeFailed = true,
             Name = "SomeValue"
         };
-        jobsMediator.EnqueueCommand(jobParam);
+        client.EnqueueCommand(jobParam);
     }
 
     private static void CreateRecurrent(IRecurrentJobsClient recurrentJobsClient)
@@ -137,7 +137,7 @@ internal class Program
 
     private class TestJobHandler : IJobCommandHandler<TestJobParam>
     {
-        public Task ExecuteAsync(TestJobParam command, JobExecutionContext ctx)
+        public Task ExecuteAsync(TestJobParam command, CommandExecutionContext ctx)
         {
             if (command.ShouldBeFailed)
             {

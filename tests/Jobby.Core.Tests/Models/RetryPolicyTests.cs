@@ -13,7 +13,7 @@ public class RetryPolicyTests
             IntervalsSeconds = [10, 20]
         };
 
-        var job = new JobModel();
+        var job = new Job();
 
         job.StartedCount = 1;
         Assert.False(retryPolicy.IsLastAttempt(job));
@@ -37,7 +37,7 @@ public class RetryPolicyTests
             IntervalsSeconds = [10, 20]
         };
 
-        var job = new JobModel();
+        var job = new Job();
 
         job.StartedCount = 1;
         var interval1 = retryPolicy.GetIntervalForNextAttempt(job);

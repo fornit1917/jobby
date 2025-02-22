@@ -4,5 +4,5 @@ namespace Jobby.Core.Interfaces;
 
 public interface IRetryPolicyService
 {
-    RetryPolicy GetRetryPolicy(JobModel job);
+    RetryPolicy GetRetryPolicy(Job job);
 }

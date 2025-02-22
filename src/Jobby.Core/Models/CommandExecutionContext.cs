@@ -1,6 +1,6 @@
 ﻿namespace Jobby.Core.Models;
 
-public class JobExecutionContext
+public class CommandExecutionContext
 {
     public required string JobName { get; init; }
     public required int StartedCount { get; init; }

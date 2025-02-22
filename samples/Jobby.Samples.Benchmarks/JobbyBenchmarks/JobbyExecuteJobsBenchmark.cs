@@ -18,7 +18,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 
         var dataSource = DataSourceFactory.Create();
         var jobsStorage = new PgJobsStorage(dataSource);
-        var jobbySettings = new JobbySettings
+        var serverSettings = new JobbyServerSettings
         {
             MaxDegreeOfParallelism = 10,
             PollingIntervalMs = 1000,
@@ -31,8 +31,9 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         var jobsRegistry = new JobsRegistryBuilder()
             .AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>()
             .Build();
-        var jobsServer = new JobsServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
-        var jobsClient = new JobsClient(jobsStorage, serializer);
+        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, serverSettings);
+        var jobsFactory = new JobsFactory(serializer);
+        var jobsClient = new JobsClient(jobsFactory, jobsStorage);
 
         Console.WriteLine("Clear jobs database");
         JobbyHelper.RemoveAllJobs(dataSource);
@@ -52,7 +53,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         Console.WriteLine("Start jobby server");
         
         Stopwatch stopwatch = Stopwatch.StartNew();
-        jobsServer.StartBackgroundService();
+        jobbyServer.StartBackgroundService();
         var hasNotCompletedJobs = true;
         while (hasNotCompletedJobs)
         {

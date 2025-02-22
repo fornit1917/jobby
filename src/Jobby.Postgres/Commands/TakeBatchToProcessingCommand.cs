@@ -25,7 +25,7 @@ internal static class TakeBatchToProcessingCommand
         RETURNING *;
     ";
 
-    public static async Task ExecuteAndWriteToListAsync(NpgsqlConnection conn, DateTime now, int maxBatchSize, List<JobModel> result)
+    public static async Task ExecuteAndWriteToListAsync(NpgsqlConnection conn, DateTime now, int maxBatchSize, List<Job> result)
     {
         result.Clear();
 

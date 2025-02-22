@@ -21,7 +21,7 @@ public class JobbyCreateJobsBenchmark : IBenchmark
 [MemoryDiagnoser]
 public class JobbyCreateJobsBenchmarkAction
 {
-    private readonly IJobsMediator _jobsClient;
+    private readonly IJobsClient _jobsClient;
 
     public JobbyCreateJobsBenchmarkAction()
     {
@@ -29,7 +29,8 @@ public class JobbyCreateJobsBenchmarkAction
         var jobsStorage = new PgJobsStorage(dataSource);
         var jsonOptions = new JsonSerializerOptions();
         var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
-        _jobsClient = new JobsClient(jobsStorage, serializer);
+        var jobsFactory = new JobsFactory(serializer);
+        _jobsClient = new JobsClient(jobsFactory, jobsStorage);
     }
 
     [Benchmark]

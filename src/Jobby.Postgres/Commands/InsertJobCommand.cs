@@ -33,7 +33,7 @@ internal static class InsertJobCommand
         RETURNING id;
     ";
 
-    private static NpgsqlCommand CreateCommand(NpgsqlConnection conn, JobModel job)
+    private static NpgsqlCommand CreateCommand(NpgsqlConnection conn, Job job)
     {
         return new NpgsqlCommand(CommandText, conn)
         {
@@ -51,14 +51,14 @@ internal static class InsertJobCommand
         };
     }
 
-    public static async Task<long> ExecuteAndGetIdAsync(NpgsqlConnection conn, JobModel job)
+    public static async Task<long> ExecuteAndGetIdAsync(NpgsqlConnection conn, Job job)
     {
         await using var cmd = CreateCommand(conn, job);
         object? id = await cmd.ExecuteScalarAsync();
         return id != null ? (long)id : 0;
     }
 
-    public static long ExecuteAndGetId(NpgsqlConnection conn, JobModel job)
+    public static long ExecuteAndGetId(NpgsqlConnection conn, Job job)
     {
         using var cmd = CreateCommand(conn, job);
         object? id = cmd.ExecuteScalar();
