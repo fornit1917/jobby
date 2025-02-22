@@ -1,4 +1,5 @@
 ﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 
@@ -143,66 +144,128 @@ public class JobsServer : IJobsServer
     {
         try
         {
-            using var scope = _scopeFactory.CreateJobExecutionScope();
-            var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
-            var completed = false;
-            try
+            if (job.IsRecurrent)
             {
-                var execMetadata = _jobsRegistry.GetJobExecutionMetadata(job.JobName);
-                if (execMetadata == null)
-                {
-                    throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
-                }
-
-                var handlerInstance = scope.GetService(execMetadata.HandlerType);
-                if (handlerInstance == null)
-                {
-                    throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
-                }
-
-                var command = _serializer.DeserializeJobParam(job.JobParam, execMetadata.CommandType);
-                if (command == null)
-                {
-                    throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
-                }
-
-                var ctx = new JobExecutionContext
-                {
-                    JobName = job.JobName,
-                    StartedCount = job.StartedCount,
-                    IsLastAttempt = retryPolicy.IsLastAttempt(job)
-                };
-                var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
-                if (result is Task)
-                {
-                    await (Task)result;
-                }
-
-                completed = true;
+                await ProcessRecurrent(job);
             }
-            catch (Exception ex)
+            else
             {
-                TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
-
-                if (retryInterval.HasValue)
-                {
-                    var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-                    await _storage.RescheduleAsync(job.Id, sheduledStartTime);
-                }
-                else
-                {
-                    await _storage.MarkFailedAsync(job.Id);
-                }
-            }
-
-            if (completed)
-            {
-                await _storage.MarkCompletedAsync(job.Id);
+                await ProcessCommand(job);
             }
         }
         finally
         {
             _semaphore.Release();
+        }
+    }
+
+    private async Task ProcessCommand(JobModel job)
+    {
+        using var scope = _scopeFactory.CreateJobExecutionScope();
+        var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
+        var completed = false;
+        try
+        {
+            var execMetadata = _jobsRegistry.GetJobExecutionMetadata(job.JobName);
+            if (execMetadata == null)
+            {
+                throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
+            }
+
+            var handlerInstance = scope.GetService(execMetadata.HandlerType);
+            if (handlerInstance == null)
+            {
+                throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
+            }
+
+            var command = _serializer.DeserializeJobParam(job.JobParam, execMetadata.CommandType);
+            if (command == null)
+            {
+                throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
+            }
+
+            var ctx = new JobExecutionContext
+            {
+                JobName = job.JobName,
+                StartedCount = job.StartedCount,
+                IsLastAttempt = retryPolicy.IsLastAttempt(job)
+            };
+            var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
+            if (result is Task)
+            {
+                await (Task)result;
+            }
+
+            completed = true;
+        }
+        catch (Exception ex)
+        {
+            TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
+
+            if (retryInterval.HasValue)
+            {
+                var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
+                await _storage.RescheduleAsync(job.Id, sheduledStartTime);
+            }
+            else
+            {
+                await _storage.MarkFailedAsync(job.Id);
+            }
+        }
+
+        if (completed)
+        {
+            await _storage.MarkCompletedAsync(job.Id);
+        }
+
+        // todo: retry status update queue
+    }
+
+    private async Task ProcessRecurrent(JobModel job)
+    {
+        ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
+
+        using var scope = _scopeFactory.CreateJobExecutionScope();
+        try
+        {
+            var execMetadata = _jobsRegistry.GetRecurrentJobExecutionMetadata(job.JobName);
+            if (execMetadata == null)
+            {
+                throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
+            }
+
+            var handlerInstance = scope.GetService(execMetadata.HandlerType);
+            if (handlerInstance == null)
+            {
+                throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
+            }
+
+            var ctx = new RecurrentJobExecutionContext
+            {
+                JobName = job.JobName
+            };
+            var result = execMetadata.ExecMethod.Invoke(handlerInstance, [ctx]);
+            if (result is Task)
+            {
+                await (Task)result;
+            }
+        }
+        catch (Exception ex)
+        {
+            // todo: log error
+        }
+        finally
+        {
+            var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
+            try
+            {
+                await _storage.RescheduleAsync(job.Id, nextStartAt);
+            }
+            catch (Exception ex) 
+            {
+                // todo: log error
+                // todo: retry status update queue
+            }
         }
     }
 }

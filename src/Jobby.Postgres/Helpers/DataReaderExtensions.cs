@@ -29,7 +29,6 @@ internal static class DataReaderExtensions
             LastStartedAt = reader.GetNullableDatetime("last_started_at"),
             LastFinishedAt = reader.GetNullableDatetime("last_finished_at"),
             StartedCount = reader.GetInt32(reader.GetOrdinal("started_count")),
-            RecurrentJobKey = reader.GetNullableString("recurrent_job_key"),
             Cron = reader.GetNullableString("cron")
         };
         return job;

@@ -19,6 +19,7 @@ internal class Program
 
         var pgJobsStorage = new PgJobsStorage(dataSource);
         var jobsClient = new JobsClient(pgJobsStorage, serializer);
+        var recurrentJobsClient = new RecurrentJobsClient(pgJobsStorage);
         var jobbySettings = new JobbySettings
         {
             PollingIntervalMs = 1000,
@@ -37,25 +38,64 @@ internal class Program
         
         var jobsRegistry = new JobsRegistryBuilder()
             .AddJob<TestJobParam, TestJobHandler>()
+            .AddRecurrentJob<TestRecurrentJobHandler>()
             .Build();
 
         var jobsServer = new JobsServer(pgJobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
 
-        for (int i = 1; i <= 1; i++)
+        Console.WriteLine("1. Demo success jobs");
+        Console.WriteLine("2. Demo failed job");
+        Console.WriteLine("3. Demo recurrent job");
+
+        string action = Console.ReadLine();
+
+        switch (action)
         {
-            var jobParam = new TestJobParam 
-            { 
-                Id = i, 
-                ShouldBeFailed = true,
-                Name = "SomeValue" 
-            };
-            await jobsClient.EnqueueCommandAsync(jobParam);
+            case "1":
+                CreateSuccess(jobsClient, 5);
+                break;
+            case "2":
+                CreateFailed(jobsClient);
+                break;
+            case "3":
+                CreateRecurrent(recurrentJobsClient);
+                break;
         }
 
         jobsServer.StartBackgroundService();
 
         Console.ReadLine();
         jobsServer.SendStopSignal();
+    }
+
+    private static void CreateSuccess(IJobsMediator jobsMediator, int count)
+    {
+        for (int i = 1; i <= count; i++)
+        {
+            var jobParam = new TestJobParam
+            {
+                Id = i,
+                ShouldBeFailed = false,
+                Name = "SomeValue"
+            };
+            jobsMediator.EnqueueCommand(jobParam);
+        }
+    }
+
+    private static void CreateFailed(IJobsMediator jobsMediator)
+    {
+        var jobParam = new TestJobParam
+        {
+            Id = 500,
+            ShouldBeFailed = true,
+            Name = "SomeValue"
+        };
+        jobsMediator.EnqueueCommand(jobParam);
+    }
+
+    private static void CreateRecurrent(IRecurrentJobsClient recurrentJobsClient)
+    {
+        recurrentJobsClient.ScheduleRecurrent<TestRecurrentJobHandler>("*/3 * * * * *");
     }
 
     private class TestJobExecutionScope : IJobExecutionScope
@@ -69,6 +109,10 @@ internal class Program
             if (type == typeof(IJobCommandHandler<TestJobParam>))
             {
                 return new TestJobHandler();
+            }
+            if (type == typeof(TestRecurrentJobHandler))
+            {
+                return new TestRecurrentJobHandler();
             }
             return null;
         }
@@ -102,6 +146,20 @@ internal class Program
             }
 
             Console.WriteLine($"Executed, Id = {command.Id}");
+            return Task.CompletedTask;
+        }
+    }
+
+    private class TestRecurrentJobHandler : IRecurrentJobHandler
+    {
+        public static string GetRecurrentJobName()
+        {
+            return "TestRecurrentJob";
+        }
+
+        public Task ExecuteAsync(RecurrentJobExecutionContext ctx)
+        {
+            Console.WriteLine($"Recurrent Job {ctx.JobName}, {DateTime.Now}");
             return Task.CompletedTask;
         }
     }

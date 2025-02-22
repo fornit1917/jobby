@@ -6,16 +6,25 @@ namespace Jobby.Core.Services;
 
 internal class JobsRegistry : IJobsRegistry
 {
-    private readonly FrozenDictionary<string, JobExecutionMetadata> _execMetadataByJobName;
+    private readonly FrozenDictionary<string, JobExecutionMetadata> _cmdExecMetadataByJobName;
+    private readonly FrozenDictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName;
 
-    public JobsRegistry(FrozenDictionary<string, JobExecutionMetadata> execMetadataByJobName)
+    public JobsRegistry(FrozenDictionary<string, JobExecutionMetadata> execMetadataByJobName, 
+        FrozenDictionary<string, RecurrentJobExecutionMetadata> recurrentExecMetadataByJobName)
     {
-        _execMetadataByJobName = execMetadataByJobName;
+        _cmdExecMetadataByJobName = execMetadataByJobName;
+        _recurrentExecMetadataByJobName = recurrentExecMetadataByJobName;
     }
 
     public JobExecutionMetadata? GetJobExecutionMetadata(string jobName)
     {
-        _execMetadataByJobName.TryGetValue(jobName, out JobExecutionMetadata? jobExecutionMetadata);
+        _cmdExecMetadataByJobName.TryGetValue(jobName, out JobExecutionMetadata? jobExecutionMetadata);
         return jobExecutionMetadata;
+    }
+
+    public RecurrentJobExecutionMetadata? GetRecurrentJobExecutionMetadata(string jobName)
+    {
+        _recurrentExecMetadataByJobName.TryGetValue(jobName, out var recurrentJobExecutionMetadata);
+        return recurrentJobExecutionMetadata;
     }
 }

@@ -6,5 +6,7 @@ public interface IJobsRegistryBuilder
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>;
 
+    IJobsRegistryBuilder AddRecurrentJob<THandler>() where THandler : IRecurrentJobHandler;
+
     IJobsRegistry Build();
 }

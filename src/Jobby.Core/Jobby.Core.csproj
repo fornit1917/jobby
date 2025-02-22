@@ -4,4 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="Cronos" Version="0.9.0" />
+    </ItemGroup>
 </Project>

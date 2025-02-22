@@ -6,7 +6,8 @@ namespace Jobby.Core.Services;
 
 public class JobsRegistryBuilder : IJobsRegistryBuilder
 {
-    private readonly Dictionary<string, JobExecutionMetadata> _execMetadataByJobName = new Dictionary<string, JobExecutionMetadata>();
+    private readonly Dictionary<string, JobExecutionMetadata> _cmdExecMetadataByJobName = new();
+    private readonly Dictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName = new();
 
     public IJobsRegistryBuilder AddJob<TCommand, THandler>()
         where TCommand : IJobCommand
@@ -28,13 +29,36 @@ public class JobsRegistryBuilder : IJobsRegistryBuilder
             ExecMethod = execMethod
         };
 
-        _execMetadataByJobName[jobName] = execMetadata;
+        _cmdExecMetadataByJobName[jobName] = execMetadata;
+
+        return this;
+    }
+
+    public IJobsRegistryBuilder AddRecurrentJob<THandler>() where THandler : IRecurrentJobHandler
+    {
+        var jobName = THandler.GetRecurrentJobName();
+        var handlerType = typeof(THandler);
+        // todo: use more strict search criteria for the method ExecuteAsync
+        var execMethod = handlerType.GetMethod("ExecuteAsync");
+        if (execMethod == null)
+        {
+            throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
+        }
+
+        var execMetadata = new RecurrentJobExecutionMetadata
+        {
+            HandlerType = handlerType,
+            ExecMethod = execMethod
+        };
+
+        _recurrentExecMetadataByJobName[jobName] = execMetadata;
 
         return this;
     }
 
     public IJobsRegistry Build()
     {
-        return new JobsRegistry(_execMetadataByJobName.ToFrozenDictionary());
+        return new JobsRegistry(_cmdExecMetadataByJobName.ToFrozenDictionary(),
+            _recurrentExecMetadataByJobName.ToFrozenDictionary());
     }
 }

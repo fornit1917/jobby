@@ -14,7 +14,6 @@ internal static class InsertJobCommand
             scheduled_start_at,
             last_started_at,
             last_finished_at,
-            recurrent_job_key,
             cron
         )
         VALUES (
@@ -25,9 +24,12 @@ internal static class InsertJobCommand
             @scheduled_start_at,
             @last_started_at,
             @last_finished_at,
-            @recurrent_job_key,
             @cron
         )
+        ON CONFLICT (job_name) WHERE cron IS NOT null DO 
+        UPDATE SET
+	        cron = @cron,
+	        scheduled_start_at = @scheduled_start_at
         RETURNING id;
     ";
 
@@ -44,7 +46,6 @@ internal static class InsertJobCommand
                 new("scheduled_start_at", job.ScheduledStartAt),
                 new("last_started_at", (object?)job.LastStartedAt ?? DBNull.Value),
                 new("last_finished_at", (object?)job.LastFinishedAt ?? DBNull.Value),
-                new("recurrent_job_key", (object?)job.RecurrentJobKey ?? DBNull.Value),
                 new("cron", (object?)job.Cron ?? DBNull.Value),
             }
         };
