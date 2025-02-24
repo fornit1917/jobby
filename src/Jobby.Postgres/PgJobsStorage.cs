@@ -68,4 +68,10 @@ public class PgJobsStorage : IJobsStorage
         await using var conn = await _dataSource.OpenConnectionAsync();
         await UpdateStatusCommand.ExecuteAsync(conn, jobId, newStatus);
     }
+
+    public async Task DeleteAsync(long jobId)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await DeleteJobCommand.ExecuteAsync(conn, jobId);
+    }
 }

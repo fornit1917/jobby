@@ -11,4 +11,5 @@ public interface IJobsStorage
     Task MarkCompletedAsync(long jobId);
     Task MarkFailedAsync(long jobId);
     Task RescheduleAsync(long jobId, DateTime sheduledStartTime);
+    Task DeleteAsync(long jobId);
 }

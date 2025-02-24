@@ -200,25 +200,48 @@ public class JobbyServer : IJobbyServer
         }
         catch (Exception ex)
         {
+            // Console.WriteLine(ex.ToString());
+
             TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
 
-            if (retryInterval.HasValue)
+            try
             {
-                var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-                await _storage.RescheduleAsync(job.Id, sheduledStartTime);
+                if (retryInterval.HasValue)
+                {
+                    var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
+                    await _storage.RescheduleAsync(job.Id, sheduledStartTime);
+                }
+                else
+                {
+                    await _storage.MarkFailedAsync(job.Id);
+                }
             }
-            else
+            catch
             {
-                await _storage.MarkFailedAsync(job.Id);
+                // todo: retry status update queue
             }
         }
 
         if (completed)
         {
-            await _storage.MarkCompletedAsync(job.Id);
+            try
+            {
+                if (_settings.DeleteCompleted)
+                {
+                    await _storage.DeleteAsync(job.Id);
+                }
+                else
+                {
+                    await _storage.MarkCompletedAsync(job.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Console.WriteLine(ex.ToString());
+                // todo: retry status update queue
+            }
         }
 
-        // todo: retry status update queue
     }
 
     private async Task ProcessRecurrent(Job job)
