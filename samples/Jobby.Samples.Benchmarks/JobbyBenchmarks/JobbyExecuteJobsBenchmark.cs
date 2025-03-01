@@ -2,6 +2,7 @@ using BenchmarkDotNet.Attributes;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Jobby.Postgres;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -16,6 +17,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
     {
         var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
 
+        var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
         var dataSource = DataSourceFactory.Create();
         var jobsStorage = new PgJobsStorage(dataSource);
         var serverSettings = new JobbyServerSettings
@@ -31,7 +33,8 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
         var jobsRegistry = new JobsRegistryBuilder()
             .AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>()
             .Build();
-        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, serverSettings);
+        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, 
+            loggerFactory.CreateLogger<JobbyServer>(), serverSettings);
         var jobsFactory = new JobsFactory(serializer);
         var jobsClient = new JobsClient(jobsFactory, jobsStorage);
 

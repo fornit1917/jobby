@@ -2,6 +2,7 @@
 using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Jobby.Core.Services;
 
@@ -12,6 +13,7 @@ public class JobbyServer : IJobbyServer
     private readonly IRetryPolicyService _retryPolicyService;
     private readonly IJobsRegistry _jobsRegistry;
     private readonly IJobParamSerializer _serializer;
+    private readonly ILogger<JobbyServer> _logger;
 
     private readonly JobbyServerSettings _settings;
 
@@ -24,6 +26,7 @@ public class JobbyServer : IJobbyServer
         IRetryPolicyService retryPolicyService,
         IJobsRegistry jobsRegistry,
         IJobParamSerializer serializer,
+        ILogger<JobbyServer> logger,
         JobbyServerSettings settings)
     {
         _storage = storage;
@@ -32,6 +35,7 @@ public class JobbyServer : IJobbyServer
         _retryPolicyService = retryPolicyService;
         _jobsRegistry = jobsRegistry;
         _serializer = serializer;
+        _logger = logger;
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
     }
 
@@ -63,10 +67,10 @@ public class JobbyServer : IJobbyServer
             {
                 job = await _storage.TakeToProcessingAsync();
             }
-            catch
+            catch (Exception ex)
             {
                 _semaphore.Release();
-                // todo: log error
+                _logger.LogError(ex, "Error receiveng next jobs from queue");
                 await Task.Delay(_settings.DbErrorPauseMs);
                 continue;
             }
@@ -101,7 +105,7 @@ public class JobbyServer : IJobbyServer
             catch (Exception ex)
             {
                 _semaphore.Release();
-                // todo: log error
+                _logger.LogError(ex, "Error receiveng next jobs from queue");
                 await Task.Delay(_settings.DbErrorPauseMs);
                 continue;
             }
@@ -200,7 +204,7 @@ public class JobbyServer : IJobbyServer
         }
         catch (Exception ex)
         {
-            // Console.WriteLine(ex.ToString());
+            _logger.LogError(ex, $"Error executing job, jobName = {job.JobName}, id = {job.Id}");
 
             TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
 
@@ -216,8 +220,10 @@ public class JobbyServer : IJobbyServer
                     await _storage.MarkFailedAsync(job.Id);
                 }
             }
-            catch
+            catch (Exception statusEx)
             {
+                _logger.LogError(statusEx,
+                    "Error while change status of failed job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
                 // todo: retry status update queue
             }
         }
@@ -237,7 +243,7 @@ public class JobbyServer : IJobbyServer
             }
             catch (Exception ex)
             {
-                // Console.WriteLine(ex.ToString());
+                _logger.LogError(ex, "Error completing executed job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
                 // todo: retry status update queue
             }
         }
@@ -275,7 +281,7 @@ public class JobbyServer : IJobbyServer
         }
         catch (Exception ex)
         {
-            // todo: log error
+            _logger.LogError(ex, $"Error executing recurrent job, jobName = {job.JobName}, id = {job.Id}");
         }
         finally
         {
@@ -286,7 +292,8 @@ public class JobbyServer : IJobbyServer
             }
             catch (Exception ex) 
             {
-                // todo: log error
+                _logger.LogError(ex,
+                    "Error while reschedule next run for recurrent job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
                 // todo: retry status update queue
             }
         }

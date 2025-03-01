@@ -2,6 +2,7 @@
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Jobby.Postgres;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Text.Json;
 
@@ -14,6 +15,7 @@ internal class Program
         var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
         using var dataSource = NpgsqlDataSource.Create(connectionString);
 
+        var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
         var jsonOptions = new JsonSerializerOptions();
         var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
         var jobsStorage = new PgJobsStorage(dataSource);
@@ -41,7 +43,8 @@ internal class Program
             .AddRecurrentJob<TestRecurrentJobHandler>()
             .Build();
 
-        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, jobbySettings);
+        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer,
+            loggerFactory.CreateLogger<JobbyServer>(), jobbySettings);
 
         Console.WriteLine("1. Demo success jobs");
         Console.WriteLine("2. Demo failed job");
