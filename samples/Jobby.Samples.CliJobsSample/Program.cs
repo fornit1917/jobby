@@ -1,7 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
-using Jobby.Postgres;
+using Jobby.Core.Services.Builders;
+using Jobby.Postgres.ConfigurationExtensions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Text.Json;
@@ -17,11 +17,6 @@ internal class Program
 
         var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
         var jsonOptions = new JsonSerializerOptions();
-        var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
-        var jobsStorage = new PgJobsStorage(dataSource);
-        var jobsFactory = new JobsFactory(serializer);
-        var jobsClient = new JobsClient(jobsFactory, jobsStorage);
-        var recurrentJobsClient = new RecurrentJobsClient(jobsStorage);
         var jobbySettings = new JobbyServerSettings
         {
             PollingIntervalMs = 1000,
@@ -30,21 +25,27 @@ internal class Program
             UseBatches = true,
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
-
         var defaultRetryPolicy = new RetryPolicy
         {
             MaxCount = 3,
             IntervalsSeconds = [1]
         };
-        var retryPolicyService = new RetryPolicyService(defaultRetryPolicy);
-        
-        var jobsRegistry = new JobsRegistryBuilder()
-            .AddCommand<TestJobParam, TestJobHandler>()
-            .AddRecurrentJob<TestRecurrentJobHandler>()
-            .Build();
 
-        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer,
-            loggerFactory.CreateLogger<JobbyServer>(), jobbySettings);
+        var builder = new JobbyServicesBuilder();
+        builder
+            .UsePostgresql(dataSource)
+            .UseServerSettings(jobbySettings)
+            .UseSystemTextJson(jsonOptions)
+            .UseExecutionScopeFactory(scopeFactory)
+            .UseRetryPolicy(x => x.UseByDefault(defaultRetryPolicy))
+            .UseJobs(x => x
+                .AddCommand<TestJobParam, TestJobHandler>()
+                .AddRecurrentJob<TestRecurrentJobHandler>())
+            .UseLoggerFactory(loggerFactory);
+
+        var jobbyServer = builder.CreateJobbyServer();
+        var jobsClient = builder.CreateJobsClient();
+        var recurrentJobsClient = builder.CreateRecurrentJobsClient();
 
         Console.WriteLine("1. Demo success jobs");
         Console.WriteLine("2. Demo failed job");

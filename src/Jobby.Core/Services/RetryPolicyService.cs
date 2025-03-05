@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using System.Collections.Frozen;
 
 namespace Jobby.Core.Services;
 
@@ -8,8 +9,7 @@ public class RetryPolicyService : IRetryPolicyService
     private readonly RetryPolicy _defaultRetryPolicy;
     private readonly IReadOnlyDictionary<string, RetryPolicy> _retryPoliciesByJobName;
 
-    public RetryPolicyService(RetryPolicy? defaultPolicy = null,
-        IReadOnlyDictionary<string, RetryPolicy>? retryPoliciesByJobName = null)
+    public RetryPolicyService(RetryPolicy defaultPolicy, IReadOnlyDictionary<string, RetryPolicy> retryPoliciesByJobName)
     {
         _defaultRetryPolicy = defaultPolicy ?? new RetryPolicy()
         {
@@ -17,7 +17,7 @@ public class RetryPolicyService : IRetryPolicyService
             IntervalsSeconds = [60, 120, 240, 480, 600]
         };
 
-        _retryPoliciesByJobName = retryPoliciesByJobName ?? new Dictionary<string, RetryPolicy>();
+        _retryPoliciesByJobName = retryPoliciesByJobName;
     }
 
 

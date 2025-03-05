@@ -6,11 +6,11 @@ namespace Jobby.Core.Services;
 
 internal class JobsRegistry : IJobsRegistry
 {
-    private readonly FrozenDictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName;
-    private readonly FrozenDictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName;
+    private readonly IReadOnlyDictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName;
+    private readonly IReadOnlyDictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName;
 
-    public JobsRegistry(FrozenDictionary<string, CommandExecutionMetadata> execMetadataByJobName, 
-        FrozenDictionary<string, RecurrentJobExecutionMetadata> recurrentExecMetadataByJobName)
+    public JobsRegistry(IReadOnlyDictionary<string, CommandExecutionMetadata> execMetadataByJobName,
+        IReadOnlyDictionary<string, RecurrentJobExecutionMetadata> recurrentExecMetadataByJobName)
     {
         _cmdExecMetadataByJobName = execMetadataByJobName;
         _recurrentExecMetadataByJobName = recurrentExecMetadataByJobName;

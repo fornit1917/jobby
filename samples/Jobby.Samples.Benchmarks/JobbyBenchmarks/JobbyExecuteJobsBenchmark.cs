@@ -1,10 +1,9 @@
 using BenchmarkDotNet.Attributes;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
-using Jobby.Postgres;
+using Jobby.Core.Services.Builders;
+using Jobby.Postgres.ConfigurationExtensions;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
-using System.Text.Json;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
@@ -19,24 +18,22 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 
         var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
         var dataSource = DataSourceFactory.Create();
-        var jobsStorage = new PgJobsStorage(dataSource);
         var serverSettings = new JobbyServerSettings
         {
             MaxDegreeOfParallelism = 10,
             PollingIntervalMs = 1000,
             UseBatches = true,
         };
-        var jsonOptions = new JsonSerializerOptions();
-        var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
         var scopeFactory = new JobbyTestExecutionScopeFactory();
-        var retryPolicyService = new RetryPolicyService();
-        var jobsRegistry = new JobsRegistryBuilder()
-            .AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>()
-            .Build();
-        var jobbyServer = new JobbyServer(jobsStorage, scopeFactory, retryPolicyService, jobsRegistry, serializer, 
-            loggerFactory.CreateLogger<JobbyServer>(), serverSettings);
-        var jobsFactory = new JobsFactory(serializer);
-        var jobsClient = new JobsClient(jobsFactory, jobsStorage);
+
+        var builder = new JobbyServicesBuilder();
+        builder
+            .UsePostgresql(dataSource)
+            .UseExecutionScopeFactory(scopeFactory)
+            .UseJobs(x => x.AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>());
+
+        var jobbyServer = builder.CreateJobbyServer();
+        var jobsClient = builder.CreateJobsClient();
 
         Console.WriteLine("Clear jobs database");
         JobbyHelper.RemoveAllJobs(dataSource);

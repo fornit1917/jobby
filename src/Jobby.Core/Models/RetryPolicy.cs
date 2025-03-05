@@ -2,6 +2,8 @@
 
 public class RetryPolicy
 {
+    public static readonly RetryPolicy NoRetry = new RetryPolicy { MaxCount = 0, IntervalsSeconds = [] };
+
     public int MaxCount { get; init; }
     public IReadOnlyList<int> IntervalsSeconds { get; init; } = Array.Empty<int>(); // todo: change to ms
 

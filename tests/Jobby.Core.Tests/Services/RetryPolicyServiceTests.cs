@@ -13,7 +13,7 @@ public class RetryPolicyServiceTests
             IntervalsSeconds = [10, 20],
             MaxCount = 4
         };
-        var policyService = new RetryPolicyService(defaultPolicy);
+        var policyService = new RetryPolicyService(defaultPolicy, new Dictionary<string, RetryPolicy>());
 
         var job = new Job { JobName = "Name" };
         var policy = policyService.GetRetryPolicy(job);

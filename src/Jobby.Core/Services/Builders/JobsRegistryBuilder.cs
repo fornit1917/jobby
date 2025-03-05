@@ -1,15 +1,17 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Builders;
 using Jobby.Core.Models;
 using System.Collections.Frozen;
+using System.Reflection;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.Builders;
 
-public class JobsRegistryBuilder : IJobsRegistryBuilder
+public class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBuilder
 {
     private readonly Dictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName = new();
     private readonly Dictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName = new();
 
-    public IJobsRegistryBuilder AddCommand<TCommand, THandler>()
+    public IJobsRegistryConfigurable AddCommand<TCommand, THandler>()
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>
     {
@@ -34,7 +36,7 @@ public class JobsRegistryBuilder : IJobsRegistryBuilder
         return this;
     }
 
-    public IJobsRegistryBuilder AddRecurrentJob<THandler>() where THandler : IRecurrentJobHandler
+    public IJobsRegistryConfigurable AddRecurrentJob<THandler>() where THandler : IRecurrentJobHandler
     {
         var jobName = THandler.GetRecurrentJobName();
         var handlerType = typeof(THandler);
@@ -54,6 +56,12 @@ public class JobsRegistryBuilder : IJobsRegistryBuilder
         _recurrentExecMetadataByJobName[jobName] = execMetadata;
 
         return this;
+    }
+
+    public IJobsRegistryConfigurable AddJobsFromAssemblies(params Assembly[] assemblies)
+    {
+        // todo: implement it
+        throw new NotImplementedException();
     }
 
     public IJobsRegistry Build()

@@ -1,9 +1,8 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using Jobby.Core.Interfaces;
-using Jobby.Core.Services;
-using Jobby.Postgres;
-using System.Text.Json;
+using Jobby.Core.Services.Builders;
+using Jobby.Postgres.ConfigurationExtensions;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
@@ -26,11 +25,9 @@ public class JobbyCreateJobsBenchmarkAction
     public JobbyCreateJobsBenchmarkAction()
     {
         var dataSource = DataSourceFactory.Create();
-        var jobsStorage = new PgJobsStorage(dataSource);
-        var jsonOptions = new JsonSerializerOptions();
-        var serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
-        var jobsFactory = new JobsFactory(serializer);
-        _jobsClient = new JobsClient(jobsFactory, jobsStorage);
+        var builder = new JobbyServicesBuilder();
+        builder.UsePostgresql(dataSource);
+        _jobsClient = builder.CreateJobsClient();
     }
 
     [Benchmark]
