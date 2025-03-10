@@ -5,11 +5,11 @@ namespace Jobby.Postgres.Commands;
 
 internal static class DeleteJobCommand
 {
-    private const string DeleteCommandText = @"DELETE FROM jobby_jobs WHERE id = @id";
+    private const string DeleteJobCommandText = @"DELETE FROM jobby_jobs WHERE id = @id";
 
     // todo: use batch command
     // todo: use positional params instead of named here and in other commands
-    private static readonly string DeleteAndScheduleNextCommandText = @$"
+    private static readonly string DeleteAndScheduleNextJobCommandText = @$"
         DELETE FROM jobby_jobs WHERE id = @id;
         UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = @next_job_id;
     ";
@@ -18,7 +18,7 @@ internal static class DeleteJobCommand
     {
         if (nextJobId == null)
         {
-            await using var cmd = new NpgsqlCommand(DeleteCommandText, conn)
+            await using var cmd = new NpgsqlCommand(DeleteJobCommandText, conn)
             {
                 Parameters =
                 {
@@ -29,7 +29,7 @@ internal static class DeleteJobCommand
         }
         else
         {
-            await using var cmd = new NpgsqlCommand(DeleteAndScheduleNextCommandText, conn)
+            await using var cmd = new NpgsqlCommand(DeleteAndScheduleNextJobCommandText, conn)
             {
                 Parameters =
                 {

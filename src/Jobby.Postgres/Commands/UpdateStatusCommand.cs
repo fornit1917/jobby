@@ -5,7 +5,7 @@ namespace Jobby.Postgres.Commands;
 
 internal static class UpdateStatusCommand
 {
-    private const string UpdateCommandText = @"
+    private const string UpdateStatusCommandText = @"
         UPDATE jobby_jobs
         SET
             status = @status,
@@ -13,7 +13,7 @@ internal static class UpdateStatusCommand
         WHERE id = @id;
     ";
 
-    private static readonly string UpdateAndScheduleNextCommandText = @$"
+    private static readonly string UpdateAndScheduleNextJobCommandText = @$"
         UPDATE jobby_jobs
         SET
             status = @status,
@@ -28,7 +28,7 @@ internal static class UpdateStatusCommand
         var finishedAt = DateTime.UtcNow;
         if (nextJobId == null)
         {
-            await using var cmd = new NpgsqlCommand(UpdateCommandText, conn)
+            await using var cmd = new NpgsqlCommand(UpdateStatusCommandText, conn)
             {
                 Parameters =
                 {
@@ -41,7 +41,7 @@ internal static class UpdateStatusCommand
         }
         else
         {
-            await using var cmd = new NpgsqlCommand(UpdateAndScheduleNextCommandText, conn)
+            await using var cmd = new NpgsqlCommand(UpdateAndScheduleNextJobCommandText, conn)
             {
                 Parameters =
                 {
