@@ -5,6 +5,8 @@ namespace Jobby.Postgres.Commands;
 
 internal static class InsertJobCommand
 {
+    // todo: remove parameters which are not actual for new jobs
+    // todo: remove returning id
     private const string CommandText = @"
         INSERT INTO jobby_jobs (
             id,
@@ -15,7 +17,8 @@ internal static class InsertJobCommand
             scheduled_start_at,
             last_started_at,
             last_finished_at,
-            cron
+            cron,
+            next_job_id
         )
         VALUES (
             @id,
@@ -26,7 +29,8 @@ internal static class InsertJobCommand
             @scheduled_start_at,
             @last_started_at,
             @last_finished_at,
-            @cron
+            @cron,
+            @next_job_id
         )
         ON CONFLICT (job_name) WHERE cron IS NOT null DO 
         UPDATE SET
@@ -50,6 +54,7 @@ internal static class InsertJobCommand
                 new("last_started_at", (object?)job.LastStartedAt ?? DBNull.Value),
                 new("last_finished_at", (object?)job.LastFinishedAt ?? DBNull.Value),
                 new("cron", (object?)job.Cron ?? DBNull.Value),
+                new("next_job_id", (object?)job.NextJobId ?? DBNull.Value),
             }
         };
     }

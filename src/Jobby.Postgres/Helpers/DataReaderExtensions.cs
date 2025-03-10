@@ -29,7 +29,8 @@ internal static class DataReaderExtensions
             LastStartedAt = reader.GetNullableDatetime("last_started_at"),
             LastFinishedAt = reader.GetNullableDatetime("last_finished_at"),
             StartedCount = reader.GetInt32(reader.GetOrdinal("started_count")),
-            Cron = reader.GetNullableString("cron")
+            Cron = reader.GetNullableString("cron"),
+            NextJobId = reader.GetNullableGuid("next_job_id"),
         };
         return job;
     }
@@ -52,5 +53,15 @@ internal static class DataReaderExtensions
             return null;
         }
         return reader.GetDateTime(index);
+    }
+
+    public static Guid? GetNullableGuid(this DbDataReader reader, string columnName)
+    {
+        var index = reader.GetOrdinal(columnName);
+        if (reader.IsDBNull(index))
+        {
+            return null;
+        }
+        return reader.GetGuid(index);
     }
 }

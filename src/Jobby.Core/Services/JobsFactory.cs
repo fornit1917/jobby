@@ -37,4 +37,14 @@ public class JobsFactory : IJobsFactory
             Status = JobStatus.Scheduled,
         };
     }
+
+    public JobsSequenceBuilder CreateSequenceBuilder()
+    {
+        return new JobsSequenceBuilder(this);
+    }
+
+    public JobsSequenceBuilder CreateSequenceBuilder(int capacity)
+    {
+        return new JobsSequenceBuilder(capacity, this);
+    }
 }

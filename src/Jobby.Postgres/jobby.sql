@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 	scheduled_start_at timestamptz NOT NULL,
 	last_started_at timestamptz DEFAULT NULL,
 	last_finished_at timestamptz DEFAULT NULL,
-	started_count int NOT NULL DEFAULT 0
+	started_count int NOT NULL DEFAULT 0,
+	next_job_id UUID DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS jobby_jobs_status_scheduled_start_at_idx ON jobby_jobs(status, scheduled_start_at);

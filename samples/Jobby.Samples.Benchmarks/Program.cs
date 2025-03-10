@@ -12,6 +12,7 @@ namespace Jobby.Samples.Benchmarks
             var benchmarks = new IBenchmark[]
             {
                 new JobbyCreateJobsBenchmark(),
+                new JobbyBulkCreateJobsBenchmark(),
                 new JobbyExecuteJobsBenchmark(),
                 new HangfireCreateJobsBenchmark(),
                 new HangfireExecuteJobsBenchmark(),

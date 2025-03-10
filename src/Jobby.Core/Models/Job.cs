@@ -17,5 +17,7 @@ public class Job
     public DateTime? LastStartedAt { get; set; }
     public DateTime? LastFinishedAt { get; set; }
 
+    public Guid? NextJobId { get; set; }
+
     public bool IsRecurrent => Cron != null;
 }

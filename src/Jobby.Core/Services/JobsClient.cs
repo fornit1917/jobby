@@ -14,6 +14,18 @@ public class JobsClient : IJobsClient
         _jobsStorage = jobsStorage;
     }
 
+    public IJobsFactory Factory => _jobFactory;
+
+    public void EnqueueBatch(IReadOnlyList<Job> jobs)
+    {
+        _jobsStorage.BulkInsert(jobs);
+    }
+
+    public Task EnqueueBatchAsync(IReadOnlyList<Job> jobs)
+    {
+        return _jobsStorage.BulkInsertAsync(jobs);
+    }
+
     public void EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command);

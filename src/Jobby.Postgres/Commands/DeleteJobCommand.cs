@@ -1,20 +1,43 @@
-﻿using Npgsql;
+﻿using Jobby.Core.Models;
+using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class DeleteJobCommand
+internal static class DeleteJobCommand
 {
-    private const string CommandText = @"DELETE FROM jobby_jobs WHERE id = @id";
+    private const string DeleteCommandText = @"DELETE FROM jobby_jobs WHERE id = @id";
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId)
+    // todo: use batch command
+    // todo: use positional params instead of named here and in other commands
+    private static readonly string DeleteAndScheduleNextCommandText = @$"
+        DELETE FROM jobby_jobs WHERE id = @id;
+        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = @next_job_id;
+    ";
+
+    public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, Guid? nextJobId = null)
     {
-        await using var cmd = new NpgsqlCommand(CommandText, conn)
+        if (nextJobId == null)
         {
-            Parameters =
+            await using var cmd = new NpgsqlCommand(DeleteCommandText, conn)
             {
-                new("id", jobId)
-            }
-        };
-        await cmd.ExecuteNonQueryAsync();
+                Parameters =
+                {
+                    new("id", jobId)
+                }
+            };
+            await cmd.ExecuteNonQueryAsync();
+        }
+        else
+        {
+            await using var cmd = new NpgsqlCommand(DeleteAndScheduleNextCommandText, conn)
+            {
+                Parameters =
+                {
+                    new("id", jobId),
+                    new("next_job_id", nextJobId.Value)
+                }
+            };
+            await cmd.ExecuteNonQueryAsync();
+        }
     }
 }

@@ -234,11 +234,11 @@ public class JobbyServer : IJobbyServer
             {
                 if (_settings.DeleteCompleted)
                 {
-                    await _storage.DeleteAsync(job.Id);
+                    await _storage.DeleteAsync(job.Id, job.NextJobId);
                 }
                 else
                 {
-                    await _storage.MarkCompletedAsync(job.Id);
+                    await _storage.MarkCompletedAsync(job.Id, job.NextJobId);
                 }
             }
             catch (Exception ex)
