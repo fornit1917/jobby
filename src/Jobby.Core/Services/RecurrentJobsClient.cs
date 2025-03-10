@@ -13,25 +13,25 @@ public class RecurrentJobsClient : IRecurrentJobsClient
         _storage = storage;
     }
 
-    public long ScheduleRecurrent(string jobName, string cron)
+    public Guid ScheduleRecurrent(string jobName, string cron)
     {
         var job = CreateRecurrentJob(jobName, cron);
         return _storage.Insert(job);
     }
 
-    public long ScheduleRecurrent<T>(string cron) where T : IRecurrentJobHandler
+    public Guid ScheduleRecurrent<T>(string cron) where T : IRecurrentJobHandler
     {
         var job = CreateRecurrentJob(T.GetRecurrentJobName(), cron);
         return _storage.Insert(job);
     }
 
-    public Task<long> ScheduleRecurrentAsync(string jobName, string cron)
+    public Task<Guid> ScheduleRecurrentAsync(string jobName, string cron)
     {
         var job = CreateRecurrentJob(jobName, cron);
         return _storage.InsertAsync(job);
     }
 
-    public Task<long> ScheduleRecurrentAsync<T>(string cron) where T : IRecurrentJobHandler
+    public Task<Guid> ScheduleRecurrentAsync<T>(string cron) where T : IRecurrentJobHandler
     {
         var job = CreateRecurrentJob(T.GetRecurrentJobName(), cron);
         return _storage.InsertAsync(job);
@@ -41,6 +41,7 @@ public class RecurrentJobsClient : IRecurrentJobsClient
     {
         return new Job
         {
+            Id = Guid.NewGuid(),
             JobName = jobName,
             Cron = cron,
             CreatedAt = DateTime.UtcNow,

@@ -16,6 +16,7 @@ public class JobsFactory : IJobsFactory
     {
         return new Job
         {
+            Id = Guid.NewGuid(),
             CreatedAt = DateTime.UtcNow,
             JobName = TCommand.GetJobName(),
             JobParam = _serializer.SerializeJobParam(command),
@@ -28,6 +29,7 @@ public class JobsFactory : IJobsFactory
     {
         return new Job
         {
+            Id = Guid.NewGuid(),
             CreatedAt = DateTime.UtcNow,
             JobName = TCommand.GetJobName(),
             JobParam = _serializer.SerializeJobParam(command),

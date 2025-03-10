@@ -1,7 +1,5 @@
-CREATE SEQUENCE IF NOT EXISTS jobby_jobs_id_seq AS int8;
-
 CREATE TABLE IF NOT EXISTS jobby_jobs (
-	id int8 NOT NULL PRIMARY KEY DEFAULT nextval('jobby_jobs_id_seq'),
+	id UUID NOT NULL PRIMARY KEY,
 	job_name TEXT NOT NULL,
 	cron TEXT DEFAULT NULL,
 	job_param TEXT DEFAULT NULL,

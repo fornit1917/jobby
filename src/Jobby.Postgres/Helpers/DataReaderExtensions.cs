@@ -20,7 +20,7 @@ internal static class DataReaderExtensions
 
         var job = new Job
         {
-            Id = reader.GetInt64(reader.GetOrdinal("id")),
+            Id = reader.GetGuid(reader.GetOrdinal("id")),
             JobName = reader.GetString(reader.GetOrdinal("job_name")),
             JobParam = reader.GetNullableString("job_param"),
             Status = (JobStatus)reader.GetInt32(reader.GetOrdinal("status")),

@@ -14,7 +14,7 @@ internal static class RescheduleCommand
         WHERE id = @id;
     ";
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, long jobId, DateTime scheduledStartTime)
+    public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, DateTime scheduledStartTime)
     {
         await using var cmd = new NpgsqlCommand(CommandText, conn)
         {

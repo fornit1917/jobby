@@ -14,14 +14,14 @@ public class PgJobsStorage : IJobsStorage
         _dataSource = dataSource;
     }
 
-    public async Task<long> InsertAsync(Job job)
+    public async Task<Guid> InsertAsync(Job job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         var id = await InsertJobCommand.ExecuteAndGetIdAsync(conn, job);
         return id;
     }
 
-    public long Insert(Job job)
+    public Guid Insert(Job job)
     {
         using var conn = _dataSource.OpenConnection();
         var id = InsertJobCommand.ExecuteAndGetId(conn, job);
@@ -45,31 +45,31 @@ public class PgJobsStorage : IJobsStorage
         await TakeBatchToProcessingCommand.ExecuteAndWriteToListAsync(conn, now, maxBatchSize, result);
     }
 
-    public Task MarkCompletedAsync(long jobId)
+    public Task MarkCompletedAsync(Guid jobId)
     {
         return UpdateStatus(jobId, JobStatus.Completed);
     }
 
-    public Task MarkFailedAsync(long jobId)
+    public Task MarkFailedAsync(Guid jobId)
     {
         // todo: write error message to job
         return UpdateStatus(jobId, JobStatus.Failed);
     }
 
-    public async Task RescheduleAsync(long jobId, DateTime sheduledStartTime)
+    public async Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await RescheduleCommand.ExecuteAsync(conn, jobId, sheduledStartTime);
     }
 
-    private async Task UpdateStatus(long jobId, JobStatus newStatus)
+    private async Task UpdateStatus(Guid jobId, JobStatus newStatus)
     {
         var finishedAt = DateTime.UtcNow;
         await using var conn = await _dataSource.OpenConnectionAsync();
         await UpdateStatusCommand.ExecuteAsync(conn, jobId, newStatus);
     }
 
-    public async Task DeleteAsync(long jobId)
+    public async Task DeleteAsync(Guid jobId)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await DeleteJobCommand.ExecuteAsync(conn, jobId);

@@ -2,7 +2,7 @@
 
 public class Job
 {
-    public long Id { get; set; }
+    public Guid Id { get; set; }
 
     public string JobName { get; set; } = string.Empty;
     public string? Cron { get; set; }

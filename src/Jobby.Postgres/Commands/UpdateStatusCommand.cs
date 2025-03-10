@@ -13,7 +13,7 @@ internal static class UpdateStatusCommand
         WHERE id = @id;
     ";
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, long jobId, JobStatus newStatus)
+    public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, JobStatus newStatus)
     {
         var finishedAt = DateTime.UtcNow;
         await using var cmd = new NpgsqlCommand(CommandText, conn)

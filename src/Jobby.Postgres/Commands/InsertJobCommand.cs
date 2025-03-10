@@ -7,6 +7,7 @@ internal static class InsertJobCommand
 {
     private const string CommandText = @"
         INSERT INTO jobby_jobs (
+            id,
             job_name,
             job_param,
             status,
@@ -17,6 +18,7 @@ internal static class InsertJobCommand
             cron
         )
         VALUES (
+            @id,
             @job_name,
             @job_param,
             @status,
@@ -39,6 +41,7 @@ internal static class InsertJobCommand
         {
             Parameters =
             {
+                new("id", job.Id),
                 new("job_name", job.JobName),
                 new("job_param", (object?)job.JobParam ?? DBNull.Value),
                 new("status", (int)job.Status),
@@ -51,17 +54,17 @@ internal static class InsertJobCommand
         };
     }
 
-    public static async Task<long> ExecuteAndGetIdAsync(NpgsqlConnection conn, Job job)
+    public static async Task<Guid> ExecuteAndGetIdAsync(NpgsqlConnection conn, Job job)
     {
         await using var cmd = CreateCommand(conn, job);
         object? id = await cmd.ExecuteScalarAsync();
-        return id != null ? (long)id : 0;
+        return id != null ? (Guid)id : Guid.Empty;
     }
 
-    public static long ExecuteAndGetId(NpgsqlConnection conn, Job job)
+    public static Guid ExecuteAndGetId(NpgsqlConnection conn, Job job)
     {
         using var cmd = CreateCommand(conn, job);
         object? id = cmd.ExecuteScalar();
-        return id != null ? (long)id : 0;
+        return id != null ? (Guid)id : Guid.Empty;
     }
 }

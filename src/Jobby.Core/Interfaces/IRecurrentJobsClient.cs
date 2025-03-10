@@ -2,9 +2,9 @@
 
 public interface IRecurrentJobsClient
 {
-    Task<long> ScheduleRecurrentAsync(string jobName, string cron);
-    long ScheduleRecurrent(string jobName, string cron);
+    Task<Guid> ScheduleRecurrentAsync(string jobName, string cron);
+    Guid ScheduleRecurrent(string jobName, string cron);
 
-    Task<long> ScheduleRecurrentAsync<T>(string cron) where T : IRecurrentJobHandler;
-    long ScheduleRecurrent<T>(string cron) where T : IRecurrentJobHandler;
+    Task<Guid> ScheduleRecurrentAsync<T>(string cron) where T : IRecurrentJobHandler;
+    Guid ScheduleRecurrent<T>(string cron) where T : IRecurrentJobHandler;
 }
