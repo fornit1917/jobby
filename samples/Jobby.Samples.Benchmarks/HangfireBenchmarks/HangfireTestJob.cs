@@ -10,5 +10,6 @@ internal class HangfireTestJob
         {
             await Task.Delay(jobParam.DelayMs);
         }
+        Counter.Increment();
     }
 }

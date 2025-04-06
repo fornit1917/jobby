@@ -1,4 +1,7 @@
-﻿using Hangfire;
+﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using Hangfire;
+using Npgsql;
 using System.Diagnostics;
 
 namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
@@ -7,48 +10,57 @@ public class HangfireExecuteJobsBenchmark : IBenchmark
 {
     public string Name => "Hangfire.Execute";
 
-    public async Task Run()
+    public Task Run()
     {
-        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
+        BenchmarkRunner.Run<HangfireExecuteJobsBenchmarkAction>();
+        return Task.CompletedTask;
+    }
+}
 
-        var dataSource = DataSourceFactory.Create();
+[MemoryDiagnoser]
+[WarmupCount(2)]
+[IterationCount(2)]
+[ProcessCount(1)]
+[InvocationCount(1)]
+public class HangfireExecuteJobsBenchmarkAction
+{
+    private readonly NpgsqlDataSource _dataSource;
 
-        Console.WriteLine("Drop old hangfire data");
-        HangfireHelper.DropHangfireTables(dataSource);
+    public HangfireExecuteJobsBenchmarkAction()
+    {
+        _dataSource = DataSourceFactory.Create();
+    }
 
-        Console.WriteLine("Configure hangfire");
-        HangfireHelper.ConfigureGlobal(dataSource);
+    [IterationSetup]
+    public void Setup()
+    {
+        const int jobsCount = 1000;
+        Counter.Reset(jobsCount);
 
-        Console.WriteLine($"Create {benchmarkParams.JobsCount} jobs");
-        for (int i = 1; i <= benchmarkParams.JobsCount; i++)
+        HangfireHelper.DropHangfireTables(_dataSource);
+        HangfireHelper.ConfigureGlobal(_dataSource);
+
+        for (int i = 1; i <= jobsCount; i++)
         {
             var jobParam = new HangfireTestJobParam
             {
                 Id = i,
-                DelayMs = benchmarkParams.JobDelayMs,
+                DelayMs = 0,
                 Value = Guid.NewGuid().ToString(),
             };
             BackgroundJob.Enqueue<HangfireTestJob>(x => x.Execute(jobParam));
         }
+    }
 
-        Console.WriteLine("Start hangfire server");
-        Stopwatch stopwatch = Stopwatch.StartNew();
+    [Benchmark]
+    public void HangfireExecuteJobs()
+    {
         using var server = new BackgroundJobServer(new BackgroundJobServerOptions
         {
             SchedulePollingInterval = TimeSpan.FromSeconds(1),
             WorkerCount = 10
         });
-        var hasNotCompletedJobs = true;
-        while (hasNotCompletedJobs)
-        {
-            hasNotCompletedJobs = HangfireHelper.HasNotCompletedJobs(dataSource);
-            if (hasNotCompletedJobs)
-            {
-                await Task.Delay(50);
-            }
-        }
-        stopwatch.Stop();
 
-        Console.WriteLine($"Total time: {stopwatch.ElapsedMilliseconds} ms");
+        Counter.Event.WaitOne();
     }
 }

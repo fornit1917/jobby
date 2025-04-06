@@ -11,5 +11,6 @@ internal class QuartzTestJob : IJob
         {
             await Task.Delay(delayMs);
         }
+        Counter.Increment();
     }
 }

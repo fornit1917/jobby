@@ -20,5 +20,6 @@ public class JobbyTestJobCommandHandler : IJobCommandHandler<JobbyTestJobCommand
         {
             await Task.Delay(command.DelayMs);
         }
+        Counter.Increment();
     }
 }

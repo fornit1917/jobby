@@ -1,4 +1,7 @@
-﻿using Jobby.Samples.Benchmarks.HangfireBenchmarks;
+﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using Npgsql;
+using Quartz;
 using System.Diagnostics;
 
 namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
@@ -7,51 +10,60 @@ public class QuartzExecuteJobsBenchmark : IBenchmark
 {
     public string Name => "Quartz.Execute";
 
-    public async Task Run()
+    public Task Run()
     {
-        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
+        BenchmarkRunner.Run<QuartzExecuteJobsBenchmarkAction>();
+        return Task.CompletedTask;
+    }
+}
 
-        var dataSource = DataSourceFactory.Create();
+[MemoryDiagnoser]
+[WarmupCount(2)]
+[IterationCount(2)]
+[ProcessCount(1)]
+[InvocationCount(1)]
+public class QuartzExecuteJobsBenchmarkAction
+{
+    private readonly NpgsqlDataSource _dataSource;
+    private IScheduler _scheduler;
 
-        Console.WriteLine("Clear jobs database");
-        QuartzHelper.RemoveAllJobs(dataSource);
+    public QuartzExecuteJobsBenchmarkAction()
+    {
+        _dataSource = DataSourceFactory.Create();
+    }
 
-        Console.WriteLine($"Create {benchmarkParams.JobsCount} jobs");
+    [IterationSetup]
+    public void Setup()
+    {
+        _scheduler = QuartzHelper.CreateScheduler().GetAwaiter().GetResult();
 
-        var scheduler = await QuartzHelper.CreateScheduler();
+        const int jobsCount = 1000;
 
-        for (int i = 1; i <= benchmarkParams.JobsCount; i++)
+        Counter.Reset(jobsCount);
+
+        QuartzHelper.RemoveAllJobs(_dataSource);
+        for (int i = 1; i <= jobsCount; i++)
         {
             var jobParam = new QuartzTestJobParam
             {
                 Id = i,
                 Value = Guid.NewGuid().ToString(),
-                DelayMs = benchmarkParams.JobDelayMs,
+                DelayMs = 0,
             };
-            await QuartzHelper.CreateTestJob(scheduler, jobParam);
+            QuartzHelper.CreateTestJob(_scheduler, jobParam).GetAwaiter().GetResult();
         }
-        
-        
-        Console.WriteLine("Start quartz server");
+    }
 
-        Stopwatch stopwatch = Stopwatch.StartNew();
+    [IterationCleanup]
+    public void Cleanup()
+    {
+        _scheduler.Shutdown().GetAwaiter().GetResult();
+    }
 
-        await scheduler.Start();
-        
-        var hasNotCompletedJobs = true;
-        while (hasNotCompletedJobs)
-        {
-            hasNotCompletedJobs = QuartzHelper.HasNotCompletedJobs(dataSource);
-            if (hasNotCompletedJobs)
-            {
-                await Task.Delay(100);
-            }
-        }
-
-        stopwatch.Stop();
-
-        await scheduler.Shutdown();
-
-        Console.WriteLine($"Total time: {stopwatch.ElapsedMilliseconds} ms");
+    [Benchmark]
+    public void Run()
+    {
+        _scheduler.Start();
+        Counter.Event.WaitOne();
     }
 }

@@ -1,23 +1,42 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using Jobby.Core.Services;
 using Jobby.Core.Services.Builders;
 using Jobby.Postgres.ConfigurationExtensions;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using System.Diagnostics;
 
 namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
-[MemoryDiagnoser]
 public class JobbyExecuteJobsBenchmark : IBenchmark
 {
     public string Name => "Jobby.Execute";
 
-    public async Task Run()
+    public Task Run()
     {
-        var benchmarkParams = BenchamrkHelper.GetJobsBenchmarkParams(defaultJobsCount: 1000, defaultJobDelayMs: 0);
+        BenchmarkRunner.Run<JobbyExecuteJobsBenchmarkAction>();
+        return Task.CompletedTask;
+    }
+}
 
+[MemoryDiagnoser]
+[WarmupCount(2)]
+[IterationCount(2)]
+[ProcessCount(1)]
+[InvocationCount(1)]
+public class JobbyExecuteJobsBenchmarkAction
+{
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly IJobbyServer _jobbyServer;
+    private readonly IJobsClient _jobsClient;
+
+    public JobbyExecuteJobsBenchmarkAction()
+    {
         var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
-        var dataSource = DataSourceFactory.Create();
+        _dataSource = DataSourceFactory.Create();
         var serverSettings = new JobbyServerSettings
         {
             MaxDegreeOfParallelism = 10,
@@ -28,18 +47,23 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 
         var builder = new JobbyServicesBuilder();
         builder
-            .UsePostgresql(dataSource)
+            .UsePostgresql(_dataSource)
             .UseExecutionScopeFactory(scopeFactory)
             .UseJobs(x => x.AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>());
 
-        var jobbyServer = builder.CreateJobbyServer();
-        var jobsClient = builder.CreateJobsClient();
+        _jobbyServer = builder.CreateJobbyServer();
+        _jobsClient = builder.CreateJobsClient();
+    }
 
-        Console.WriteLine("Clear jobs database");
-        JobbyHelper.RemoveAllJobs(dataSource);
+    [IterationSetup]
+    public void Setup()
+    {
+        const int jobsCount = 1000;
+        Counter.Reset(jobsCount);
 
-        Console.WriteLine($"Create {benchmarkParams.JobsCount} jobs");
-        for (int i = 1; i <= benchmarkParams.JobsCount; i++)
+        _jobbyServer.SendStopSignal();
+        JobbyHelper.RemoveAllJobs(_dataSource);
+        for (int i = 1; i <= jobsCount; i++)
         {
             var jobCommand = new JobbyTestJobCommand
             {
@@ -47,24 +71,14 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
                 Value = Guid.NewGuid().ToString(),
                 DelayMs = 0,
             };
-            jobsClient.EnqueueCommand(jobCommand);
+            _jobsClient.EnqueueCommand(jobCommand);
         }
+    }
 
-        Console.WriteLine("Start jobby server");
-        
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        jobbyServer.StartBackgroundService();
-        var hasNotCompletedJobs = true;
-        while (hasNotCompletedJobs)
-        {
-            hasNotCompletedJobs = JobbyHelper.HasNotCompletedJobs(dataSource);
-            if (hasNotCompletedJobs)
-            {
-                await Task.Delay(100);
-            }
-        }
-        stopwatch.Stop();
-
-        Console.WriteLine($"Total time: {stopwatch.ElapsedMilliseconds} ms");
+    [Benchmark]
+    public void JobbyExecuteJobs()
+    {
+        _jobbyServer.StartBackgroundService();
+        Counter.Event.WaitOne();
     }
 }
