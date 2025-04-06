@@ -6,7 +6,7 @@ namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
 
 public class QuartzCreateJobsBenchmark : IBenchmark
 {
-    public string Name => "Quartz.Create.5";
+    public string Name => "Quartz.Create.1";
 
     public Task Run()
     {
@@ -28,7 +28,7 @@ public class QuartzCreateJobsBenchmarkAction
     [Benchmark]
     public void QuartzCreateJobs()
     {
-        const int jobsCount = 5;
+        const int jobsCount = 1;
         for (int i = 1; i <= jobsCount; i++) 
         {
             var jobParam = new QuartzTestJobParam

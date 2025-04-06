@@ -9,7 +9,7 @@ namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
 public class JobbyBulkCreateJobsBenchmark : IBenchmark
 {
-    public string Name => "Jobby.BulkCreate.5";
+    public string Name => "Jobby.BulkCreate.10";
 
     public Task Run()
     {
@@ -32,9 +32,9 @@ public class JobbyBulkCreateJobsBenchmarkAction
     }
 
     [Benchmark]
-    public async Task JobbyCreateJobs()
+    public async Task JobbyBulkCreateJobs()
     {
-        const int jobsCount = 5;
+        const int jobsCount = 10;
         var jobs = new List<Job>(capacity: jobsCount);
         for (int i = 1; i <= jobsCount; i++)
         {

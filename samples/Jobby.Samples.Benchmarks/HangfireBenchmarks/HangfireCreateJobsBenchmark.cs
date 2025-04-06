@@ -6,7 +6,7 @@ namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
 
 public class HangfireCreateJobsBenchmark : IBenchmark
 {
-    public string Name => "Hangfire.Create.5";
+    public string Name => "Hangfire.Create.1";
 
     public Task Run()
     {
@@ -25,17 +25,13 @@ public class HangfireCreateJobsBenchmarkAction
     }
 
     [Benchmark]
-    public void HangfireCreateJobs()
+    public void HangfireCreateJob()
     {
-        const int jobsCount = 5;
-        for (int i = 1; i <= jobsCount; i++)
+        var jobParam = new HangfireTestJobParam
         {
-            var jobParam = new HangfireTestJobParam
-            {
-                Id = i,
-                Value = Guid.NewGuid().ToString(),
-            };
-            BackgroundJob.Enqueue<HangfireTestJob>(x => x.Execute(jobParam));
-        }
+            Id = 1,
+            Value = Guid.NewGuid().ToString(),
+        };
+        BackgroundJob.Enqueue<HangfireTestJob>(x => x.Execute(jobParam));
     }
 }

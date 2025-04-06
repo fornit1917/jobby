@@ -8,7 +8,7 @@ namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
 
 public class JobbyCreateJobsBenchmark : IBenchmark
 {
-    public string Name => "Jobby.Create.5";
+    public string Name => "Jobby.Create.1";
 
     public Task Run()
     {
@@ -31,19 +31,14 @@ public class JobbyCreateJobsBenchmarkAction
     }
 
     [Benchmark]
-    public async Task JobbyCreateJobs()
+    public async Task JobbyCreateJob()
     {
-        const int jobsCount = 5;
-        for (int i = 1; i <= jobsCount; i++)
+        var jobCommand = new JobbyTestJobCommand
         {
-            var jobCommand = new JobbyTestJobCommand
-            {
-                Id = i,
-                Value = Guid.NewGuid().ToString(),
-                DelayMs = 0,
-            };
-
-            await _jobsClient.EnqueueCommandAsync(jobCommand);
-        }
+            Id = 1,
+            Value = Guid.NewGuid().ToString(),
+            DelayMs = 0,
+        };
+        await _jobsClient.EnqueueCommandAsync(jobCommand);
     }
 }

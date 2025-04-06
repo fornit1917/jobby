@@ -1,5 +1,4 @@
-﻿using BenchmarkDotNet.Running;
-using Jobby.Samples.Benchmarks.HangfireBenchmarks;
+﻿using Jobby.Samples.Benchmarks.HangfireBenchmarks;
 using Jobby.Samples.Benchmarks.JobbyBenchmarks;
 using Jobby.Samples.Benchmarks.QuartzBenchmarks;
 
@@ -14,8 +13,11 @@ namespace Jobby.Samples.Benchmarks
                 new JobbyCreateJobsBenchmark(),
                 new JobbyBulkCreateJobsBenchmark(),
                 new JobbyExecuteJobsBenchmark(),
+
                 new HangfireCreateJobsBenchmark(),
+                new HangfireBulkCreateJobsBenchmark(),
                 new HangfireExecuteJobsBenchmark(),
+                
                 new QuartzCreateJobsBenchmark(),
                 new QuartzExecuteJobsBenchmark(),
             };
