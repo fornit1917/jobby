@@ -9,9 +9,9 @@ internal static class RescheduleCommand
         UPDATE jobby_jobs
         SET
             status = {(int)JobStatus.Scheduled},
-            last_finished_at = @last_finished_at,
-            scheduled_start_at = @scheduled_start_at
-        WHERE id = @id;
+            last_finished_at = $1,
+            scheduled_start_at = $2
+        WHERE id = $3;
     ";
 
     public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, DateTime scheduledStartTime)
@@ -20,9 +20,9 @@ internal static class RescheduleCommand
         {
             Parameters =
             {
-                new("last_finished_at", DateTime.UtcNow),
-                new("scheduled_start_at", scheduledStartTime),
-                new("id", jobId)
+                new() { Value = DateTime.UtcNow },
+                new() { Value = scheduledStartTime },
+                new() { Value = jobId }
             }
         };
         await cmd.ExecuteNonQueryAsync();

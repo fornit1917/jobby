@@ -18,8 +18,8 @@ public class QuartzExecuteJobsBenchmark : IBenchmark
 }
 
 [MemoryDiagnoser]
-[WarmupCount(2)]
-[IterationCount(2)]
+[WarmupCount(1)]
+[IterationCount(1)]
 [ProcessCount(1)]
 [InvocationCount(1)]
 public class QuartzExecuteJobsBenchmarkAction

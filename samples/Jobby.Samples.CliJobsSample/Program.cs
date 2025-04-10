@@ -22,8 +22,9 @@ internal class Program
             PollingIntervalMs = 1000,
             DbErrorPauseMs = 5000,
             MaxDegreeOfParallelism = 10,
-            UseBatches = true,
-            DeleteCompleted = true
+            TakeToProcessingBatchSize = 10,
+            DeleteCompleted = true,
+            CompleteWithBatching = true
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
         var defaultRetryPolicy = new RetryPolicy

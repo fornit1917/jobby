@@ -14,32 +14,20 @@ public class PgJobsStorage : IJobsStorage
         _dataSource = dataSource;
     }
 
-    public async Task<Guid> InsertAsync(Job job)
+    public async Task InsertAsync(Job job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
-        var id = await InsertJobCommand.ExecuteAndGetIdAsync(conn, job);
-        return id;
+        await InsertJobCommand.ExecuteAsync(conn, job);
     }
 
-    public Guid Insert(Job job)
+    public void Insert(Job job)
     {
         using var conn = _dataSource.OpenConnection();
-        var id = InsertJobCommand.ExecuteAndGetId(conn, job);
-        return id;
-    }
-
-    public async Task<Job?> TakeToProcessingAsync()
-    {
-        // todo: maybe it will be better to return some other model from this method
-        var now = DateTime.UtcNow;
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        var job = await TakeToProcessingCommand.ExecuteAsync(conn, now);
-        return job;
+        InsertJobCommand.Execute(conn, job);
     }
 
     public async Task TakeBatchToProcessingAsync(int maxBatchSize, List<Job> result)
     {
-        // todo: maybe it will be better to return some other model from this method
         var now = DateTime.UtcNow;
         await using var conn = await _dataSource.OpenConnectionAsync();
         await TakeBatchToProcessingCommand.ExecuteAndWriteToListAsync(conn, now, maxBatchSize, result);
@@ -85,5 +73,11 @@ public class PgJobsStorage : IJobsStorage
     {
         using var conn = _dataSource.OpenConnection();
         BulkInsertJobsCommand.Execute(conn, jobs);
+    }
+
+    public async Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await BulkDeleteJobsCommand.ExecuteAsync(conn, jobIds, nextJobIds);
     }
 }

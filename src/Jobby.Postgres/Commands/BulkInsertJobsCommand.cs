@@ -16,59 +16,48 @@ internal static class BulkInsertJobsCommand
             next_job_id
         )
         VALUES (
-            @id,
-            @job_name,
-            @job_param,
-            @status,
-            @created_at,
-            @scheduled_start_at,
-            @next_job_id
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7
         )
     ";
 
     public static async Task ExecuteAsync(NpgsqlConnection conn, IReadOnlyList<Job> jobs)
     {
         await using var batch = new NpgsqlBatch(conn);
-        foreach (var job in jobs)
-        {
-            var cmd = new NpgsqlBatchCommand(CommandText)
-            {
-                Parameters =
-                {
-                    new("id", job.Id),
-                    new("job_name", job.JobName),
-                    new("job_param", (object?)job.JobParam ?? DBNull.Value),
-                    new("status", (int)job.Status),
-                    new("created_at", job.CreatedAt),
-                    new("scheduled_start_at", job.ScheduledStartAt),
-                    new("next_job_id", (object?)job.NextJobId ?? DBNull.Value),
-                }
-            };
-            batch.BatchCommands.Add(cmd);
-        }
+        PrepareCommand(batch, jobs);
         await batch.ExecuteNonQueryAsync();
     }
 
     public static void Execute(NpgsqlConnection conn, IReadOnlyList<Job> jobs)
     {
         using var batch = new NpgsqlBatch(conn);
+        PrepareCommand(batch, jobs);
+        batch.ExecuteNonQuery();
+    }
+
+    private static void PrepareCommand(NpgsqlBatch batch, IReadOnlyList<Job> jobs)
+    {
         foreach (var job in jobs)
         {
             var cmd = new NpgsqlBatchCommand(CommandText)
             {
                 Parameters =
                 {
-                    new("id", job.Id),
-                    new("job_name", job.JobName),
-                    new("job_param", (object?)job.JobParam ?? DBNull.Value),
-                    new("status", (int)job.Status),
-                    new("created_at", job.CreatedAt),
-                    new("scheduled_start_at", job.ScheduledStartAt),
-                    new("next_job_id", (object?)job.NextJobId ?? DBNull.Value),
+                    new() { Value = job.Id },
+                    new() { Value = job.JobName },
+                    new() { Value = (object?)job.JobParam ?? DBNull.Value },
+                    new() { Value = (int)job.Status },
+                    new() { Value = job.CreatedAt },
+                    new() { Value = job.ScheduledStartAt },
+                    new() { Value = (object?)job.NextJobId ?? DBNull.Value },
                 }
             };
             batch.BatchCommands.Add(cmd);
         }
-        batch.ExecuteNonQuery();
     }
 }

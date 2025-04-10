@@ -16,25 +16,29 @@ public class RecurrentJobsClient : IRecurrentJobsClient
     public Guid ScheduleRecurrent(string jobName, string cron)
     {
         var job = CreateRecurrentJob(jobName, cron);
-        return _storage.Insert(job);
+        _storage.Insert(job);
+        return job.Id;
     }
 
     public Guid ScheduleRecurrent<T>(string cron) where T : IRecurrentJobHandler
     {
         var job = CreateRecurrentJob(T.GetRecurrentJobName(), cron);
-        return _storage.Insert(job);
+        _storage.Insert(job);
+        return job.Id;
     }
 
-    public Task<Guid> ScheduleRecurrentAsync(string jobName, string cron)
+    public async Task<Guid> ScheduleRecurrentAsync(string jobName, string cron)
     {
         var job = CreateRecurrentJob(jobName, cron);
-        return _storage.InsertAsync(job);
+        await _storage.InsertAsync(job);
+        return job.Id;
     }
 
-    public Task<Guid> ScheduleRecurrentAsync<T>(string cron) where T : IRecurrentJobHandler
+    public async Task<Guid> ScheduleRecurrentAsync<T>(string cron) where T : IRecurrentJobHandler
     {
         var job = CreateRecurrentJob(T.GetRecurrentJobName(), cron);
-        return _storage.InsertAsync(job);
+        await _storage.InsertAsync(job);
+        return job.Id;
     }
 
     private Job CreateRecurrentJob(string jobName, string cron)

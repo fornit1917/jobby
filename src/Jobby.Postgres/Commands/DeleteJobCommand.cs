@@ -5,13 +5,10 @@ namespace Jobby.Postgres.Commands;
 
 internal static class DeleteJobCommand
 {
-    private const string DeleteJobCommandText = @"DELETE FROM jobby_jobs WHERE id = @id";
+    private const string DeleteJobCommandText = @"DELETE FROM jobby_jobs WHERE id = $1";
 
-    // todo: use batch command
-    // todo: use positional params instead of named here and in other commands
-    private static readonly string DeleteAndScheduleNextJobCommandText = @$"
-        DELETE FROM jobby_jobs WHERE id = @id;
-        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = @next_job_id;
+    private static readonly string ScheduleNextJobCommandText = @$"
+        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = $1
     ";
 
     public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, Guid? nextJobId = null)
@@ -22,22 +19,35 @@ internal static class DeleteJobCommand
             {
                 Parameters =
                 {
-                    new("id", jobId)
+                    new() { Value = jobId }
                 }
             };
             await cmd.ExecuteNonQueryAsync();
         }
         else
         {
-            await using var cmd = new NpgsqlCommand(DeleteAndScheduleNextJobCommandText, conn)
+            await using var batch = new NpgsqlBatch(conn);
+
+            var deleteCmd = new NpgsqlBatchCommand(DeleteJobCommandText)
             {
                 Parameters =
                 {
-                    new("id", jobId),
-                    new("next_job_id", nextJobId.Value)
+                    new() { Value = jobId }
                 }
             };
-            await cmd.ExecuteNonQueryAsync();
+
+            var scheduleNextCmd = new NpgsqlBatchCommand(ScheduleNextJobCommandText)
+            {
+                Parameters =
+                {
+                    new() { Value = nextJobId.Value }
+                }
+            };
+
+            batch.BatchCommands.Add(deleteCmd);
+            batch.BatchCommands.Add(scheduleNextCmd);
+
+            await batch.ExecuteNonQueryAsync();
         }
     }
 }

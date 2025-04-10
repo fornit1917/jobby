@@ -15,11 +15,17 @@ public class JobbyServer : IJobbyServer
     private readonly IJobParamSerializer _serializer;
     private readonly ILogger<JobbyServer> _logger;
 
+    private readonly IJobCompletingService _jobCompletingService;
+
     private readonly JobbyServerSettings _settings;
 
     private readonly SemaphoreSlim _semaphore;
 
     private bool _running;
+
+    public IReadOnlyList<int> BatchCompletionStat => _jobCompletingService != null && _jobCompletingService is BatchingJobCompletingService
+        ? ((BatchingJobCompletingService)_jobCompletingService).Stat
+        : Array.Empty<int>();
 
     public JobbyServer(IJobsStorage storage,
         IJobExecutionScopeFactory scopeFactory,
@@ -37,19 +43,16 @@ public class JobbyServer : IJobbyServer
         _serializer = serializer;
         _logger = logger;
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
+
+        _jobCompletingService = _settings.CompleteWithBatching
+            ? new BatchingJobCompletingService(storage, settings)
+            : new SimpleJobCompletingService(storage, settings.DeleteCompleted);
     }
 
     public void StartBackgroundService()
     {
         _running = true;
-        if (_settings.UseBatches)
-        {
-            Task.Run(PollByBatches);
-        }
-        else
-        {
-            Task.Run(Poll);
-        }
+        Task.Run(Poll);
     }
 
     public void SendStopSignal()
@@ -59,44 +62,16 @@ public class JobbyServer : IJobbyServer
 
     private async Task Poll()
     {
-        while (_running)
-        {
-            Job? job = null;
-            await _semaphore.WaitAsync();
-            try
-            {
-                job = await _storage.TakeToProcessingAsync();
-            }
-            catch (Exception ex)
-            {
-                _semaphore.Release();
-                _logger.LogError(ex, "Error receiveng next jobs from queue");
-                await Task.Delay(_settings.DbErrorPauseMs);
-                continue;
-            }
-
-            if (job == null)
-            {
-                _semaphore.Release();
-                if (_running)
-                {
-                    await Task.Delay(_settings.PollingIntervalMs);
-                }
-            }
-            else
-            {
-                StartProcessing(job);
-            }
-        }
-    }
-
-    private async Task PollByBatches()
-    {
-        var jobs = new List<Job>(capacity: _settings.MaxDegreeOfParallelism);
+        var jobs = new List<Job>(capacity: _settings.TakeToProcessingBatchSize);
         while (_running)
         {
             await _semaphore.WaitAsync();
+
             var maxBatchSize = _semaphore.CurrentCount + 1;
+            if (maxBatchSize > _settings.TakeToProcessingBatchSize)
+            {
+                maxBatchSize = _settings.TakeToProcessingBatchSize;
+            }
 
             try
             {
@@ -232,14 +207,7 @@ public class JobbyServer : IJobbyServer
         {
             try
             {
-                if (_settings.DeleteCompleted)
-                {
-                    await _storage.DeleteAsync(job.Id, job.NextJobId);
-                }
-                else
-                {
-                    await _storage.MarkCompletedAsync(job.Id, job.NextJobId);
-                }
+                await _jobCompletingService.CompleteJob(job.Id, job.NextJobId);
             }
             catch (Exception ex)
             {

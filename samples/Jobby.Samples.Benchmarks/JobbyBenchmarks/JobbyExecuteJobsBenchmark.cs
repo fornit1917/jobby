@@ -23,8 +23,8 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 }
 
 [MemoryDiagnoser]
-[WarmupCount(2)]
-[IterationCount(2)]
+[WarmupCount(1)]
+[IterationCount(1)]
 [ProcessCount(1)]
 [InvocationCount(1)]
 public class JobbyExecuteJobsBenchmarkAction
@@ -40,14 +40,17 @@ public class JobbyExecuteJobsBenchmarkAction
         var serverSettings = new JobbyServerSettings
         {
             MaxDegreeOfParallelism = 10,
+            TakeToProcessingBatchSize = 10,
             PollingIntervalMs = 1000,
-            UseBatches = true,
+            DeleteCompleted = true,
+            CompleteWithBatching = true,
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
 
         var builder = new JobbyServicesBuilder();
         builder
             .UsePostgresql(_dataSource)
+            .UseServerSettings(serverSettings)
             .UseExecutionScopeFactory(scopeFactory)
             .UseJobs(x => x.AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>());
 

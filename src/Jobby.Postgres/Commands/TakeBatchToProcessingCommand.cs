@@ -11,15 +11,15 @@ internal static class TakeBatchToProcessingCommand
 	        SELECT id FROM jobby_jobs 
 	        WHERE
                 status = {(int)JobStatus.Scheduled}
-                AND scheduled_start_at <= @now
+                AND scheduled_start_at <= $1
 	        ORDER BY scheduled_start_at
-	        LIMIT @max_batch_size
+	        LIMIT $2
 	        FOR UPDATE SKIP LOCKED
         )
         UPDATE jobby_jobs
         SET
 	        status = {(int)JobStatus.Processing},
-	        last_started_at = @now,
+	        last_started_at = $1,
 	        started_count = started_count + 1
         WHERE id IN (SELECT id FROM ready_jobs)
         RETURNING *;
@@ -33,8 +33,8 @@ internal static class TakeBatchToProcessingCommand
         {
             Parameters =
             {
-                new("now", now),
-                new("max_batch_size", maxBatchSize)
+                new() { Value = now },              // 1
+                new() { Value = maxBatchSize }      // 2
             }
         };
 
