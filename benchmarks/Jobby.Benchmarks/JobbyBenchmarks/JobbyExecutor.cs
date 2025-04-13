@@ -1,6 +1,6 @@
 using Jobby.Core.Interfaces;
 
-namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
+namespace Jobby.Benchmarks.JobbyBenchmarks;
 
 public class JobbyTestExecutionScope : IJobExecutionScope
 {

@@ -17,7 +17,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.CliJobsSample
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Postgres", "src\Jobby.Postgres\Jobby.Postgres.csproj", "{CD553FDC-9DF2-4E14-BEAF-03246C8B222D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.Benchmarks", "samples\Jobby.Samples.Benchmarks\Jobby.Samples.Benchmarks.csproj", "{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{9760726B-474A-4886-BF1F-CB06AD9ADE0B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Benchmarks", "benchmarks\Jobby.Benchmarks\Jobby.Benchmarks.csproj", "{1B76E3CC-6E46-4D9A-B541-A0C044F29A16}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B76E3CC-6E46-4D9A-B541-A0C044F29A16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B76E3CC-6E46-4D9A-B541-A0C044F29A16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B76E3CC-6E46-4D9A-B541-A0C044F29A16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B76E3CC-6E46-4D9A-B541-A0C044F29A16}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -55,6 +61,7 @@ Global
 		{8CDAE691-0E98-48B1-830A-77ED6DBF540C} = {83E0937E-5C14-4AE9-92D9-6C82E51794F5}
 		{CD553FDC-9DF2-4E14-BEAF-03246C8B222D} = {53C087B0-B962-4304-9BAB-CF97AA54467C}
 		{2B2330DF-1475-4258-9AB7-5B07BAF2B1A8} = {83E0937E-5C14-4AE9-92D9-6C82E51794F5}
+		{1B76E3CC-6E46-4D9A-B541-A0C044F29A16} = {9760726B-474A-4886-BF1F-CB06AD9ADE0B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {23088ACE-0F91-45A0-AA33-62075083224F}

@@ -2,7 +2,7 @@
 using BenchmarkDotNet.Running;
 using Quartz;
 
-namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
+namespace Jobby.Benchmarks.QuartzBenchmarks;
 
 public class QuartzCreateJobsBenchmark : IBenchmark
 {

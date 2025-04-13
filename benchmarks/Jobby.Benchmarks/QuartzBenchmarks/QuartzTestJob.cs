@@ -1,6 +1,6 @@
 ﻿using Quartz;
 
-namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
+namespace Jobby.Benchmarks.QuartzBenchmarks;
 
 internal class QuartzTestJob : IJob
 {

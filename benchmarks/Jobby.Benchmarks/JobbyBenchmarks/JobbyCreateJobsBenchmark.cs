@@ -4,7 +4,7 @@ using Jobby.Core.Interfaces;
 using Jobby.Core.Services.Builders;
 using Jobby.Postgres.ConfigurationExtensions;
 
-namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
+namespace Jobby.Benchmarks.JobbyBenchmarks;
 
 public class JobbyCreateJobsBenchmark : IBenchmark
 {

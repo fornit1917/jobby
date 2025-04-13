@@ -1,6 +1,6 @@
 ﻿using Npgsql;
 
-namespace Jobby.Samples.Benchmarks;
+namespace Jobby.Benchmarks;
 
 internal static class DataSourceFactory
 {

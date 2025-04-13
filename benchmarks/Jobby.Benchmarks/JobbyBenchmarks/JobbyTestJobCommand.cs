@@ -1,7 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 
-namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
+namespace Jobby.Benchmarks.JobbyBenchmarks;
 
 public class JobbyTestJobCommand : IJobCommand
 {

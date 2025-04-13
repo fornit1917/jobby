@@ -1,4 +1,4 @@
-﻿namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
+﻿namespace Jobby.Benchmarks.HangfireBenchmarks;
 
 internal class HangfireTestJob
 {

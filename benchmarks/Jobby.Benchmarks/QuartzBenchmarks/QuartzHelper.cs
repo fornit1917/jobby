@@ -1,7 +1,7 @@
 ﻿using Npgsql;
 using Quartz;
 
-namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
+namespace Jobby.Benchmarks.QuartzBenchmarks;
 
 public static class QuartzHelper
 {

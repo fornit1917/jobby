@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Diagnostics;
 
-namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
+namespace Jobby.Benchmarks.JobbyBenchmarks;
 
 public class JobbyExecuteJobsBenchmark : IBenchmark
 {

@@ -1,8 +1,8 @@
-﻿using Jobby.Samples.Benchmarks.HangfireBenchmarks;
-using Jobby.Samples.Benchmarks.JobbyBenchmarks;
-using Jobby.Samples.Benchmarks.QuartzBenchmarks;
+﻿using Jobby.Benchmarks.HangfireBenchmarks;
+using Jobby.Benchmarks.JobbyBenchmarks;
+using Jobby.Benchmarks.QuartzBenchmarks;
 
-namespace Jobby.Samples.Benchmarks
+namespace Jobby.Benchmarks
 {
     internal class Program
     {

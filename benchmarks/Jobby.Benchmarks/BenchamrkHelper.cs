@@ -1,4 +1,4 @@
-﻿namespace Jobby.Samples.Benchmarks;
+﻿namespace Jobby.Benchmarks;
 
 public static class BenchamrkHelper
 {

@@ -1,7 +1,7 @@
 ﻿using Hangfire.PostgreSql;
 using Npgsql;
 
-namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
+namespace Jobby.Benchmarks.HangfireBenchmarks;
 
 internal class HangfireConnectionFactory : IConnectionFactory
 {

@@ -4,7 +4,7 @@ using Hangfire;
 using Npgsql;
 using System.Diagnostics;
 
-namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
+namespace Jobby.Benchmarks.HangfireBenchmarks;
 
 public class HangfireExecuteJobsBenchmark : IBenchmark
 {

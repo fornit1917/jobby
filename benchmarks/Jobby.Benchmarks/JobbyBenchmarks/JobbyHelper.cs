@@ -1,7 +1,7 @@
 using Jobby.Core.Models;
 using Npgsql;
 
-namespace Jobby.Samples.Benchmarks.JobbyBenchmarks;
+namespace Jobby.Benchmarks.JobbyBenchmarks;
 
 public static class JobbyHelper
 {

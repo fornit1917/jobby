@@ -1,6 +1,6 @@
-﻿namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
+﻿namespace Jobby.Benchmarks.HangfireBenchmarks;
 
-public class QuartzTestJobParam
+public class HangfireTestJobParam
 {
     public int Id { get; set; }
     public string Value { get; set; } = string.Empty;

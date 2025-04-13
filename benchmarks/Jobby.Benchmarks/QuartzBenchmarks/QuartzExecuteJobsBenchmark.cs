@@ -4,7 +4,7 @@ using Npgsql;
 using Quartz;
 using System.Diagnostics;
 
-namespace Jobby.Samples.Benchmarks.QuartzBenchmarks;
+namespace Jobby.Benchmarks.QuartzBenchmarks;
 
 public class QuartzExecuteJobsBenchmark : IBenchmark
 {

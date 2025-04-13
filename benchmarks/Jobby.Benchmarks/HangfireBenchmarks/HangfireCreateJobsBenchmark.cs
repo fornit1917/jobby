@@ -2,7 +2,7 @@
 using BenchmarkDotNet.Running;
 using Hangfire;
 
-namespace Jobby.Samples.Benchmarks.HangfireBenchmarks;
+namespace Jobby.Benchmarks.HangfireBenchmarks;
 
 public class HangfireCreateJobsBenchmark : IBenchmark
 {
