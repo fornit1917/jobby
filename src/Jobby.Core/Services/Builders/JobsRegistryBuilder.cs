@@ -17,8 +17,7 @@ internal class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBui
     {
         var jobName = TCommand.GetJobName();
         var handlerType = typeof(IJobCommandHandler<TCommand>);
-        // todo: use more strict search criteria for the method ExecuteAsync
-        var execMethod = handlerType.GetMethod("ExecuteAsync");
+        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(TCommand), typeof(CommandExecutionContext)]);
         if (execMethod == null)
         {
             throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
@@ -40,8 +39,7 @@ internal class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBui
     {
         var jobName = THandler.GetRecurrentJobName();
         var handlerType = typeof(THandler);
-        // todo: use more strict search criteria for the method ExecuteAsync
-        var execMethod = handlerType.GetMethod("ExecuteAsync");
+        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(RecurrentJobExecutionContext)]);
         if (execMethod == null)
         {
             throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
