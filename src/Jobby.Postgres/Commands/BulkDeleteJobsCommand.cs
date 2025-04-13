@@ -1,5 +1,4 @@
-﻿using Jobby.Core.Dto;
-using Jobby.Core.Models;
+﻿using Jobby.Core.Models;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;

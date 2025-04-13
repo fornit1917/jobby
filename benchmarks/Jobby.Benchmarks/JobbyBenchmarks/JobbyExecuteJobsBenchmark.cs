@@ -42,6 +42,7 @@ public class JobbyExecuteJobsBenchmarkAction
             MaxDegreeOfParallelism = 10,
             TakeToProcessingBatchSize = 10,
             PollingIntervalMs = 1000,
+            DbErrorPauseMs = 5000,
             DeleteCompleted = true,
             CompleteWithBatching = true,
         };
