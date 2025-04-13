@@ -1,6 +1,6 @@
 ﻿namespace Jobby.Core.Interfaces.Builders;
 
-public interface IJobsRegistryBuilder
+internal interface IJobsRegistryBuilder
 {
     IJobsRegistry Build();
 }

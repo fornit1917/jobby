@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Jobby.Core.Services;
 
-public class SystemTextJsonJobParamSerializer : IJobParamSerializer
+internal class SystemTextJsonJobParamSerializer : IJobParamSerializer
 {
     private readonly JsonSerializerOptions _opts;
 

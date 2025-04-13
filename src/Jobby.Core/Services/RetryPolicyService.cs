@@ -1,10 +1,9 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using System.Collections.Frozen;
 
 namespace Jobby.Core.Services;
 
-public class RetryPolicyService : IRetryPolicyService
+internal class RetryPolicyService : IRetryPolicyService
 {
     private readonly RetryPolicy _defaultRetryPolicy;
     private readonly IReadOnlyDictionary<string, RetryPolicy> _retryPoliciesByJobName;

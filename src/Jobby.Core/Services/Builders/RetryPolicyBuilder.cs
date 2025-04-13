@@ -5,7 +5,7 @@ using System.Collections.Frozen;
 
 namespace Jobby.Core.Services.Builders;
 
-public class RetryPolicyBuilder : IRetryPolicyConfigurable, IRetryPolicyBuilder
+internal class RetryPolicyBuilder : IRetryPolicyConfigurable, IRetryPolicyBuilder
 {
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
     private readonly Dictionary<string, RetryPolicy> _retryPoliciesByJobName = new();

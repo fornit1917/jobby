@@ -4,7 +4,7 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
 
-public class RecurrentJobsClient : IRecurrentJobsClient
+internal class RecurrentJobsClient : IRecurrentJobsClient
 {
     private readonly IJobsStorage _storage;
 

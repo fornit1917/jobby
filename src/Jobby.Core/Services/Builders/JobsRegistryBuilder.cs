@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace Jobby.Core.Services.Builders;
 
-public class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBuilder
+internal class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBuilder
 {
     private readonly Dictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName = new();
     private readonly Dictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName = new();

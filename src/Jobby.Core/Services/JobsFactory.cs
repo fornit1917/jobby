@@ -3,7 +3,7 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
 
-public class JobsFactory : IJobsFactory
+internal class JobsFactory : IJobsFactory
 {
     private readonly IJobParamSerializer _serializer;
 

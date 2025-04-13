@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jobby.Core.Services;
 
-public class JobbyServer : IJobbyServer
+internal class JobbyServer : IJobbyServer
 {
     private readonly IJobsStorage _storage;
     private readonly IJobExecutionScopeFactory _scopeFactory;

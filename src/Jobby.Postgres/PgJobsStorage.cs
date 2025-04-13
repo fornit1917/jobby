@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace Jobby.Postgres;
 
-public class PgJobsStorage : IJobsStorage
+internal class PgJobsStorage : IJobsStorage
 {
     private readonly NpgsqlDataSource _dataSource;
 

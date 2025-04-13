@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-public class BulkDeleteJobsCommand
+internal class BulkDeleteJobsCommand
 {
     private const string DeleteCommandText = @"DELETE FROM jobby_jobs WHERE id = ANY($1)";
     
