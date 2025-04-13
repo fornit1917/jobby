@@ -14,14 +14,11 @@ public class JobbyServer : IJobbyServer
     private readonly IJobsRegistry _jobsRegistry;
     private readonly IJobParamSerializer _serializer;
     private readonly ILogger<JobbyServer> _logger;
-
-    private readonly IJobCompletingService _jobCompletingService;
-
     private readonly JobbyServerSettings _settings;
 
+    private readonly IJobCompletingService _jobCompletingService;
     private readonly SemaphoreSlim _semaphore;
-
-    private bool _running;
+    private CancellationTokenSource _cancellationTokenSource;
 
     public IReadOnlyList<int> BatchCompletionStat => _jobCompletingService != null && _jobCompletingService is BatchingJobCompletingService
         ? ((BatchingJobCompletingService)_jobCompletingService).Stat
@@ -47,23 +44,28 @@ public class JobbyServer : IJobbyServer
         _jobCompletingService = _settings.CompleteWithBatching
             ? new BatchingJobCompletingService(storage, settings)
             : new SimpleJobCompletingService(storage, settings.DeleteCompleted);
+
+        _cancellationTokenSource = new CancellationTokenSource();
     }
 
     public void StartBackgroundService()
     {
-        _running = true;
+        if (_cancellationTokenSource.IsCancellationRequested)
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
+        }
         Task.Run(Poll);
     }
 
     public void SendStopSignal()
     {
-        _running = false;
+        _cancellationTokenSource.Cancel();
     }
 
     private async Task Poll()
     {
         var jobs = new List<Job>(capacity: _settings.TakeToProcessingBatchSize);
-        while (_running)
+        while (!_cancellationTokenSource.IsCancellationRequested)
         {
             await _semaphore.WaitAsync();
 
@@ -88,7 +90,7 @@ public class JobbyServer : IJobbyServer
             if (jobs.Count == 0)
             {
                 _semaphore.Release();
-                if (_running)
+                if (!_cancellationTokenSource.IsCancellationRequested)
                 {
                     await Task.Delay(_settings.PollingIntervalMs);
                 }
@@ -167,7 +169,8 @@ public class JobbyServer : IJobbyServer
             {
                 JobName = job.JobName,
                 StartedCount = job.StartedCount,
-                IsLastAttempt = retryPolicy.IsLastAttempt(job)
+                IsLastAttempt = retryPolicy.IsLastAttempt(job),
+                CancellationToken = _cancellationTokenSource.Token,
             };
             var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
             if (result is Task)
@@ -239,7 +242,8 @@ public class JobbyServer : IJobbyServer
 
             var ctx = new RecurrentJobExecutionContext
             {
-                JobName = job.JobName
+                JobName = job.JobName,
+                CancellationToken = _cancellationTokenSource.Token,
             };
             var result = execMetadata.ExecMethod.Invoke(handlerInstance, [ctx]);
             if (result is Task)
