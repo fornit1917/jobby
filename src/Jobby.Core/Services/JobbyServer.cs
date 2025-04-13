@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jobby.Core.Services;
 
-internal class JobbyServer : IJobbyServer
+internal class JobbyServer : IJobbyServer, IDisposable
 {
     private readonly IJobsStorage _storage;
     private readonly IJobExecutionScopeFactory _scopeFactory;
@@ -16,13 +16,10 @@ internal class JobbyServer : IJobbyServer
     private readonly ILogger<JobbyServer> _logger;
     private readonly JobbyServerSettings _settings;
 
-    private readonly IJobCompletingService _jobCompletingService;
+    private readonly IJobCompletionService _jobCompletingService;
     private readonly SemaphoreSlim _semaphore;
     private CancellationTokenSource _cancellationTokenSource;
-
-    public IReadOnlyList<int> BatchCompletionStat => _jobCompletingService != null && _jobCompletingService is BatchingJobCompletingService
-        ? ((BatchingJobCompletingService)_jobCompletingService).Stat
-        : Array.Empty<int>();
+    private bool _polling = false;
 
     public JobbyServer(IJobsStorage storage,
         IJobExecutionScopeFactory scopeFactory,
@@ -42,8 +39,8 @@ internal class JobbyServer : IJobbyServer
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
 
         _jobCompletingService = _settings.CompleteWithBatching
-            ? new BatchingJobCompletingService(storage, settings)
-            : new SimpleJobCompletingService(storage, settings.DeleteCompleted);
+            ? new BatchingJobCompletionService(storage, settings)
+            : new SimpleJobCompletionService(storage, settings.DeleteCompleted);
 
         _cancellationTokenSource = new CancellationTokenSource();
     }
@@ -64,6 +61,7 @@ internal class JobbyServer : IJobbyServer
 
     private async Task Poll()
     {
+        _polling = true;
         var jobs = new List<Job>(capacity: _settings.TakeToProcessingBatchSize);
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
@@ -106,6 +104,7 @@ internal class JobbyServer : IJobbyServer
                 StartProcessing(jobs);
             }
         }
+        _polling = false;
     }
 
     private void StartProcessing(Job job)
@@ -269,5 +268,23 @@ internal class JobbyServer : IJobbyServer
                 // todo: retry status update queue
             }
         }
+    }
+
+    public void Dispose()
+    {
+        if (_jobCompletingService is IDisposable disposableJobCompletionService)
+        {
+            disposableJobCompletionService.Dispose();
+        }
+
+        if (!_cancellationTokenSource.IsCancellationRequested)
+        {
+            _cancellationTokenSource.Cancel();
+        }
+    }
+
+    public bool HasInProgressJobs()
+    {
+        return !_polling && _semaphore.CurrentCount == _settings.MaxDegreeOfParallelism;
     }
 }

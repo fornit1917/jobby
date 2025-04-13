@@ -80,4 +80,10 @@ internal class PgJobsStorage : IJobsStorage
         await using var conn = await _dataSource.OpenConnectionAsync();
         await BulkDeleteJobsCommand.ExecuteAsync(conn, jobIds, nextJobIds);
     }
+
+    public async Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await BulkCompleteJobsCommand.ExecuteAsync(conn, jobIds, nextJobIds);
+    }
 }

@@ -59,7 +59,7 @@ internal class Program
         switch (action)
         {
             case "1":
-                CreateSuccess(jobsClient, 5);
+                CreateSuccess(jobsClient, 500);
                 break;
             case "2":
                 CreateFailed(jobsClient);
@@ -68,7 +68,7 @@ internal class Program
                 CreateRecurrent(recurrentJobsClient);
                 break;
             case "4":
-                CreateSequence(jobsClient);
+                CreateSequence(jobsClient, 5);
                 break;
         }
 
@@ -108,10 +108,10 @@ internal class Program
         recurrentJobsClient.ScheduleRecurrent<TestRecurrentJobHandler>("*/3 * * * * *");
     }
 
-    private static void CreateSequence(IJobsClient client)
+    private static void CreateSequence(IJobsClient client, int jobsCount)
     {
         var builder = client.Factory.CreateSequenceBuilder();
-        for (int i = 1; i <= 5; i++)
+        for (int i = 1; i <= jobsCount; i++)
         {
             builder.Add(new TestJobParam { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false });
         }

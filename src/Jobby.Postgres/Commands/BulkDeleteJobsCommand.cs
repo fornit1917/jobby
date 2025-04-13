@@ -3,7 +3,7 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class BulkDeleteJobsCommand
+internal static class BulkDeleteJobsCommand
 {
     private const string DeleteCommandText = @"DELETE FROM jobby_jobs WHERE id = ANY($1)";
     
@@ -15,7 +15,7 @@ internal class BulkDeleteJobsCommand
     {
         if (nextJobIds is { Count : > 0})
         {
-            var batch = new NpgsqlBatch(conn);
+            await using var batch = new NpgsqlBatch(conn);
             
             var deleteCmd = new NpgsqlBatchCommand(DeleteCommandText)
             {
@@ -40,7 +40,7 @@ internal class BulkDeleteJobsCommand
         }
         else
         {
-            var deleteCmd = new NpgsqlCommand(DeleteCommandText, conn)
+            await using var deleteCmd = new NpgsqlCommand(DeleteCommandText, conn)
             {
                 Parameters =
                 {

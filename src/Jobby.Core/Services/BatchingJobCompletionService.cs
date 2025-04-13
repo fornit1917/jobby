@@ -4,7 +4,7 @@ using System.Threading.Channels;
 
 namespace Jobby.Core.Services;
 
-internal class BatchingJobCompletingService : IJobCompletingService
+internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
 {
     private readonly IJobsStorage _storage;
     private readonly JobbyServerSettings _settings;
@@ -13,10 +13,8 @@ internal class BatchingJobCompletingService : IJobCompletingService
     private Channel<QueueItem> _chan;
 
     private readonly int[] _stat;
-    public IReadOnlyList<int> Stat => _stat;
 
-
-    public BatchingJobCompletingService(IJobsStorage storage, JobbyServerSettings settings)
+    public BatchingJobCompletionService(IJobsStorage storage, JobbyServerSettings settings)
     {
         _storage = storage;
         _settings = settings;
@@ -37,12 +35,6 @@ internal class BatchingJobCompletingService : IJobCompletingService
 
     public Task CompleteJob(Guid jobId, Guid? nextJobId)
     {
-        // todo: add batching for "MarkCompleted" mode
-        if (!_settings.DeleteCompleted)
-        {
-            return _storage.MarkCompletedAsync(jobId, nextJobId);
-        }
-
         var queueItem = new QueueItem
         {
             JobId = jobId,
@@ -64,8 +56,6 @@ internal class BatchingJobCompletingService : IJobCompletingService
 
     private async Task Process()
     {
-        // todo: close channel when service is stopped
-
         var taskCompletionSources = new List<TaskCompletionSource>(capacity: _settings.MaxDegreeOfParallelism);
         var jobIds = new List<Guid>(capacity: _settings.MaxDegreeOfParallelism);
         var nextJobIds = new List<Guid>(capacity: _settings.MaxDegreeOfParallelism);
@@ -106,7 +96,15 @@ internal class BatchingJobCompletingService : IJobCompletingService
             // If batch is not empty - send bulk command to DB
             try
             {
-                await _storage.BulkDeleteAsync(jobIds, nextJobIds);
+                if (_settings.DeleteCompleted)
+                {
+                    await _storage.BulkDeleteAsync(jobIds, nextJobIds);
+                }
+                else
+                {
+                    await _storage.BulkMarkCompletedAsync(jobIds, nextJobIds);
+                }
+                
                 SetCompletedForTasks(taskCompletionSources);
             }
             catch (Exception ex)
@@ -135,5 +133,10 @@ internal class BatchingJobCompletingService : IJobCompletingService
         {
             taskCompletionSources[i].SetException(ex);
         }
+    }
+
+    public void Dispose()
+    {
+        _chan.Writer.Complete();
     }
 }
