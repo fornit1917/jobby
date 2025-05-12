@@ -36,6 +36,7 @@ public static class QuartzHelper
             {
                 x.MaxConcurrency = maxConcurrency;
             })
+            .WithMaxBatchSize(maxConcurrency)
             .UsePersistentStore(x =>
             {
                 x.UseClustering();

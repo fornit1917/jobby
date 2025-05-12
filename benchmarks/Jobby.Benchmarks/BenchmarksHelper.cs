@@ -5,26 +5,25 @@ internal static class BenchmarksHelper
     public static BenchmarkParams GetCommonParams()
     {
         string? input;
-        
+
+        var result = new BenchmarkParams();
+
+        Console.Write("Jobs count (default 1000): ");
+        input = Console.ReadLine();
+        result.JobsCount = string.IsNullOrWhiteSpace(input) ? 1000 : int.Parse(input);
+
         Console.Write("Degree of parallelism (default 10): ");
         input = Console.ReadLine();
-        int degreeOfParallelism = string.IsNullOrWhiteSpace(input) ? 10 : int.Parse(input);
+        result.DegreeOfParallelism = string.IsNullOrWhiteSpace(input) ? 10 : int.Parse(input);
 
-        return new BenchmarkParams
-        {
-            DegreeOfParallelism = degreeOfParallelism,
-        };
+        return result;
     }
 
     public static BenchmarkParams GetJobbyParams()
     {
         string? input;
 
-        var result = new BenchmarkParams();
-
-        Console.Write("Degree of parallelism (default 10): ");
-        input = Console.ReadLine();
-        result.DegreeOfParallelism = string.IsNullOrWhiteSpace(input) ? 10 : int.Parse(input);
+        var result = GetCommonParams();
 
         Console.Write("Complete with batching (y/n, default n): ");
         input = Console.ReadLine()?.Trim();

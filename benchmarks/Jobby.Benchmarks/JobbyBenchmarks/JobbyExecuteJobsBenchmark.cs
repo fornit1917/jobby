@@ -1,9 +1,7 @@
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
 using Jobby.Core.Services.Builders;
 using Jobby.Postgres.ConfigurationExtensions;
 using Microsoft.Extensions.Logging;
@@ -14,12 +12,49 @@ namespace Jobby.Benchmarks.JobbyBenchmarks;
 
 public class JobbyExecuteJobsBenchmark : IBenchmark
 {
-    public string Name => "Jobby.Execute";
+    private readonly bool _useBenchmarkLib;
 
-    public Task Run()
+    public JobbyExecuteJobsBenchmark(bool useBenchmarkLib)
     {
-        BenchmarkRunner.Run<JobbyExecuteJobsBenchmarkAction>();
-        return Task.CompletedTask;
+        _useBenchmarkLib = useBenchmarkLib;
+    }
+
+    public string Name => _useBenchmarkLib 
+        ? "Jobby.Execute" 
+        : "Jobby.Execute.WithoutBenchmarkLib";
+
+    public async Task Run()
+    {
+        if (_useBenchmarkLib)
+        {
+            BenchmarkRunner.Run<JobbyExecuteJobsBenchmarkAction>();
+        }
+        else
+        {
+            var action = new JobbyExecuteJobsBenchmarkAction();
+            var benchmarkParams = BenchmarksHelper.GetJobbyParams();
+            action.JobsCount = benchmarkParams.JobsCount;
+            action.DegreeOfParallelism = benchmarkParams.DegreeOfParallelism;
+            action.CompleteWithBatching = benchmarkParams.CompleteWithBatching;
+
+            Console.WriteLine("Warmup...");
+            action.Setup();
+            action.JobbyExecuteJobs();
+
+            Console.WriteLine("Setup...");
+            action.Setup();
+
+            Console.WriteLine("Pause before run...");
+            await Task.Delay(3000);
+            Console.WriteLine("Run!");
+
+            var sw = new Stopwatch();
+            sw.Start();
+            action.JobbyExecuteJobs();
+            sw.Stop();
+
+            Console.WriteLine($"Jobs execution time: {sw.ElapsedMilliseconds} ms");
+        }
     }
 }
 
@@ -39,6 +74,14 @@ public class JobbyExecuteJobsBenchmarkAction
         _dataSource = DataSourceFactory.Create();
     }
 
+    [Params(10, 30)]
+    public int DegreeOfParallelism { get; set; } = 10;
+
+    [Params(false, true)]
+    public bool CompleteWithBatching { get; set; } = false;
+
+    public int JobsCount { get; set; } = 1000;
+
     [IterationSetup]
     public void Setup()
     {
@@ -46,12 +89,12 @@ public class JobbyExecuteJobsBenchmarkAction
 
         var serverSettings = new JobbyServerSettings
         {
-            MaxDegreeOfParallelism = 30,
+            MaxDegreeOfParallelism = DegreeOfParallelism,
             TakeToProcessingBatchSize = 10,
             PollingIntervalMs = 1000,
             DbErrorPauseMs = 5000,
             DeleteCompleted = true,
-            CompleteWithBatching = false,
+            CompleteWithBatching = CompleteWithBatching,
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
 
@@ -65,12 +108,11 @@ public class JobbyExecuteJobsBenchmarkAction
         _jobbyServer = builder.CreateJobbyServer();
         _jobsClient = builder.CreateJobsClient();
 
-        const int jobsCount = 1000;
-        Counter.Reset(jobsCount);
+        Counter.Reset(JobsCount);
 
         JobbyHelper.RemoveAllJobs(_dataSource);
-        var jobs = new List<Job>(capacity: jobsCount);
-        for (int i = 1; i <= jobsCount; i++)
+        var jobs = new List<Job>(capacity: JobsCount);
+        for (int i = 1; i <= JobsCount; i++)
         {
             var jobCommand = new JobbyTestJobCommand
             {

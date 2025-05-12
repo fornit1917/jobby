@@ -12,15 +12,18 @@ namespace Jobby.Benchmarks
             {
                 new JobbyCreateJobsBenchmark(),
                 new JobbyBulkCreateJobsBenchmark(),
-                new JobbyExecuteJobsBenchmark(),
+                new JobbyExecuteJobsBenchmark(useBenchmarkLib: true),
+                new JobbyExecuteJobsBenchmark(useBenchmarkLib: false),
 
                 new HangfireCreateJobsBenchmark(),
                 new HangfireBulkCreateJobsBenchmark(),
-                new HangfireExecuteJobsBenchmark(),
-                
+                new HangfireExecuteJobsBenchmark(useBenchmarkLib: true),
+                new HangfireExecuteJobsBenchmark(useBenchmarkLib: false),
+
                 new QuartzCreateJobsBenchmark(),
                 new QuartzBulkCreateJobsBenchmark(),
-                new QuartzExecuteJobsBenchmark(),
+                new QuartzExecuteJobsBenchmark(useBenchamrkLib: true),
+                new QuartzExecuteJobsBenchmark(useBenchamrkLib: false),
             };
 
             for (int i = 0; i < benchmarks.Length; i++)

@@ -2,17 +2,54 @@
 using BenchmarkDotNet.Running;
 using Npgsql;
 using Quartz;
+using System.Diagnostics;
 
 namespace Jobby.Benchmarks.QuartzBenchmarks;
 
 public class QuartzExecuteJobsBenchmark : IBenchmark
 {
-    public string Name => "Quartz.Execute";
+    private readonly bool _useBenchamrkLib;
 
-    public Task Run()
+    public QuartzExecuteJobsBenchmark(bool useBenchamrkLib)
     {
-        BenchmarkRunner.Run<QuartzExecuteJobsBenchmarkAction>();
-        return Task.CompletedTask;
+        _useBenchamrkLib = useBenchamrkLib;
+    }
+
+    public string Name => _useBenchamrkLib ? "Quartz.Execute" : "Quartz.Execute.WithoutBenchmarkLib";
+
+    public async Task Run()
+    {
+        if (_useBenchamrkLib)
+        {
+            BenchmarkRunner.Run<QuartzExecuteJobsBenchmarkAction>();
+        }
+        else
+        {
+            var benchmarkParams = BenchmarksHelper.GetCommonParams();
+            var action = new QuartzExecuteJobsBenchmarkAction();
+            action.JobsCount = benchmarkParams.JobsCount;
+            action.DegreeOfParallelism = benchmarkParams.DegreeOfParallelism;
+
+            Console.WriteLine("Warmup...");
+            action.Setup();
+            action.QuartzExecuteJobs();
+            action.Cleanup();
+
+            Console.WriteLine("Setup...");
+            action.Setup();
+
+            Console.WriteLine("Pause before run...");
+            await Task.Delay(3000);
+            Console.WriteLine("Run!");
+
+            var sw = new Stopwatch();
+            sw.Start();
+            action.QuartzExecuteJobs();
+            sw.Stop();
+            action.Cleanup();
+
+            Console.WriteLine($"Jobs execution time: {sw.ElapsedMilliseconds} ms");
+        }   
     }
 }
 
@@ -26,6 +63,11 @@ public class QuartzExecuteJobsBenchmarkAction
     private readonly NpgsqlDataSource _dataSource;
     private IScheduler? _scheduler;
 
+    public int JobsCount { get; set; } = 1000;
+
+    [Params(10, 30)]
+    public int DegreeOfParallelism { get; set; } = 10;
+
     public QuartzExecuteJobsBenchmarkAction()
     {
         _dataSource = DataSourceFactory.Create();
@@ -34,14 +76,12 @@ public class QuartzExecuteJobsBenchmarkAction
     [IterationSetup]
     public void Setup()
     {
-        _scheduler = QuartzHelper.CreateScheduler(maxConcurrency: 10).GetAwaiter().GetResult();
+        _scheduler = QuartzHelper.CreateScheduler(maxConcurrency: DegreeOfParallelism).GetAwaiter().GetResult();
 
-        const int jobsCount = 1000;
-
-        Counter.Reset(jobsCount);
+        Counter.Reset(JobsCount);
 
         QuartzHelper.RemoveAllJobs(_dataSource);
-        for (int i = 1; i <= jobsCount; i++)
+        for (int i = 1; i <= JobsCount; i++)
         {
             var jobParam = new QuartzTestJobParam
             {
@@ -60,7 +100,7 @@ public class QuartzExecuteJobsBenchmarkAction
     }
 
     [Benchmark]
-    public void Run()
+    public void QuartzExecuteJobs()
     {
         _scheduler?.Start();
         Counter.Event.WaitOne();
