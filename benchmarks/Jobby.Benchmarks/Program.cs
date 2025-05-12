@@ -19,6 +19,7 @@ namespace Jobby.Benchmarks
                 new HangfireExecuteJobsBenchmark(),
                 
                 new QuartzCreateJobsBenchmark(),
+                new QuartzBulkCreateJobsBenchmark(),
                 new QuartzExecuteJobsBenchmark(),
             };
 

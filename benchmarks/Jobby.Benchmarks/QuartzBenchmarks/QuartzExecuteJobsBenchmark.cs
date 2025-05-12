@@ -2,7 +2,6 @@
 using BenchmarkDotNet.Running;
 using Npgsql;
 using Quartz;
-using System.Diagnostics;
 
 namespace Jobby.Benchmarks.QuartzBenchmarks;
 
@@ -25,7 +24,7 @@ public class QuartzExecuteJobsBenchmark : IBenchmark
 public class QuartzExecuteJobsBenchmarkAction
 {
     private readonly NpgsqlDataSource _dataSource;
-    private IScheduler _scheduler;
+    private IScheduler? _scheduler;
 
     public QuartzExecuteJobsBenchmarkAction()
     {
@@ -35,7 +34,7 @@ public class QuartzExecuteJobsBenchmarkAction
     [IterationSetup]
     public void Setup()
     {
-        _scheduler = QuartzHelper.CreateScheduler().GetAwaiter().GetResult();
+        _scheduler = QuartzHelper.CreateScheduler(maxConcurrency: 10).GetAwaiter().GetResult();
 
         const int jobsCount = 1000;
 
@@ -57,13 +56,13 @@ public class QuartzExecuteJobsBenchmarkAction
     [IterationCleanup]
     public void Cleanup()
     {
-        _scheduler.Shutdown().GetAwaiter().GetResult();
+        _scheduler?.Shutdown().GetAwaiter().GetResult();
     }
 
     [Benchmark]
     public void Run()
     {
-        _scheduler.Start();
+        _scheduler?.Start();
         Counter.Event.WaitOne();
     }
 }

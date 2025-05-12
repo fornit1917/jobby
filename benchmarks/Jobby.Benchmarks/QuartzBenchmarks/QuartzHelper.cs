@@ -29,10 +29,13 @@ public static class QuartzHelper
         return reader.HasRows;
     }
 
-    public static Task<IScheduler> CreateScheduler()
+    public static Task<IScheduler> CreateScheduler(int maxConcurrency = 10)
     {
         return SchedulerBuilder.Create()
-            .UseDefaultThreadPool(x => x.MaxConcurrency = 10)
+            .UseDefaultThreadPool(x =>
+            {
+                x.MaxConcurrency = maxConcurrency;
+            })
             .UsePersistentStore(x =>
             {
                 x.UseClustering();
@@ -62,5 +65,29 @@ public static class QuartzHelper
             .Build();
 
         return scheduler.ScheduleJob(job, trigger);
+    }
+
+    public static Task CreateTestJobs(IScheduler scheduler, IReadOnlyList<QuartzTestJobParam> jobsParams)
+    {
+        var jobs = new Dictionary<IJobDetail, IReadOnlyCollection<ITrigger>>();
+        for (int i = 0; i < jobsParams.Count; i++)
+        {
+            var jobParam = jobsParams[i];
+
+            var trigger = TriggerBuilder.Create()
+            .WithIdentity(Guid.NewGuid().ToString())
+            .StartNow()
+            .Build();
+
+            var job = JobBuilder.Create<QuartzTestJob>()
+                .WithIdentity(Guid.NewGuid().ToString())
+                .UsingJobData(nameof(QuartzTestJobParam.Id), jobParam.Id)
+                .UsingJobData(nameof(QuartzTestJobParam.Value), jobParam.Value)
+                .UsingJobData(nameof(QuartzTestJobParam.DelayMs), jobParam.DelayMs)
+                .Build();
+
+            jobs[job] = [trigger];
+        }
+        return scheduler.ScheduleJobs(jobs, false);
     }
 }

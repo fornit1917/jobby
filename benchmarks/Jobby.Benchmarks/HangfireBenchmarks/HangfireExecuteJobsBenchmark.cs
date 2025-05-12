@@ -2,7 +2,6 @@
 using BenchmarkDotNet.Running;
 using Hangfire;
 using Npgsql;
-using System.Diagnostics;
 
 namespace Jobby.Benchmarks.HangfireBenchmarks;
 

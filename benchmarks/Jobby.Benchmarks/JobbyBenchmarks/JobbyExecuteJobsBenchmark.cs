@@ -1,4 +1,5 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
@@ -29,22 +30,28 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 [InvocationCount(1)]
 public class JobbyExecuteJobsBenchmarkAction
 {
-    private readonly NpgsqlDataSource _dataSource;
-    private readonly IJobbyServer _jobbyServer;
-    private readonly IJobsClient _jobsClient;
+    private NpgsqlDataSource _dataSource;
+    private IJobbyServer? _jobbyServer;
+    private IJobsClient? _jobsClient;
 
     public JobbyExecuteJobsBenchmarkAction()
     {
-        var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
         _dataSource = DataSourceFactory.Create();
+    }
+
+    [IterationSetup]
+    public void Setup()
+    {
+        var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
+
         var serverSettings = new JobbyServerSettings
         {
-            MaxDegreeOfParallelism = 10,
+            MaxDegreeOfParallelism = 30,
             TakeToProcessingBatchSize = 10,
             PollingIntervalMs = 1000,
             DbErrorPauseMs = 5000,
             DeleteCompleted = true,
-            CompleteWithBatching = true,
+            CompleteWithBatching = false,
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
 
@@ -57,16 +64,12 @@ public class JobbyExecuteJobsBenchmarkAction
 
         _jobbyServer = builder.CreateJobbyServer();
         _jobsClient = builder.CreateJobsClient();
-    }
 
-    [IterationSetup]
-    public void Setup()
-    {
         const int jobsCount = 1000;
         Counter.Reset(jobsCount);
 
-        _jobbyServer.SendStopSignal();
         JobbyHelper.RemoveAllJobs(_dataSource);
+        var jobs = new List<Job>(capacity: jobsCount);
         for (int i = 1; i <= jobsCount; i++)
         {
             var jobCommand = new JobbyTestJobCommand
@@ -75,14 +78,18 @@ public class JobbyExecuteJobsBenchmarkAction
                 Value = Guid.NewGuid().ToString(),
                 DelayMs = 0,
             };
-            _jobsClient.EnqueueCommand(jobCommand);
+            var job = _jobsClient.Factory.Create(jobCommand);
+            jobs.Add(job);
         }
+        _jobsClient.EnqueueBatch(jobs);
     }
+
 
     [Benchmark]
     public void JobbyExecuteJobs()
     {
-        _jobbyServer.StartBackgroundService();
+        _jobbyServer?.StartBackgroundService();
         Counter.Event.WaitOne();
+        _jobbyServer?.SendStopSignal();
     }
 }

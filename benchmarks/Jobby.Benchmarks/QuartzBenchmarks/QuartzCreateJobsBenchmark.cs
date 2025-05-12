@@ -28,16 +28,12 @@ public class QuartzCreateJobsBenchmarkAction
     [Benchmark]
     public void QuartzCreateJobs()
     {
-        const int jobsCount = 1;
-        for (int i = 1; i <= jobsCount; i++) 
+        var jobParam = new QuartzTestJobParam
         {
-            var jobParam = new QuartzTestJobParam
-            {
-                Id = i,
-                Value = Guid.NewGuid().ToString(),
-                DelayMs = 0,
-            };
-            QuartzHelper.CreateTestJob(_scheduler, jobParam).GetAwaiter().GetResult();
-        }
+            Id = 1,
+            Value = Guid.NewGuid().ToString(),
+            DelayMs = 0,
+        };
+        QuartzHelper.CreateTestJob(_scheduler, jobParam).GetAwaiter().GetResult();
     }
 }
