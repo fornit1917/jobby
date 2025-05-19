@@ -1,21 +1,33 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class DeleteJobCommand
+internal class DeleteJobCommand
 {
-    private const string DeleteJobCommandText = @"DELETE FROM jobby_jobs WHERE id = $1";
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _deleteJobCommandText;
+    private readonly string _scheduleNextJobCommandText;
 
-    private static readonly string ScheduleNextJobCommandText = @$"
-        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = $1
-    ";
-
-    public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, Guid? nextJobId = null)
+    public DeleteJobCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
+        _dataSource = dataSource;
+        
+        _deleteJobCommandText = $"DELETE FROM {TableName.Jobs(settings)} WHERE id = $1";
+        
+        _scheduleNextJobCommandText = @$"
+            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = $1
+        ";
+    }
+
+    public async Task ExecuteAsync(Guid jobId, Guid? nextJobId = null)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+
         if (nextJobId == null)
         {
-            await using var cmd = new NpgsqlCommand(DeleteJobCommandText, conn)
+            await using var cmd = new NpgsqlCommand(_deleteJobCommandText, conn)
             {
                 Parameters =
                 {
@@ -28,7 +40,7 @@ internal static class DeleteJobCommand
         {
             await using var batch = new NpgsqlBatch(conn);
 
-            var deleteCmd = new NpgsqlBatchCommand(DeleteJobCommandText)
+            var deleteCmd = new NpgsqlBatchCommand(_deleteJobCommandText)
             {
                 Parameters =
                 {
@@ -36,7 +48,7 @@ internal static class DeleteJobCommand
                 }
             };
 
-            var scheduleNextCmd = new NpgsqlBatchCommand(ScheduleNextJobCommandText)
+            var scheduleNextCmd = new NpgsqlBatchCommand(_scheduleNextJobCommandText)
             {
                 Parameters =
                 {

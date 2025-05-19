@@ -9,28 +9,42 @@ internal class PgJobsStorage : IJobsStorage
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    public PgJobsStorage(NpgsqlDataSource dataSource)
+    private readonly BulkCompleteJobsCommand _bulkCompleteJobsCommand;
+    private readonly BulkDeleteJobsCommand _bulkDeleteJobsCommand;
+    private readonly BulkInsertJobsCommand _bulkInsertJobsCommand;
+    private readonly DeleteJobCommand _deleteJobCommand;
+    private readonly InsertJobCommand _insertJobCommand;
+    private readonly RescheduleCommand _rescheduleJobCommand;
+    private readonly TakeBatchToProcessingCommand _takeBatchToProcessingCommand;
+    private readonly UpdateStatusCommand _updateStatusCommand;
+
+    public PgJobsStorage(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
         _dataSource = dataSource;
+
+        _bulkCompleteJobsCommand = new BulkCompleteJobsCommand(dataSource, settings);
+        _bulkDeleteJobsCommand = new BulkDeleteJobsCommand(dataSource, settings);
+        _bulkInsertJobsCommand = new BulkInsertJobsCommand(dataSource, settings);
+        _deleteJobCommand = new DeleteJobCommand(dataSource, settings);
+        _insertJobCommand = new InsertJobCommand(dataSource, settings);
+        _rescheduleJobCommand = new RescheduleCommand(dataSource, settings);
+        _takeBatchToProcessingCommand = new TakeBatchToProcessingCommand(dataSource, settings);
+        _updateStatusCommand = new UpdateStatusCommand(dataSource, settings);
     }
 
-    public async Task InsertAsync(Job job)
+    public Task InsertAsync(Job job)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await InsertJobCommand.ExecuteAsync(conn, job);
+        return _insertJobCommand.ExecuteAsync(job);
     }
 
     public void Insert(Job job)
     {
-        using var conn = _dataSource.OpenConnection();
-        InsertJobCommand.Execute(conn, job);
+        _insertJobCommand.Execute(job);
     }
 
-    public async Task TakeBatchToProcessingAsync(int maxBatchSize, List<Job> result)
+    public Task TakeBatchToProcessingAsync(int maxBatchSize, List<Job> result)
     {
-        var now = DateTime.UtcNow;
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await TakeBatchToProcessingCommand.ExecuteAndWriteToListAsync(conn, now, maxBatchSize, result);
+        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(DateTime.UtcNow, maxBatchSize, result);
     }
 
     public Task MarkCompletedAsync(Guid jobId, Guid? nextJobId = null)
@@ -40,50 +54,42 @@ internal class PgJobsStorage : IJobsStorage
 
     public Task MarkFailedAsync(Guid jobId)
     {
-        // todo: write error message to job
         return UpdateStatus(jobId, JobStatus.Failed);
     }
 
-    public async Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime)
+    public Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await RescheduleCommand.ExecuteAsync(conn, jobId, sheduledStartTime);
+        return _rescheduleJobCommand.ExecuteAsync(jobId, sheduledStartTime);
     }
 
-    private async Task UpdateStatus(Guid jobId, JobStatus newStatus, Guid? nextJobId = null)
+    private Task UpdateStatus(Guid jobId, JobStatus newStatus, Guid? nextJobId = null)
     {
         var finishedAt = DateTime.UtcNow;
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await UpdateStatusCommand.ExecuteAsync(conn, jobId, newStatus, nextJobId);
+        return _updateStatusCommand.ExecuteAsync(jobId, newStatus, nextJobId);
     }
 
-    public async Task DeleteAsync(Guid jobId, Guid? nextJobId = null)
+    public Task DeleteAsync(Guid jobId, Guid? nextJobId = null)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await DeleteJobCommand.ExecuteAsync(conn, jobId, nextJobId);
+        return _deleteJobCommand.ExecuteAsync(jobId, nextJobId);
     }
 
-    public async Task BulkInsertAsync(IReadOnlyList<Job> jobs)
+    public Task BulkInsertAsync(IReadOnlyList<Job> jobs)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await BulkInsertJobsCommand.ExecuteAsync(conn, jobs);
+        return _bulkInsertJobsCommand.ExecuteAsync(jobs);
     }
 
     public void BulkInsert(IReadOnlyList<Job> jobs)
     {
-        using var conn = _dataSource.OpenConnection();
-        BulkInsertJobsCommand.Execute(conn, jobs);
+        _bulkInsertJobsCommand.Execute(jobs);
     }
 
-    public async Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    public Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await BulkDeleteJobsCommand.ExecuteAsync(conn, jobIds, nextJobIds);
+        return _bulkDeleteJobsCommand.ExecuteAsync(jobIds, nextJobIds);
     }
 
-    public async Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    public Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
     {
-        await using var conn = await _dataSource.OpenConnectionAsync();
-        await BulkCompleteJobsCommand.ExecuteAsync(conn, jobIds, nextJobIds);
+        return _bulkCompleteJobsCommand.ExecuteAsync(jobIds, nextJobIds);
     }
 }

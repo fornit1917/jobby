@@ -4,32 +4,42 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class TakeBatchToProcessingCommand
+internal class TakeBatchToProcessingCommand
 {
-    private static readonly string TakeBatchToProcessingSql = $@"
-        WITH ready_jobs AS (
-	        SELECT id FROM jobby_jobs 
-	        WHERE
-                status = {(int)JobStatus.Scheduled}
-                AND scheduled_start_at <= $1
-	        ORDER BY scheduled_start_at
-	        LIMIT $2
-	        FOR UPDATE SKIP LOCKED
-        )
-        UPDATE jobby_jobs
-        SET
-	        status = {(int)JobStatus.Processing},
-	        last_started_at = $1,
-	        started_count = started_count + 1
-        WHERE id IN (SELECT id FROM ready_jobs)
-        RETURNING *;
-    ";
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _commandText;
 
-    public static async Task ExecuteAndWriteToListAsync(NpgsqlConnection conn, DateTime now, int maxBatchSize, List<Job> result)
+    public TakeBatchToProcessingCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    {
+        _dataSource = dataSource;
+
+        _commandText = $@"
+            WITH ready_jobs AS (
+	            SELECT id FROM {TableName.Jobs(settings)} 
+	            WHERE
+                    status = {(int)JobStatus.Scheduled}
+                    AND scheduled_start_at <= $1
+	            ORDER BY scheduled_start_at
+	            LIMIT $2
+	            FOR UPDATE SKIP LOCKED
+            )
+            UPDATE {TableName.Jobs(settings)}
+            SET
+	            status = {(int)JobStatus.Processing},
+	            last_started_at = $1,
+	            started_count = started_count + 1
+            WHERE id IN (SELECT id FROM ready_jobs)
+            RETURNING *;
+        ";
+    }
+
+    public async Task ExecuteAndWriteToListAsync(DateTime now, int maxBatchSize, List<Job> result)
     {
         result.Clear();
 
-        await using var cmd = new NpgsqlCommand(TakeBatchToProcessingSql, conn)
+        await using var conn = await _dataSource.OpenConnectionAsync();
+
+        await using var cmd = new NpgsqlCommand(_commandText, conn)
         {
             Parameters =
             {

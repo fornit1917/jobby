@@ -1,30 +1,40 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class BulkCompleteJobsCommand
+internal class BulkCompleteJobsCommand
 {
-    private static readonly string UpdateStatusCommandText = @$"
-        UPDATE jobby_jobs
-        SET
-            status = {(int)JobStatus.Completed},
-            last_finished_at = $1
-        WHERE id = ANY($2);
-    ";
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _updateStatusCommandText;
+    private readonly string _scheduleNextJobCommandText;
 
-    private static readonly string ScheduleNextJobCommandText = @$"
-        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = ANY($1)
-    ";
-
-    public static async Task ExecuteAsync(NpgsqlConnection conn, 
-        IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    public BulkCompleteJobsCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
+        _dataSource = dataSource;
+
+        _updateStatusCommandText = @$"
+            UPDATE {TableName.Jobs(settings)}
+            SET
+                status = {(int)JobStatus.Completed},
+                last_finished_at = $1
+            WHERE id = ANY($2);
+        ";
+
+        _scheduleNextJobCommandText = @$"
+            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = ANY($1)
+        ";
+    }
+
+    public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
         if (nextJobIds is { Count: > 0 })
         {
             await using var batch = new NpgsqlBatch(conn);
 
-            var updateCmd = new NpgsqlBatchCommand(UpdateStatusCommandText)
+            var updateCmd = new NpgsqlBatchCommand(_updateStatusCommandText)
             {
                 Parameters =
                 {
@@ -33,7 +43,7 @@ internal static class BulkCompleteJobsCommand
                 }
             };
 
-            var scheduleNextCmd = new NpgsqlBatchCommand(ScheduleNextJobCommandText)
+            var scheduleNextCmd = new NpgsqlBatchCommand(_scheduleNextJobCommandText)
             {
                 Parameters =
                 {
@@ -48,7 +58,7 @@ internal static class BulkCompleteJobsCommand
         }
         else
         {
-            await using var updateCmd = new NpgsqlCommand(UpdateStatusCommandText, conn)
+            await using var updateCmd = new NpgsqlCommand(_updateStatusCommandText, conn)
             {
                 Parameters =
                 {

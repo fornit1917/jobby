@@ -1,28 +1,40 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class UpdateStatusCommand
+internal class UpdateStatusCommand
 {
-    private const string UpdateStatusCommandText = @"
-        UPDATE jobby_jobs
-        SET
-            status = $1,
-            last_finished_at = $2
-        WHERE id = $3;
-    ";
+    private readonly NpgsqlDataSource _dataSource;
 
-    private static readonly string ScheduleNextJobCommandText = @$"
-        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = $1
-    ";
+    private readonly string _updateStatusCommandText;
+    private readonly string _scheduleNextJobCommandText;
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, Guid jobId, JobStatus newStatus, Guid? nextJobId = null)
+    public UpdateStatusCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
+        _dataSource = dataSource;
+
+        _updateStatusCommandText = $@"
+            UPDATE {TableName.Jobs(settings)}
+            SET
+                status = $1,
+                last_finished_at = $2
+            WHERE id = $3;
+        ";
+
+        _scheduleNextJobCommandText = @$"
+            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = $1
+        ";
+    }
+
+    public async Task ExecuteAsync(Guid jobId, JobStatus newStatus, Guid? nextJobId = null)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
         var finishedAt = DateTime.UtcNow;
         if (nextJobId == null)
         {
-            await using var cmd = new NpgsqlCommand(UpdateStatusCommandText, conn)
+            await using var cmd = new NpgsqlCommand(_updateStatusCommandText, conn)
             {
                 Parameters =
                 {
@@ -37,7 +49,7 @@ internal static class UpdateStatusCommand
         {
             await using var batch = new NpgsqlBatch(conn);
 
-            var updateCmd = new NpgsqlBatchCommand(UpdateStatusCommandText)
+            var updateCmd = new NpgsqlBatchCommand(_updateStatusCommandText)
             {
                 Parameters =
                 {
@@ -47,7 +59,7 @@ internal static class UpdateStatusCommand
                 }
             };
 
-            var scheduleNextCommand = new NpgsqlBatchCommand(ScheduleNextJobCommandText)
+            var scheduleNextCommand = new NpgsqlBatchCommand(_scheduleNextJobCommandText)
             {
                 Parameters =
                 {

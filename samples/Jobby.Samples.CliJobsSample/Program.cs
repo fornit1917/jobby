@@ -35,7 +35,10 @@ internal class Program
 
         var builder = new JobbyServicesBuilder();
         builder
-            .UsePostgresql(dataSource)
+            .UsePostgresql(pgOpts =>
+            {
+                pgOpts.UseDataSource(dataSource);
+            })
             .UseServerSettings(jobbySettings)
             .UseSystemTextJson(jsonOptions)
             .UseExecutionScopeFactory(scopeFactory)
@@ -59,7 +62,7 @@ internal class Program
         switch (action)
         {
             case "1":
-                CreateSuccess(jobsClient, 500);
+                CreateSuccess(jobsClient, 5);
                 break;
             case "2":
                 CreateFailed(jobsClient);

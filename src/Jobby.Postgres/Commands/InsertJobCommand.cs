@@ -1,40 +1,49 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class InsertJobCommand
+internal class InsertJobCommand
 {
-    private const string CommandText = @"
-        INSERT INTO jobby_jobs (
-            id,
-            job_name,
-            job_param,
-            status,
-            created_at,
-            scheduled_start_at,
-            cron,
-            next_job_id
-        )
-        VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
-            $7,
-            $8
-        )
-        ON CONFLICT (job_name) WHERE cron IS NOT null DO 
-        UPDATE SET
-	        cron = $7,
-	        scheduled_start_at = $6;
-    ";
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _commandText;
 
-    private static NpgsqlCommand CreateCommand(NpgsqlConnection conn, Job job)
+    public InsertJobCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
-        return new NpgsqlCommand(CommandText, conn)
+        _dataSource = dataSource;
+        
+        _commandText = @$"
+            INSERT INTO {TableName.Jobs(settings)} (
+                id,
+                job_name,
+                job_param,
+                status,
+                created_at,
+                scheduled_start_at,
+                cron,
+                next_job_id
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8
+            )
+            ON CONFLICT (job_name) WHERE cron IS NOT null DO 
+            UPDATE SET
+	            cron = $7,
+	            scheduled_start_at = $6;
+        ";
+    }
+
+    private NpgsqlCommand CreateCommand(NpgsqlConnection conn, Job job)
+    {
+        return new NpgsqlCommand(_commandText, conn)
         {
             Parameters =
             {
@@ -50,14 +59,16 @@ internal static class InsertJobCommand
         };
     }
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, Job job)
+    public async Task ExecuteAsync(Job job)
     {
+        await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = CreateCommand(conn, job);
         await cmd.ExecuteNonQueryAsync();
     }
 
-    public static void Execute(NpgsqlConnection conn, Job job)
+    public void Execute(Job job)
     {
+        using var conn = _dataSource.OpenConnection();
         using var cmd = CreateCommand(conn, job);
         cmd.ExecuteNonQuery();
     }

@@ -1,23 +1,35 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class BulkDeleteJobsCommand
+internal class BulkDeleteJobsCommand
 {
-    private const string DeleteCommandText = @"DELETE FROM jobby_jobs WHERE id = ANY($1)";
-    
-    private static readonly string ScheduleNextJobsCommandText = @$"
-        UPDATE jobby_jobs SET status={(int)JobStatus.Scheduled} WHERE id = ANY($1)
-    ";
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _deleteCommandText;
+    private readonly string _scheduleNextJobsCommandText;
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    public BulkDeleteJobsCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
+        _dataSource = dataSource;
+
+        _deleteCommandText = $"DELETE FROM {TableName.Jobs(settings)} WHERE id = ANY($1)";
+        
+        _scheduleNextJobsCommandText = @$"
+            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = ANY($1)
+        ";
+    }
+
+    public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+
         if (nextJobIds is { Count : > 0})
         {
             await using var batch = new NpgsqlBatch(conn);
             
-            var deleteCmd = new NpgsqlBatchCommand(DeleteCommandText)
+            var deleteCmd = new NpgsqlBatchCommand(_deleteCommandText)
             {
                 Parameters =
                 {
@@ -25,7 +37,7 @@ internal static class BulkDeleteJobsCommand
                 },
             };
             
-            var scheduleNextCmd = new NpgsqlBatchCommand(ScheduleNextJobsCommandText)
+            var scheduleNextCmd = new NpgsqlBatchCommand(_scheduleNextJobsCommandText)
             {
                 Parameters =
                 {
@@ -40,7 +52,7 @@ internal static class BulkDeleteJobsCommand
         }
         else
         {
-            await using var deleteCmd = new NpgsqlCommand(DeleteCommandText, conn)
+            await using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn)
             {
                 Parameters =
                 {

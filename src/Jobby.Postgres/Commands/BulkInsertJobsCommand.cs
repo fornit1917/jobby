@@ -1,50 +1,61 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal static class BulkInsertJobsCommand
+internal class BulkInsertJobsCommand
 {
-    public const string CommandText = @"
-        INSERT INTO jobby_jobs (
-            id,
-            job_name,
-            job_param,
-            status,
-            created_at,
-            scheduled_start_at,
-            next_job_id
-        )
-        VALUES (
-            $1,
-            $2,
-            $3,
-            $4,
-            $5,
-            $6,
-            $7
-        )
-    ";
+    private readonly NpgsqlDataSource _dataSource;
+    private readonly string _commandText;
 
-    public static async Task ExecuteAsync(NpgsqlConnection conn, IReadOnlyList<Job> jobs)
+    public BulkInsertJobsCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
     {
+        _dataSource = dataSource;
+
+        _commandText = @$"
+            INSERT INTO {TableName.Jobs(settings)} (
+                id,
+                job_name,
+                job_param,
+                status,
+                created_at,
+                scheduled_start_at,
+                next_job_id
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7
+            )
+        ";
+    }
+
+    public async Task ExecuteAsync(IReadOnlyList<Job> jobs)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
         await using var batch = new NpgsqlBatch(conn);
         PrepareCommand(batch, jobs);
         await batch.ExecuteNonQueryAsync();
     }
 
-    public static void Execute(NpgsqlConnection conn, IReadOnlyList<Job> jobs)
+    public void Execute(IReadOnlyList<Job> jobs)
     {
+        using var conn = _dataSource.OpenConnection();
         using var batch = new NpgsqlBatch(conn);
         PrepareCommand(batch, jobs);
         batch.ExecuteNonQuery();
     }
 
-    private static void PrepareCommand(NpgsqlBatch batch, IReadOnlyList<Job> jobs)
+    private void PrepareCommand(NpgsqlBatch batch, IReadOnlyList<Job> jobs)
     {
         foreach (var job in jobs)
         {
-            var cmd = new NpgsqlBatchCommand(CommandText)
+            var cmd = new NpgsqlBatchCommand(_commandText)
             {
                 Parameters =
                 {
