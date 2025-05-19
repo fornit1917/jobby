@@ -6,9 +6,9 @@ namespace Jobby.Core.Services;
 internal class JobsClient : IJobsClient
 {
     private readonly IJobsFactory _jobFactory;
-    private readonly IJobsStorage _jobsStorage;
+    private readonly IJobbyStorage _jobsStorage;
 
-    public JobsClient(IJobsFactory jobFactory, IJobsStorage jobsStorage)
+    public JobsClient(IJobsFactory jobFactory, IJobbyStorage jobsStorage)
     {
         _jobFactory = jobFactory;
         _jobsStorage = jobsStorage;

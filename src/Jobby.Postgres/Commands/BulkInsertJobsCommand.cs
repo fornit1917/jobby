@@ -9,7 +9,7 @@ internal class BulkInsertJobsCommand
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
 
-    public BulkInsertJobsCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public BulkInsertJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 

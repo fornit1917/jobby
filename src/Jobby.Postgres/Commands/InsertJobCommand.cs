@@ -9,7 +9,7 @@ internal class InsertJobCommand
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
 
-    public InsertJobCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public InsertJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
         

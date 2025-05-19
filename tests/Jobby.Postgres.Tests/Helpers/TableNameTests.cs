@@ -7,14 +7,14 @@ public class TableNameTests
     [Fact]
     public void SchemaEmpty_ReturnsOnlyTableName()
     {
-        var settings = new PgStorageSettings { TablesPrefix = "prefix_" };
+        var settings = new PostgresqlStorageSettings { TablesPrefix = "prefix_" };
         Assert.Equal("\"prefix_jobs\"", TableName.For("jobs", settings));
     }
 
     [Fact]
     public void SchemaNotEmpty_ReturnTableNameWithSchema()
     {
-        var settings = new PgStorageSettings 
+        var settings = new PostgresqlStorageSettings 
         { 
             TablesPrefix = "prefix_",
             SchemaName = "jobby"

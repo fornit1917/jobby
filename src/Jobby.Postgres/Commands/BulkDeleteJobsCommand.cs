@@ -10,7 +10,7 @@ internal class BulkDeleteJobsCommand
     private readonly string _deleteCommandText;
     private readonly string _scheduleNextJobsCommandText;
 
-    public BulkDeleteJobsCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public BulkDeleteJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 

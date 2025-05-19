@@ -10,7 +10,7 @@ internal class DeleteJobCommand
     private readonly string _deleteJobCommandText;
     private readonly string _scheduleNextJobCommandText;
 
-    public DeleteJobCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public DeleteJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
         

@@ -2,7 +2,7 @@
 
 namespace Jobby.Core.Interfaces;
 
-public interface IJobsStorage
+public interface IJobbyStorage
 {
     Task InsertAsync(Job job);
     Task BulkInsertAsync(IReadOnlyList<Job> jobs);

@@ -6,7 +6,7 @@ namespace Jobby.Core.Services;
 
 internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
 {
-    private readonly IJobsStorage _storage;
+    private readonly IJobbyStorage _storage;
     private readonly JobbyServerSettings _settings;
 
     private readonly record struct QueueItem(TaskCompletionSource Tcs, Guid JobId, Guid? NextJobId);
@@ -14,7 +14,7 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
 
     private readonly int[] _stat;
 
-    public BatchingJobCompletionService(IJobsStorage storage, JobbyServerSettings settings)
+    public BatchingJobCompletionService(IJobbyStorage storage, JobbyServerSettings settings)
     {
         _storage = storage;
         _settings = settings;

@@ -5,9 +5,9 @@ namespace Jobby.Postgres.ConfigurationExtensions;
 
 public static class JobbyPostgresqlConfigurationExtensions
 {
-    public static IJobbyServicesConfigurable UsePostgresql(this IJobbyServicesConfigurable opts, Action<IPostgresStorageConfigurable> configure)
+    public static IJobbyServicesConfigurable UsePostgresql(this IJobbyServicesConfigurable opts, Action<IPostgresqlStorageConfigurable> configure)
     {
-        var builder = new PgStorageBuilder();
+        var builder = new PostgresqlStorageBuilder();
         configure(builder);
         var storage = builder.Build();
         opts.UseStorage(storage);
@@ -16,7 +16,7 @@ public static class JobbyPostgresqlConfigurationExtensions
 
     public static IJobbyServicesConfigurable UsePostgresql(this IJobbyServicesConfigurable opts, NpgsqlDataSource dataSource)
     {
-        var builder = new PgStorageBuilder();
+        var builder = new PostgresqlStorageBuilder();
         builder.UseDataSource(dataSource);
         var storage = builder.Build();
         opts.UseStorage(storage);

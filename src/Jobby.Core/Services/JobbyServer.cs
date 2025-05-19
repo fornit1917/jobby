@@ -8,7 +8,7 @@ namespace Jobby.Core.Services;
 
 internal class JobbyServer : IJobbyServer, IDisposable
 {
-    private readonly IJobsStorage _storage;
+    private readonly IJobbyStorage _storage;
     private readonly IJobExecutionScopeFactory _scopeFactory;
     private readonly IRetryPolicyService _retryPolicyService;
     private readonly IJobsRegistry _jobsRegistry;
@@ -21,7 +21,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private CancellationTokenSource _cancellationTokenSource;
     private bool _polling = false;
 
-    public JobbyServer(IJobsStorage storage,
+    public JobbyServer(IJobbyStorage storage,
         IJobExecutionScopeFactory scopeFactory,
         IRetryPolicyService retryPolicyService,
         IJobsRegistry jobsRegistry,

@@ -9,7 +9,7 @@ namespace Jobby.Core.Services.Builders;
 
 public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBuilder
 {
-    private IJobsStorage? _storage;
+    private IJobbyStorage? _storage;
     private IJobExecutionScopeFactory? _scopeFactory;
     private ILoggerFactory? _loggerFactory;
     private IJobParamSerializer? _serializer;
@@ -111,7 +111,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
         return this;
     }
 
-    public IJobbyServicesConfigurable UseStorage(IJobsStorage storage)
+    public IJobbyServicesConfigurable UseStorage(IJobbyStorage storage)
     {
         _storage = storage;
         return this;

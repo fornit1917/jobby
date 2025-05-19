@@ -9,7 +9,7 @@ internal class RescheduleCommand
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
 
-    public RescheduleCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public RescheduleCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 

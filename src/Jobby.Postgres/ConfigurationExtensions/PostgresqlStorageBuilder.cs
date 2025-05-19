@@ -3,20 +3,20 @@ using Npgsql;
 
 namespace Jobby.Postgres.ConfigurationExtensions;
 
-internal class PgStorageBuilder : IPostgresStorageConfigurable
+internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
 {
     private NpgsqlDataSource? _dataSource;
-    private PgStorageSettings _settings = new PgStorageSettings();
+    private PostgresqlStorageSettings _settings = new PostgresqlStorageSettings();
 
-    public IPostgresStorageConfigurable UseDataSource(NpgsqlDataSource dataSource)
+    public IPostgresqlStorageConfigurable UseDataSource(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
         return this;
     }
 
-    public IPostgresStorageConfigurable UseSchemaName(string schemaName)
+    public IPostgresqlStorageConfigurable UseSchemaName(string schemaName)
     {
-        _settings = new PgStorageSettings 
+        _settings = new PostgresqlStorageSettings 
         { 
             SchemaName = schemaName, 
             TablesPrefix = _settings.TablesPrefix 
@@ -24,9 +24,9 @@ internal class PgStorageBuilder : IPostgresStorageConfigurable
         return this;
     }
 
-    public IPostgresStorageConfigurable UseTablesPrefix(string tablesPrefix)
+    public IPostgresqlStorageConfigurable UseTablesPrefix(string tablesPrefix)
     {
-        _settings = new PgStorageSettings
+        _settings = new PostgresqlStorageSettings
         {
             SchemaName = _settings.SchemaName,
             TablesPrefix = tablesPrefix
@@ -34,12 +34,12 @@ internal class PgStorageBuilder : IPostgresStorageConfigurable
         return this;
     }
 
-    public PgJobsStorage Build()
+    public PostgresqlJobbyStorage Build()
     {
         if (_dataSource == null) 
         {
             throw new InvalidBuilderConfigException("DataSource is not configured for PostgresStorage. UseDataSource method should be called");
         }
-        return new PgJobsStorage(_dataSource, _settings);
+        return new PostgresqlJobbyStorage(_dataSource, _settings);
     }
 }

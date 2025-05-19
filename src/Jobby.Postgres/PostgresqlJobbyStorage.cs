@@ -5,7 +5,7 @@ using Npgsql;
 
 namespace Jobby.Postgres;
 
-internal class PgJobsStorage : IJobsStorage
+internal class PostgresqlJobbyStorage : IJobbyStorage
 {
     private readonly NpgsqlDataSource _dataSource;
 
@@ -18,7 +18,7 @@ internal class PgJobsStorage : IJobsStorage
     private readonly TakeBatchToProcessingCommand _takeBatchToProcessingCommand;
     private readonly UpdateStatusCommand _updateStatusCommand;
 
-    public PgJobsStorage(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 

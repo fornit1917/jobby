@@ -11,7 +11,7 @@ internal class UpdateStatusCommand
     private readonly string _updateStatusCommandText;
     private readonly string _scheduleNextJobCommandText;
 
-    public UpdateStatusCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public UpdateStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 

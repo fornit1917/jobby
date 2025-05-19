@@ -6,9 +6,9 @@ namespace Jobby.Core.Services;
 
 internal class RecurrentJobsClient : IRecurrentJobsClient
 {
-    private readonly IJobsStorage _storage;
+    private readonly IJobbyStorage _storage;
 
-    public RecurrentJobsClient(IJobsStorage storage)
+    public RecurrentJobsClient(IJobbyStorage storage)
     {
         _storage = storage;
     }

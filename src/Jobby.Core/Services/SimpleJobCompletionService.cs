@@ -4,10 +4,10 @@ namespace Jobby.Core.Services;
 
 internal class SimpleJobCompletionService : IJobCompletionService
 {
-    private readonly IJobsStorage _storage;
+    private readonly IJobbyStorage _storage;
     private readonly bool _deleteCompleted;
 
-    public SimpleJobCompletionService(IJobsStorage storage, bool deleteCompletedJobs)
+    public SimpleJobCompletionService(IJobbyStorage storage, bool deleteCompletedJobs)
     {
         _storage = storage;
         _deleteCompleted = deleteCompletedJobs;

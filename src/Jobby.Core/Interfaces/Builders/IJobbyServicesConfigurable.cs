@@ -6,7 +6,7 @@ namespace Jobby.Core.Interfaces.Builders;
 
 public interface IJobbyServicesConfigurable
 {
-    IJobbyServicesConfigurable UseStorage(IJobsStorage storage);
+    IJobbyServicesConfigurable UseStorage(IJobbyStorage storage);
     IJobbyServicesConfigurable UseLoggerFactory(ILoggerFactory loggerFactory);
     IJobbyServicesConfigurable UseSystemTextJson(JsonSerializerOptions jsonOptions);
     IJobbyServicesConfigurable UseServerSettings(JobbyServerSettings settings);

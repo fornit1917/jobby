@@ -9,7 +9,7 @@ internal class TakeBatchToProcessingCommand
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
 
-    public TakeBatchToProcessingCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public TakeBatchToProcessingCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 

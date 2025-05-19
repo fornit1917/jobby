@@ -10,7 +10,7 @@ internal class BulkCompleteJobsCommand
     private readonly string _updateStatusCommandText;
     private readonly string _scheduleNextJobCommandText;
 
-    public BulkCompleteJobsCommand(NpgsqlDataSource dataSource, PgStorageSettings settings)
+    public BulkCompleteJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 
