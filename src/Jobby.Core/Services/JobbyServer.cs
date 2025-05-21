@@ -1,5 +1,4 @@
 ﻿using Jobby.Core.Exceptions;
-using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -16,7 +15,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private readonly ILogger<JobbyServer> _logger;
     private readonly JobbyServerSettings _settings;
 
-    private readonly IJobCompletionService _jobCompletingService;
+    private readonly IPostProcessingService _postProcessingService;
     private readonly SemaphoreSlim _semaphore;
     private CancellationTokenSource _cancellationTokenSource;
     private bool _polling = false;
@@ -36,12 +35,9 @@ internal class JobbyServer : IJobbyServer, IDisposable
         _jobsRegistry = jobsRegistry;
         _serializer = serializer;
         _logger = logger;
+
+        _postProcessingService = new PostProcessingService(storage, logger, settings);
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
-
-        _jobCompletingService = _settings.CompleteWithBatching
-            ? new BatchingJobCompletionService(storage, settings)
-            : new SimpleJobCompletionService(storage, settings.DeleteCompleted);
-
         _cancellationTokenSource = new CancellationTokenSource();
     }
 
@@ -66,6 +62,21 @@ internal class JobbyServer : IJobbyServer, IDisposable
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
             await _semaphore.WaitAsync();
+
+            try
+            {
+                if (!_postProcessingService.IsRetryQueueEmpty)
+                {
+                    await Task.Delay(_settings.DbErrorPauseMs);
+                    await _postProcessingService.DoRetriesFromQueueAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _semaphore.Release();
+                _logger.LogError(ex, "Error while retry post-processing for jobs");
+                continue;
+            }
 
             var maxBatchSize = _semaphore.CurrentCount + 1;
             if (maxBatchSize > _settings.TakeToProcessingBatchSize)
@@ -182,42 +193,13 @@ internal class JobbyServer : IJobbyServer, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error executing job, jobName = {job.JobName}, id = {job.Id}");
-
-            TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
-
-            try
-            {
-                if (retryInterval.HasValue)
-                {
-                    var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-                    await _storage.RescheduleAsync(job.Id, sheduledStartTime);
-                }
-                else
-                {
-                    await _storage.MarkFailedAsync(job.Id);
-                }
-            }
-            catch (Exception statusEx)
-            {
-                _logger.LogError(statusEx,
-                    "Error while change status of failed job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
-                // todo: retry status update queue
-            }
+            await _postProcessingService.HandleFailedAsync(job, retryPolicy);
         }
 
         if (completed)
         {
-            try
-            {
-                await _jobCompletingService.CompleteJob(job.Id, job.NextJobId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error completing executed job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
-                // todo: retry status update queue
-            }
+            await _postProcessingService.HandleCompletedAsync(job);
         }
-
     }
 
     private async Task ProcessRecurrent(Job job)
@@ -256,26 +238,13 @@ internal class JobbyServer : IJobbyServer, IDisposable
         }
         finally
         {
-            var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
-            try
-            {
-                await _storage.RescheduleAsync(job.Id, nextStartAt);
-            }
-            catch (Exception ex) 
-            {
-                _logger.LogError(ex,
-                    "Error while reschedule next run for recurrent job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
-                // todo: retry status update queue
-            }
+            await _postProcessingService.RescheduleRecurrentAsync(job);
         }
     }
 
     public void Dispose()
     {
-        if (_jobCompletingService is IDisposable disposableJobCompletionService)
-        {
-            disposableJobCompletionService.Dispose();
-        }
+        _postProcessingService.Dispose();
 
         if (!_cancellationTokenSource.IsCancellationRequested)
         {
