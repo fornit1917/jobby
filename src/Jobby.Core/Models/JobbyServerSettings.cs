@@ -50,6 +50,28 @@ public class JobbyServerSettings
     
     public bool CompleteWithBatching { get; init; } = false;
 
+    private int _heatbeatIntervalSeconds = 10;
+    public int HeatbeatIntervalSeconds
+    {
+        get => _heatbeatIntervalSeconds;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(HeatbeatIntervalSeconds));
+            _heatbeatIntervalSeconds = value;
+        }
+    }
+
+    private int _maxNoHeartbeatIntervalSeconds = 300;
+    public int MaxNoHeartbeatIntervalSeconds
+    {
+        get => _maxNoHeartbeatIntervalSeconds;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(MaxNoHeartbeatIntervalSeconds));
+            _maxNoHeartbeatIntervalSeconds = value;
+        }
+    }
+
     private static void ThrowIfValueIsNotPositive(int value, string fieldName)
     {
         if (value <= 0)

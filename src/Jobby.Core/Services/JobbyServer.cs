@@ -15,7 +15,6 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private readonly SemaphoreSlim _semaphore;
     private readonly string _serverId;
     private CancellationTokenSource _cancellationTokenSource;
-    private bool _polling = false;
 
     public JobbyServer(IJobbyStorage storage,
         IJobExecutionService executionService,
@@ -41,17 +40,35 @@ internal class JobbyServer : IJobbyServer, IDisposable
         {
             _cancellationTokenSource = new CancellationTokenSource();
         }
+        _logger.LogInformation("Jobby server is running, serverId = {ServerId}", _serverId);
+        Task.Run(Heartbeat);
         Task.Run(Poll);
     }
 
     public void SendStopSignal()
     {
+        _logger.LogInformation("Jobby server received stop signal, serverId = {ServerId}", _serverId);
         _cancellationTokenSource.Cancel();
+    }
+
+    private async Task Heartbeat()
+    {
+        while (!_cancellationTokenSource.IsCancellationRequested)
+        {
+            try
+            {
+                await _storage.SendHeartbeatAsync(_serverId);
+                await Task.Delay(TimeSpan.FromSeconds(_settings.HeatbeatIntervalSeconds));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during send hearbeat");
+            }
+        }
     }
 
     private async Task Poll()
     {
-        _polling = true;
         var jobs = new List<Job>(capacity: _settings.TakeToProcessingBatchSize);
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
@@ -109,7 +126,6 @@ internal class JobbyServer : IJobbyServer, IDisposable
                 Run(jobs);
             }
         }
-        _polling = false;
     }
 
     private void Run(Job job)

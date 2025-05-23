@@ -6,7 +6,6 @@ public interface IJobbyStorage
 {
     Task InsertAsync(Job job);
     Task BulkInsertAsync(IReadOnlyList<Job> jobs);
-
     void Insert(Job job);
     void BulkInsert(IReadOnlyList<Job> jobs);
     
@@ -20,4 +19,6 @@ public interface IJobbyStorage
 
     Task DeleteAsync(Guid jobId, Guid? nextJobId = null);
     Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);
+
+    Task SendHeartbeatAsync(string serverId);
 }

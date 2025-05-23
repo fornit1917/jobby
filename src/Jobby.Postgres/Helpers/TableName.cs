@@ -13,4 +13,9 @@ internal class TableName
     {
         return For("jobs", settings);
     }
+
+    public static string Servers(PostgresqlStorageSettings settings)
+    {
+        return For("servers", settings);
+    }
 }

@@ -1,6 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using System.Collections.Frozen;
 
 namespace Jobby.Core.Services;
 

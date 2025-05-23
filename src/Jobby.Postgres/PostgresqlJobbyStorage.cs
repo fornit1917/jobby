@@ -17,6 +17,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     private readonly RescheduleCommand _rescheduleJobCommand;
     private readonly TakeBatchToProcessingCommand _takeBatchToProcessingCommand;
     private readonly UpdateStatusCommand _updateStatusCommand;
+    private readonly SendHeartbeatCommand _sendHeartbeatCommand;
 
     public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -30,6 +31,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _rescheduleJobCommand = new RescheduleCommand(dataSource, settings);
         _takeBatchToProcessingCommand = new TakeBatchToProcessingCommand(dataSource, settings);
         _updateStatusCommand = new UpdateStatusCommand(dataSource, settings);
+        _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
     }
 
     public Task InsertAsync(Job job)
@@ -91,5 +93,10 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     public Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
     {
         return _bulkCompleteJobsCommand.ExecuteAsync(jobIds, nextJobIds);
+    }
+
+    public Task SendHeartbeatAsync(string serverId)
+    {
+        return _sendHeartbeatCommand.ExecuteAsync(serverId, DateTime.UtcNow);
     }
 }
