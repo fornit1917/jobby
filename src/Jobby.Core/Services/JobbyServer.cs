@@ -61,7 +61,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
                 if (!_postProcessingService.IsRetryQueueEmpty)
                 {
                     await Task.Delay(_settings.DbErrorPauseMs);
-                    await _postProcessingService.DoRetriesFromQueueAsync();
+                    await _postProcessingService.DoRetriesFromQueue();
                 }
             }
             catch (Exception ex)

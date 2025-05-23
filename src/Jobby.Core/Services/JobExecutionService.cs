@@ -72,12 +72,12 @@ internal class JobExecutionService : IJobExecutionService
         catch (Exception ex)
         {
             _logger.LogError(ex, $"Error executing job, jobName = {job.JobName}, id = {job.Id}");
-            await _postProcessingService.HandleFailedAsync(job, retryPolicy);
+            await _postProcessingService.HandleFailed(job, retryPolicy);
         }
 
         if (completed)
         {
-            await _postProcessingService.HandleCompletedAsync(job);
+            await _postProcessingService.HandleCompleted(job);
         }
     }
 
@@ -117,7 +117,7 @@ internal class JobExecutionService : IJobExecutionService
         }
         finally
         {
-            await _postProcessingService.RescheduleRecurrentAsync(job);
+            await _postProcessingService.RescheduleRecurrent(job);
         }
     }
 

@@ -28,7 +28,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     public bool IsRetryQueueEmpty => _retryQueue.IsEmpty;
 
-    public async Task HandleCompletedAsync(Job job)
+    public async Task HandleCompleted(Job job)
     {
         try
         {
@@ -41,7 +41,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task HandleFailedAsync(Job job, RetryPolicy retryPolicy)
+    public async Task HandleFailed(Job job, RetryPolicy retryPolicy)
     {
         try
         {
@@ -56,7 +56,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task RescheduleRecurrentAsync(Job job)
+    public async Task RescheduleRecurrent(Job job)
     {
         try
         {
@@ -71,7 +71,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task DoRetriesFromQueueAsync()
+    public async Task DoRetriesFromQueue()
     {
         while (_retryQueue.TryPeek(out var queueItem))
         {
