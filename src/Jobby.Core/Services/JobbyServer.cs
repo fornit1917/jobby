@@ -13,6 +13,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private readonly JobbyServerSettings _settings;
 
     private readonly SemaphoreSlim _semaphore;
+    private readonly string _serverId;
     private CancellationTokenSource _cancellationTokenSource;
     private bool _polling = false;
 
@@ -31,7 +32,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
         _cancellationTokenSource = new CancellationTokenSource();
-        _executionService = executionService;
+        _serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
     }
 
     public void StartBackgroundService()
@@ -79,7 +80,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
             try
             {
-                await _storage.TakeBatchToProcessingAsync(maxBatchSize, jobs);
+                await _storage.TakeBatchToProcessingAsync(_serverId, maxBatchSize, jobs);
             }
             catch (Exception ex)
             {

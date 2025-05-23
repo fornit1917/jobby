@@ -10,7 +10,7 @@ public interface IJobbyStorage
     void Insert(Job job);
     void BulkInsert(IReadOnlyList<Job> jobs);
     
-    Task TakeBatchToProcessingAsync(int maxBatchSize, List<Job> result);
+    Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<Job> result);
     
     Task MarkFailedAsync(Guid jobId);
     Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime);

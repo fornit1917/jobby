@@ -27,13 +27,14 @@ internal class TakeBatchToProcessingCommand
             SET
 	            status = {(int)JobStatus.Processing},
 	            last_started_at = $1,
-	            started_count = started_count + 1
+	            started_count = started_count + 1,
+                server_id = $3
             WHERE id IN (SELECT id FROM ready_jobs)
             RETURNING *;
         ";
     }
 
-    public async Task ExecuteAndWriteToListAsync(DateTime now, int maxBatchSize, List<Job> result)
+    public async Task ExecuteAndWriteToListAsync(string serverId, DateTime now, int maxBatchSize, List<Job> result)
     {
         result.Clear();
 
@@ -44,7 +45,8 @@ internal class TakeBatchToProcessingCommand
             Parameters =
             {
                 new() { Value = now },              // 1
-                new() { Value = maxBatchSize }      // 2
+                new() { Value = maxBatchSize },     // 2
+                new() { Value = serverId }          // 3
             }
         };
 

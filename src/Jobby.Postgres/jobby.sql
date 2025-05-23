@@ -9,8 +9,14 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 	last_started_at timestamptz DEFAULT NULL,
 	last_finished_at timestamptz DEFAULT NULL,
 	started_count int NOT NULL DEFAULT 0,
-	next_job_id UUID DEFAULT NULL
+	next_job_id UUID DEFAULT NULL,
+	server_id TEXT DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS jobby_jobs_status_scheduled_start_at_idx ON jobby_jobs(status, scheduled_start_at);
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_recurrent_name_idx ON jobby_jobs(job_name) WHERE cron IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS jobby_servers (
+	id TEXT NOT NULL PRIMARY KEY,
+	heartbeat_ts timestamptz NOT NULL
+);

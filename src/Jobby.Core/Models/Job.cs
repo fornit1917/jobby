@@ -19,5 +19,7 @@ public class Job
 
     public Guid? NextJobId { get; set; }
 
+    public string? ServerId { get; set; }
+
     public bool IsRecurrent => Cron != null;
 }
