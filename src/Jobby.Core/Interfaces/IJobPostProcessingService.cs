@@ -2,7 +2,7 @@
 
 namespace Jobby.Core.Interfaces;
 
-internal interface IPostProcessingService : IDisposable
+internal interface IJobPostProcessingService : IDisposable
 {
     Task HandleCompletedAsync(Job job);
     Task HandleFailedAsync(Job job, RetryPolicy retryPolicy);

@@ -15,6 +15,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
     private IJobParamSerializer? _serializer;
     private IRetryPolicyService? _retryPolicyService;
     private IJobsRegistry? _jobsRegistry;
+
     private JobbyServerSettings _serverSettings = new JobbyServerSettings();
 
     public IJobbyServer CreateJobbyServer()
@@ -23,33 +24,53 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
         {
             throw new InvalidBuilderConfigException("Storage is not specified");
         }
+
         if (_scopeFactory == null) 
         {
             throw new InvalidBuilderConfigException("ExecutionScopeFactory is not specified");
         }
+
         if (_serializer == null)
         {
             _serializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
         }
+
         if (_loggerFactory == null)
         {
             _loggerFactory = new EmptyLoggerFactory();
         }
+
         if (_retryPolicyService == null)
         {
             var builder = new RetryPolicyBuilder();
             _retryPolicyService = builder.Build();
         }
+
         if (_jobsRegistry == null)
         {
             throw new InvalidBuilderConfigException("Jobs is not configured. UseJobs should be called");
         }
 
-        return new JobbyServer(_storage,
-            _scopeFactory,
-            _retryPolicyService, 
-            _jobsRegistry, 
+
+        IJobCompletionService completionService = _serverSettings.CompleteWithBatching 
+            ? new BatchingJobCompletionService(_storage, _serverSettings)
+            : new SimpleJobCompletionService(_storage, _serverSettings.DeleteCompleted);
+
+        IJobPostProcessingService postProcessingService = new JobPostProcessingService(_storage,
+            completionService,
+            _loggerFactory.CreateLogger<JobPostProcessingService>(),
+            _serverSettings);
+
+        IJobExecutionService executionService = new JobExecutionService(_scopeFactory,
+            _jobsRegistry,
+            _retryPolicyService,
             _serializer,
+            postProcessingService,
+            _loggerFactory.CreateLogger<JobExecutionService>());
+
+        return new JobbyServer(_storage,
+            executionService,
+            postProcessingService,
             _loggerFactory.CreateLogger<JobbyServer>(),
             _serverSettings);
     }

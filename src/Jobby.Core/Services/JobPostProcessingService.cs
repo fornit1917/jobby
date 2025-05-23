@@ -6,28 +6,24 @@ using System.Collections.Concurrent;
 
 namespace Jobby.Core.Services;
 
-internal class PostProcessingService : IPostProcessingService
+internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
+    private readonly IJobCompletionService _jobCompletingService;
     private readonly ILogger _logger;
     private readonly JobbyServerSettings _settings;
-
-    private readonly IJobCompletionService _jobCompletingService;
 
     private readonly record struct RetryQueueItem(Job Job, RetryPolicy? RetryPolicy = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
-    public PostProcessingService(IJobbyStorage storage, ILogger logger, JobbyServerSettings settings)
+    public JobPostProcessingService(IJobbyStorage storage, IJobCompletionService jobCompletingService, ILogger logger, JobbyServerSettings settings)
     {
         _storage = storage;
         _logger = logger;
         _settings = settings;
 
-        _jobCompletingService = _settings.CompleteWithBatching
-            ? new BatchingJobCompletionService(storage, settings)
-            : new SimpleJobCompletionService(storage, settings.DeleteCompleted);
-
         _retryQueue = new ConcurrentQueue<RetryQueueItem>();
+        _jobCompletingService = jobCompletingService;
     }
 
     public bool IsRetryQueueEmpty => _retryQueue.IsEmpty;
@@ -125,8 +121,6 @@ internal class PostProcessingService : IPostProcessingService
 
     public void Dispose()
     {
-        // todo: log warning if _retryQueue is not empty
-
         if (_jobCompletingService is IDisposable disposableJobCompletionService)
         {
             disposableJobCompletionService.Dispose();

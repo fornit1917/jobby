@@ -1,5 +1,4 @@
-﻿using Jobby.Core.Exceptions;
-using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -8,37 +7,31 @@ namespace Jobby.Core.Services;
 internal class JobbyServer : IJobbyServer, IDisposable
 {
     private readonly IJobbyStorage _storage;
-    private readonly IJobExecutionScopeFactory _scopeFactory;
-    private readonly IRetryPolicyService _retryPolicyService;
-    private readonly IJobsRegistry _jobsRegistry;
-    private readonly IJobParamSerializer _serializer;
+    private readonly IJobExecutionService _executionService;
+    private readonly IJobPostProcessingService _postProcessingService;
     private readonly ILogger<JobbyServer> _logger;
     private readonly JobbyServerSettings _settings;
 
-    private readonly IPostProcessingService _postProcessingService;
     private readonly SemaphoreSlim _semaphore;
     private CancellationTokenSource _cancellationTokenSource;
     private bool _polling = false;
 
     public JobbyServer(IJobbyStorage storage,
-        IJobExecutionScopeFactory scopeFactory,
-        IRetryPolicyService retryPolicyService,
-        IJobsRegistry jobsRegistry,
-        IJobParamSerializer serializer,
+        IJobExecutionService executionService,
+        IJobPostProcessingService postProcessingService,
         ILogger<JobbyServer> logger,
-        JobbyServerSettings settings)
+        JobbyServerSettings settings
+        )
     {
         _storage = storage;
-        _scopeFactory = scopeFactory;
+        _executionService = executionService;
+        _postProcessingService = postProcessingService;
         _settings = settings;
-        _retryPolicyService = retryPolicyService;
-        _jobsRegistry = jobsRegistry;
-        _serializer = serializer;
         _logger = logger;
 
-        _postProcessingService = new PostProcessingService(storage, logger, settings);
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
         _cancellationTokenSource = new CancellationTokenSource();
+        _executionService = executionService;
     }
 
     public void StartBackgroundService()
@@ -112,36 +105,36 @@ internal class JobbyServer : IJobbyServer, IDisposable
                     await _semaphore.WaitAsync();
                 }
 
-                StartProcessing(jobs);
+                Run(jobs);
             }
         }
         _polling = false;
     }
 
-    private void StartProcessing(Job job)
+    private void Run(Job job)
     {
-        Task.Run(() => Process(job));
+        Task.Run(() => Execute(job));
     }
 
-    private void StartProcessing(IReadOnlyList<Job> jobs)
+    private void Run(IReadOnlyList<Job> jobs)
     {
         for (int i = 0; i < jobs.Count; i++)
         {
-            StartProcessing(jobs[i]);
+            Run(jobs[i]);
         }
     }
 
-    private async Task Process(Job job)
+    private async Task Execute(Job job)
     {
         try
         {
             if (job.IsRecurrent)
             {
-                await ProcessRecurrent(job);
+                await _executionService.ExecuteRecurrent(job, _cancellationTokenSource.Token);
             }
             else
             {
-                await ProcessCommand(job);
+                await _executionService.ExecuteCommand(job, _cancellationTokenSource.Token);
             }
         }
         finally
@@ -150,101 +143,9 @@ internal class JobbyServer : IJobbyServer, IDisposable
         }
     }
 
-    private async Task ProcessCommand(Job job)
-    {
-        using var scope = _scopeFactory.CreateJobExecutionScope();
-        var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
-        var completed = false;
-        try
-        {
-            var execMetadata = _jobsRegistry.GetCommandExecutionMetadata(job.JobName);
-            if (execMetadata == null)
-            {
-                throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
-            }
-
-            var handlerInstance = scope.GetService(execMetadata.HandlerType);
-            if (handlerInstance == null)
-            {
-                throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
-            }
-
-            var command = _serializer.DeserializeJobParam(job.JobParam, execMetadata.CommandType);
-            if (command == null)
-            {
-                throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
-            }
-
-            var ctx = new CommandExecutionContext
-            {
-                JobName = job.JobName,
-                StartedCount = job.StartedCount,
-                IsLastAttempt = retryPolicy.IsLastAttempt(job),
-                CancellationToken = _cancellationTokenSource.Token,
-            };
-            var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
-            if (result is Task)
-            {
-                await (Task)result;
-            }
-
-            completed = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error executing job, jobName = {job.JobName}, id = {job.Id}");
-            await _postProcessingService.HandleFailedAsync(job, retryPolicy);
-        }
-
-        if (completed)
-        {
-            await _postProcessingService.HandleCompletedAsync(job);
-        }
-    }
-
-    private async Task ProcessRecurrent(Job job)
-    {
-        ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
-
-        using var scope = _scopeFactory.CreateJobExecutionScope();
-        try
-        {
-            var execMetadata = _jobsRegistry.GetRecurrentJobExecutionMetadata(job.JobName);
-            if (execMetadata == null)
-            {
-                throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
-            }
-
-            var handlerInstance = scope.GetService(execMetadata.HandlerType);
-            if (handlerInstance == null)
-            {
-                throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
-            }
-
-            var ctx = new RecurrentJobExecutionContext
-            {
-                JobName = job.JobName,
-                CancellationToken = _cancellationTokenSource.Token,
-            };
-            var result = execMetadata.ExecMethod.Invoke(handlerInstance, [ctx]);
-            if (result is Task)
-            {
-                await (Task)result;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Error executing recurrent job, jobName = {job.JobName}, id = {job.Id}");
-        }
-        finally
-        {
-            await _postProcessingService.RescheduleRecurrentAsync(job);
-        }
-    }
-
     public void Dispose()
     {
-        _postProcessingService.Dispose();
+        _executionService.Dispose();
 
         if (!_cancellationTokenSource.IsCancellationRequested)
         {
@@ -254,6 +155,6 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
     public bool HasInProgressJobs()
     {
-        return !_polling && _semaphore.CurrentCount == _settings.MaxDegreeOfParallelism;
+        return _semaphore.CurrentCount < _settings.MaxDegreeOfParallelism;
     }
 }
