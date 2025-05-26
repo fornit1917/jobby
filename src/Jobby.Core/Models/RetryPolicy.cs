@@ -7,7 +7,7 @@ public class RetryPolicy
     public int MaxCount { get; init; }
     public IReadOnlyList<int> IntervalsSeconds { get; init; } = Array.Empty<int>();
 
-    public TimeSpan? GetIntervalForNextAttempt(Job job)
+    public TimeSpan? GetIntervalForNextAttempt(JobExecutionModel job)
     {
         if (job.StartedCount >= MaxCount)
         {
@@ -26,7 +26,7 @@ public class RetryPolicy
         return TimeSpan.FromSeconds(intervalSeconds);
     }
 
-    public bool IsLastAttempt(Job job)
+    public bool IsLastAttempt(JobExecutionModel job)
     {
         return job.StartedCount >= MaxCount;
     }

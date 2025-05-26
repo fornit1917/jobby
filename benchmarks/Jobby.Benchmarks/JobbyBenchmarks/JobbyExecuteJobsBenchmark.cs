@@ -111,7 +111,7 @@ public class JobbyExecuteJobsBenchmarkAction
         Counter.Reset(JobsCount);
 
         JobbyHelper.RemoveAllJobs(_dataSource);
-        var jobs = new List<Job>(capacity: JobsCount);
+        var jobs = new List<JobCreationModel>(capacity: JobsCount);
         for (int i = 1; i <= JobsCount; i++)
         {
             var jobCommand = new JobbyTestJobCommand

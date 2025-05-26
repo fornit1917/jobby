@@ -15,7 +15,7 @@ public class RetryPolicyServiceTests
         };
         var policyService = new RetryPolicyService(defaultPolicy, new Dictionary<string, RetryPolicy>());
 
-        var job = new Job { JobName = "Name" };
+        var job = new JobExecutionModel { JobName = "Name" };
         var policy = policyService.GetRetryPolicy(job);
 
         Assert.Equal(defaultPolicy, policy);
@@ -24,7 +24,7 @@ public class RetryPolicyServiceTests
     [Fact]
     public void HasPolicyForJobName_UsesPolicyForJobName()
     {
-        var job = new Job { JobName = "Name" };
+        var job = new JobExecutionModel { JobName = "Name" };
 
         var defaultPolicy = new RetryPolicy
         {

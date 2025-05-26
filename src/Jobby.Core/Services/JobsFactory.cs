@@ -13,9 +13,9 @@ internal class JobsFactory : IJobsFactory
         _serializer = serializer;
     }
 
-    public Job Create<TCommand>(TCommand command) where TCommand : IJobCommand
+    public JobCreationModel Create<TCommand>(TCommand command) where TCommand : IJobCommand
     {
-        return new Job
+        return new JobCreationModel
         {
             Id = Guid.NewGuid(),
             CreatedAt = DateTime.UtcNow,
@@ -27,9 +27,9 @@ internal class JobsFactory : IJobsFactory
         };
     }
 
-    public Job Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
+    public JobCreationModel Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
-        return new Job
+        return new JobCreationModel
         {
             Id = Guid.NewGuid(),
             CreatedAt = DateTime.UtcNow,
@@ -41,9 +41,9 @@ internal class JobsFactory : IJobsFactory
         };
     }
 
-    public Job CreateRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
     {
-        return new Job
+        return new JobCreationModel
         {
             Id = Guid.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),

@@ -34,7 +34,7 @@ internal class TakeBatchToProcessingCommand
         ";
     }
 
-    public async Task ExecuteAndWriteToListAsync(string serverId, DateTime now, int maxBatchSize, List<Job> result)
+    public async Task ExecuteAndWriteToListAsync(string serverId, DateTime now, int maxBatchSize, List<JobExecutionModel> result)
     {
         result.Clear();
 

@@ -45,7 +45,7 @@ internal class InsertJobCommand
         ";
     }
 
-    private NpgsqlCommand CreateCommand(NpgsqlConnection conn, Job job)
+    private NpgsqlCommand CreateCommand(NpgsqlConnection conn, JobCreationModel job)
     {
         return new NpgsqlCommand(_commandText, conn)
         {
@@ -64,14 +64,14 @@ internal class InsertJobCommand
         };
     }
 
-    public async Task ExecuteAsync(Job job)
+    public async Task ExecuteAsync(JobCreationModel job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = CreateCommand(conn, job);
         await cmd.ExecuteNonQueryAsync();
     }
 
-    public void Execute(Job job)
+    public void Execute(JobCreationModel job)
     {
         using var conn = _dataSource.OpenConnection();
         using var cmd = CreateCommand(conn, job);

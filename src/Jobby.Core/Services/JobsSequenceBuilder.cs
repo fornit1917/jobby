@@ -6,17 +6,17 @@ namespace Jobby.Core.Services;
 public class JobsSequenceBuilder
 {
     private readonly IJobsFactory _factory;
-    private readonly List<Job> _jobs;
+    private readonly List<JobCreationModel> _jobs;
 
     public JobsSequenceBuilder(IJobsFactory factory)
     {
-        _jobs = new List<Job>();
+        _jobs = new List<JobCreationModel>();
         _factory = factory;
     }
 
     public JobsSequenceBuilder(int capacity, IJobsFactory factory)
     {
-        _jobs = new List<Job>(capacity);
+        _jobs = new List<JobCreationModel>(capacity);
         _factory = factory;
     }
 
@@ -37,7 +37,7 @@ public class JobsSequenceBuilder
         return this;
     }
 
-    public List<Job> GetJobs()
+    public List<JobCreationModel> GetJobs()
     {
         return _jobs;
     }

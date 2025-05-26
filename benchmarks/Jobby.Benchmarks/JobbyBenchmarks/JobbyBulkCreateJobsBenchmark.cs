@@ -35,7 +35,7 @@ public class JobbyBulkCreateJobsBenchmarkAction
     public async Task JobbyBulkCreateJobs()
     {
         const int jobsCount = 10;
-        var jobs = new List<Job>(capacity: jobsCount);
+        var jobs = new List<JobCreationModel>(capacity: jobsCount);
         for (int i = 1; i <= jobsCount; i++)
         {
             var jobCommand = new JobbyTestJobCommand

@@ -4,5 +4,5 @@ namespace Jobby.Core.Interfaces;
 
 internal interface IJobExecutionService : IDisposable
 {
-    Task ExecuteJob(Job job, CancellationToken cancellationToken);
+    Task ExecuteJob(JobExecutionModel job, CancellationToken cancellationToken);
 }

@@ -13,7 +13,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     private readonly ILogger<JobPostProcessingService> _logger;
     private readonly JobbyServerSettings _settings;
 
-    private readonly record struct RetryQueueItem(Job Job, RetryPolicy? RetryPolicy = null);
+    private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
     public JobPostProcessingService(IJobbyStorage storage,
@@ -31,7 +31,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     public bool IsRetryQueueEmpty => _retryQueue.IsEmpty;
 
-    public async Task HandleCompleted(Job job)
+    public async Task HandleCompleted(JobExecutionModel job)
     {
         try
         {
@@ -44,7 +44,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task HandleFailed(Job job, RetryPolicy retryPolicy)
+    public async Task HandleFailed(JobExecutionModel job, RetryPolicy retryPolicy)
     {
         try
         {
@@ -59,7 +59,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task RescheduleRecurrent(Job job)
+    public async Task RescheduleRecurrent(JobExecutionModel job)
     {
         try
         {
@@ -96,12 +96,12 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    private Task HandleCompletedInternal(Job job)
+    private Task HandleCompletedInternal(JobExecutionModel job)
     {
         return _jobCompletingService.CompleteJob(job.Id, job.NextJobId);
     }
 
-    private Task HandleFailedInternal(Job job, RetryPolicy retryPolicy)
+    private Task HandleFailedInternal(JobExecutionModel job, RetryPolicy retryPolicy)
     {
         TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
         if (retryInterval.HasValue)
@@ -115,7 +115,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    private Task RescheduleRecurrentInternal(Job job)
+    private Task RescheduleRecurrentInternal(JobExecutionModel job)
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
         var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);

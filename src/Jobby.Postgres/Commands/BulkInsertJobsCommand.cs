@@ -37,7 +37,7 @@ internal class BulkInsertJobsCommand
         ";
     }
 
-    public async Task ExecuteAsync(IReadOnlyList<Job> jobs)
+    public async Task ExecuteAsync(IReadOnlyList<JobCreationModel> jobs)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var batch = new NpgsqlBatch(conn);
@@ -45,7 +45,7 @@ internal class BulkInsertJobsCommand
         await batch.ExecuteNonQueryAsync();
     }
 
-    public void Execute(IReadOnlyList<Job> jobs)
+    public void Execute(IReadOnlyList<JobCreationModel> jobs)
     {
         using var conn = _dataSource.OpenConnection();
         using var batch = new NpgsqlBatch(conn);
@@ -53,7 +53,7 @@ internal class BulkInsertJobsCommand
         batch.ExecuteNonQuery();
     }
 
-    private void PrepareCommand(NpgsqlBatch batch, IReadOnlyList<Job> jobs)
+    private void PrepareCommand(NpgsqlBatch batch, IReadOnlyList<JobCreationModel> jobs)
     {
         foreach (var job in jobs)
         {

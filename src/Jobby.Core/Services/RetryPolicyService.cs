@@ -20,7 +20,7 @@ internal class RetryPolicyService : IRetryPolicyService
     }
 
 
-    public RetryPolicy GetRetryPolicy(Job job)
+    public RetryPolicy GetRetryPolicy(JobExecutionModel job)
     {
         RetryPolicy? retryPolicy = null;
 

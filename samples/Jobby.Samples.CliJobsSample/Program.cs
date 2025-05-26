@@ -155,7 +155,7 @@ internal class Program
 
         public static string GetJobName() => "TestJob";
 
-        public bool CanBeRestarted() => true;
+        public bool CanBeRestarted() => Id % 2 == 0;
     }
 
     private class TestJobHandler : IJobCommandHandler<TestJobParam>

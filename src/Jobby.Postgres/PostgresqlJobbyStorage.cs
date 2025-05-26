@@ -34,17 +34,17 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
     }
 
-    public Task InsertAsync(Job job)
+    public Task InsertAsync(JobCreationModel job)
     {
         return _insertJobCommand.ExecuteAsync(job);
     }
 
-    public void Insert(Job job)
+    public void Insert(JobCreationModel job)
     {
         _insertJobCommand.Execute(job);
     }
 
-    public Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<Job> result)
+    public Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<JobExecutionModel> result)
     {
         return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(serverId, DateTime.UtcNow, maxBatchSize, result);
     }
@@ -75,12 +75,12 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         return _deleteJobCommand.ExecuteAsync(jobId, nextJobId);
     }
 
-    public Task BulkInsertAsync(IReadOnlyList<Job> jobs)
+    public Task BulkInsertAsync(IReadOnlyList<JobCreationModel> jobs)
     {
         return _bulkInsertJobsCommand.ExecuteAsync(jobs);
     }
 
-    public void BulkInsert(IReadOnlyList<Job> jobs)
+    public void BulkInsert(IReadOnlyList<JobCreationModel> jobs)
     {
         _bulkInsertJobsCommand.Execute(jobs);
     }

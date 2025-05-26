@@ -72,7 +72,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
     private async Task Poll()
     {
-        var jobs = new List<Job>(capacity: _settings.TakeToProcessingBatchSize);
+        var jobs = new List<JobExecutionModel>(capacity: _settings.TakeToProcessingBatchSize);
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
             await _semaphore.WaitAsync();
@@ -131,12 +131,12 @@ internal class JobbyServer : IJobbyServer, IDisposable
         }
     }
 
-    private void Run(Job job)
+    private void Run(JobExecutionModel job)
     {
         Task.Run(() => Execute(job));
     }
 
-    private void Run(IReadOnlyList<Job> jobs)
+    private void Run(IReadOnlyList<JobExecutionModel> jobs)
     {
         for (int i = 0; i < jobs.Count; i++)
         {
@@ -144,7 +144,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
         }
     }
 
-    private async Task Execute(Job job)
+    private async Task Execute(JobExecutionModel job)
     {
         try
         {

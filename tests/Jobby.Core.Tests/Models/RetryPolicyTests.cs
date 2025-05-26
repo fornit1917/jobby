@@ -13,18 +13,16 @@ public class RetryPolicyTests
             IntervalsSeconds = [10, 20]
         };
 
-        var job = new Job();
-
-        job.StartedCount = 1;
+        var job = new JobExecutionModel { StartedCount = 1 };
         Assert.False(retryPolicy.IsLastAttempt(job));
 
-        job.StartedCount = 2;
+        job = new JobExecutionModel { StartedCount = 2 };
         Assert.False(retryPolicy.IsLastAttempt(job));
 
-        job.StartedCount = 3;
+        job = new JobExecutionModel { StartedCount = 3 };
         Assert.False(retryPolicy.IsLastAttempt(job));
 
-        job.StartedCount = 4;
+        job = new JobExecutionModel { StartedCount = 4 };
         Assert.True(retryPolicy.IsLastAttempt(job));
     }
 
@@ -37,21 +35,19 @@ public class RetryPolicyTests
             IntervalsSeconds = [10, 20]
         };
 
-        var job = new Job();
-
-        job.StartedCount = 1;
+        var job = new JobExecutionModel { StartedCount = 1 };
         var interval1 = retryPolicy.GetIntervalForNextAttempt(job);
         Assert.Equal(TimeSpan.FromSeconds(10), interval1);
 
-        job.StartedCount = 2;
+        job = new JobExecutionModel { StartedCount = 2 };
         var interval2 = retryPolicy.GetIntervalForNextAttempt(job);
         Assert.Equal(TimeSpan.FromSeconds(20), interval2);
 
-        job.StartedCount = 3;
+        job = new JobExecutionModel { StartedCount = 3 };
         var interval3 = retryPolicy.GetIntervalForNextAttempt(job);
         Assert.Equal(TimeSpan.FromSeconds(20), interval3);
 
-        job.StartedCount = 4;
+        job = new JobExecutionModel { StartedCount = 4 };
         var interval4 = retryPolicy.GetIntervalForNextAttempt(job);
         Assert.Null(interval4);
     }

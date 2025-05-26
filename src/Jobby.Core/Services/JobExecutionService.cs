@@ -29,7 +29,7 @@ internal class JobExecutionService : IJobExecutionService
         _logger = logger;
     }
 
-    public async Task ExecuteJob(Job job, CancellationToken cancellationToken)
+    public async Task ExecuteJob(JobExecutionModel job, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateJobExecutionScope();
         var retryPolicy = _retryPolicyService.GetRetryPolicy(job);

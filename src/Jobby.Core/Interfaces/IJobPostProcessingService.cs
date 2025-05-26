@@ -4,9 +4,9 @@ namespace Jobby.Core.Interfaces;
 
 internal interface IJobPostProcessingService : IDisposable
 {
-    Task HandleCompleted(Job job);
-    Task HandleFailed(Job job, RetryPolicy retryPolicy);
-    Task RescheduleRecurrent(Job job);
+    Task HandleCompleted(JobExecutionModel job);
+    Task HandleFailed(JobExecutionModel job, RetryPolicy retryPolicy);
+    Task RescheduleRecurrent(JobExecutionModel job);
 
     bool IsRetryQueueEmpty {  get; }
     Task DoRetriesFromQueue();

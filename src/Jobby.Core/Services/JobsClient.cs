@@ -16,12 +16,12 @@ internal class JobsClient : IJobsClient
 
     public IJobsFactory Factory => _jobFactory;
 
-    public void EnqueueBatch(IReadOnlyList<Job> jobs)
+    public void EnqueueBatch(IReadOnlyList<JobCreationModel> jobs)
     {
         _storage.BulkInsert(jobs);
     }
 
-    public Task EnqueueBatchAsync(IReadOnlyList<Job> jobs)
+    public Task EnqueueBatchAsync(IReadOnlyList<JobCreationModel> jobs)
     {
         return _storage.BulkInsertAsync(jobs);
     }
