@@ -10,13 +10,16 @@ internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
-    private readonly ILogger _logger;
+    private readonly ILogger<JobPostProcessingService> _logger;
     private readonly JobbyServerSettings _settings;
 
     private readonly record struct RetryQueueItem(Job Job, RetryPolicy? RetryPolicy = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
-    public JobPostProcessingService(IJobbyStorage storage, IJobCompletionService jobCompletingService, ILogger logger, JobbyServerSettings settings)
+    public JobPostProcessingService(IJobbyStorage storage,
+        IJobCompletionService jobCompletingService,
+        ILogger<JobPostProcessingService> logger,
+        JobbyServerSettings settings)
     {
         _storage = storage;
         _logger = logger;

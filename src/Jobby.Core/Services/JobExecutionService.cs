@@ -71,7 +71,7 @@ internal class JobExecutionService : IJobExecutionService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error executing job, jobName = {job.JobName}, id = {job.Id}");
+            _logger.LogError(ex, "Error executing job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
 
             if (!job.IsRecurrent)
             {
