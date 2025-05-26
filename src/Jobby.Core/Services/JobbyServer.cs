@@ -58,7 +58,10 @@ internal class JobbyServer : IJobbyServer, IDisposable
             try
             {
                 await _storage.SendHeartbeatAsync(_serverId);
-                await Task.Delay(TimeSpan.FromSeconds(_settings.HeatbeatIntervalSeconds));
+                if (!_cancellationTokenSource.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(_settings.HeatbeatIntervalSeconds));
+                }
             }
             catch (Exception ex)
             {
@@ -145,14 +148,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
     {
         try
         {
-            if (job.IsRecurrent)
-            {
-                await _executionService.ExecuteRecurrent(job, _cancellationTokenSource.Token);
-            }
-            else
-            {
-                await _executionService.ExecuteCommand(job, _cancellationTokenSource.Token);
-            }
+            await _executionService.ExecuteJob(job, _cancellationTokenSource.Token);
         }
         finally
         {

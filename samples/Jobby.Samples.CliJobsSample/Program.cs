@@ -23,7 +23,7 @@ internal class Program
             DbErrorPauseMs = 5000,
             MaxDegreeOfParallelism = 10,
             TakeToProcessingBatchSize = 10,
-            DeleteCompleted = false,
+            DeleteCompleted = true,
             CompleteWithBatching = true
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
@@ -44,13 +44,14 @@ internal class Program
             .UseExecutionScopeFactory(scopeFactory)
             .UseRetryPolicy(x => x.UseByDefault(defaultRetryPolicy))
             .UseJobs(x => x
-                .AddCommand<TestJobParam, TestJobHandler>()
-                .AddRecurrentJob<TestRecurrentJobHandler>())
+                .AddJob<TestJobParam, TestJobHandler>()
+                .AddJob<TestRecurrentJobCommand, TestRecurrentJobHandler>())
             .UseLoggerFactory(loggerFactory);
 
         var jobbyServer = builder.CreateJobbyServer();
         var jobsClient = builder.CreateJobsClient();
-        var recurrentJobsClient = builder.CreateRecurrentJobsClient();
+
+        jobbyServer.StartBackgroundService();
 
         Console.WriteLine("1. Demo success jobs");
         Console.WriteLine("2. Demo failed job");
@@ -68,15 +69,12 @@ internal class Program
                 CreateFailed(jobsClient);
                 break;
             case "3":
-                CreateRecurrent(recurrentJobsClient);
+                CreateRecurrent(jobsClient);
                 break;
             case "4":
                 CreateSequence(jobsClient, 5);
                 break;
         }
-
-        jobbyServer.StartBackgroundService();
-
         Console.ReadLine();
         jobbyServer.SendStopSignal();
     }
@@ -106,9 +104,9 @@ internal class Program
         client.EnqueueCommand(jobParam);
     }
 
-    private static void CreateRecurrent(IRecurrentJobsClient recurrentJobsClient)
+    private static void CreateRecurrent(IJobsClient jobsClient)
     {
-        recurrentJobsClient.ScheduleRecurrent<TestRecurrentJobHandler>("*/3 * * * * *");
+        jobsClient.ScheduleRecurrent(new TestRecurrentJobCommand(), "*/3 * * * * *");
     }
 
     private static void CreateSequence(IJobsClient client, int jobsCount)
@@ -133,7 +131,7 @@ internal class Program
             {
                 return new TestJobHandler();
             }
-            if (type == typeof(TestRecurrentJobHandler))
+            if (type == typeof(IJobCommandHandler<TestRecurrentJobCommand>))
             {
                 return new TestRecurrentJobHandler();
             }
@@ -160,7 +158,7 @@ internal class Program
 
     private class TestJobHandler : IJobCommandHandler<TestJobParam>
     {
-        public Task ExecuteAsync(TestJobParam command, CommandExecutionContext ctx)
+        public Task ExecuteAsync(TestJobParam command, JobExecutionContext ctx)
         {
             if (command.ShouldBeFailed)
             {
@@ -173,14 +171,22 @@ internal class Program
         }
     }
 
-    private class TestRecurrentJobHandler : IRecurrentJobHandler
+    private class TestRecurrentJobCommand : IJobCommand
+    {
+        public static string GetJobName()
+        {
+            return "TestRecurrentJob";
+        }
+    }
+
+    private class TestRecurrentJobHandler : IJobCommandHandler<TestRecurrentJobCommand>
     {
         public static string GetRecurrentJobName()
         {
             return "TestRecurrentJob";
         }
 
-        public Task ExecuteAsync(RecurrentJobExecutionContext ctx)
+        public Task ExecuteAsync(TestRecurrentJobCommand command, JobExecutionContext ctx)
         {
             Console.WriteLine($"Recurrent Job {ctx.JobName}, {DateTime.Now}");
             return Task.CompletedTask;

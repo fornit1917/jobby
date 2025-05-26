@@ -14,7 +14,7 @@ public class JobbyTestJobCommand : IJobCommand
 
 public class JobbyTestJobCommandHandler : IJobCommandHandler<JobbyTestJobCommand>
 {
-    public async Task ExecuteAsync(JobbyTestJobCommand command, CommandExecutionContext ctx)
+    public async Task ExecuteAsync(JobbyTestJobCommand command, JobExecutionContext ctx)
     {
         if (command?.DelayMs > 0)
         {

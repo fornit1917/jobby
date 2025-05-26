@@ -8,22 +8,21 @@ namespace Jobby.Core.Services.Builders;
 
 internal class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBuilder
 {
-    private readonly Dictionary<string, CommandExecutionMetadata> _cmdExecMetadataByJobName = new();
-    private readonly Dictionary<string, RecurrentJobExecutionMetadata> _recurrentExecMetadataByJobName = new();
+    private readonly Dictionary<string, JobExecutionMetadata> _cmdExecMetadataByJobName = new();
 
-    public IJobsRegistryConfigurable AddCommand<TCommand, THandler>()
+    public IJobsRegistryConfigurable AddJob<TCommand, THandler>()
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>
     {
         var jobName = TCommand.GetJobName();
         var handlerType = typeof(IJobCommandHandler<TCommand>);
-        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(TCommand), typeof(CommandExecutionContext)]);
+        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(TCommand), typeof(JobExecutionContext)]);
         if (execMethod == null)
         {
             throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
         }
 
-        var execMetadata = new CommandExecutionMetadata
+        var execMetadata = new JobExecutionMetadata
         {
             CommandType = typeof(TCommand),
             HandlerType = handlerType,
@@ -31,27 +30,6 @@ internal class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBui
         };
 
         _cmdExecMetadataByJobName[jobName] = execMetadata;
-
-        return this;
-    }
-
-    public IJobsRegistryConfigurable AddRecurrentJob<THandler>() where THandler : IRecurrentJobHandler
-    {
-        var jobName = THandler.GetRecurrentJobName();
-        var handlerType = typeof(THandler);
-        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(RecurrentJobExecutionContext)]);
-        if (execMethod == null)
-        {
-            throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
-        }
-
-        var execMetadata = new RecurrentJobExecutionMetadata
-        {
-            HandlerType = handlerType,
-            ExecMethod = execMethod
-        };
-
-        _recurrentExecMetadataByJobName[jobName] = execMetadata;
 
         return this;
     }
@@ -64,7 +42,6 @@ internal class JobsRegistryBuilder : IJobsRegistryConfigurable, IJobsRegistryBui
 
     public IJobsRegistry Build()
     {
-        return new JobsRegistry(_cmdExecMetadataByJobName.ToFrozenDictionary(),
-            _recurrentExecMetadataByJobName.ToFrozenDictionary());
+        return new JobsRegistry(_cmdExecMetadataByJobName.ToFrozenDictionary());
     }
 }

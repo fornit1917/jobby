@@ -89,15 +89,6 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
         return new JobsClient(jobsFactory, _storage);
     }
 
-    public IRecurrentJobsClient CreateRecurrentJobsClient()
-    {
-        if (_storage == null)
-        {
-            throw new InvalidBuilderConfigException("Jobs storage is not specified");
-        }
-        return new RecurrentJobsClient(_storage);
-    }
-
     public IJobbyServicesConfigurable UseExecutionScopeFactory(IJobExecutionScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;

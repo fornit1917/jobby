@@ -8,11 +8,12 @@ public interface IJobsClient
 
     Task EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand;
     Task EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
-
     void EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand;
     void EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
 
+    Task EnqueueBatchAsync(IReadOnlyList<Job> jobs);
     void EnqueueBatch(IReadOnlyList<Job> jobs);
 
-    Task EnqueueBatchAsync(IReadOnlyList<Job> jobs);
+    Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
+    void ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
 }

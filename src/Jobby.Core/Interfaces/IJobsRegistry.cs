@@ -5,6 +5,5 @@ namespace Jobby.Core.Interfaces;
 
 internal interface IJobsRegistry
 {
-    CommandExecutionMetadata? GetCommandExecutionMetadata(string jobName);
-    RecurrentJobExecutionMetadata? GetRecurrentJobExecutionMetadata(string jobName);
+    JobExecutionMetadata? GetJobExecutionMetadata(string jobName);
 }

@@ -3,6 +3,5 @@
 public interface IJobbyServicesBuilder
 {
     IJobsClient CreateJobsClient();
-    IRecurrentJobsClient CreateRecurrentJobsClient();
     IJobbyServer CreateJobbyServer();
 }

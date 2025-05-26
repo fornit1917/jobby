@@ -103,7 +103,7 @@ public class JobbyExecuteJobsBenchmarkAction
             .UsePostgresql(_dataSource)
             .UseServerSettings(serverSettings)
             .UseExecutionScopeFactory(scopeFactory)
-            .UseJobs(x => x.AddCommand<JobbyTestJobCommand, JobbyTestJobCommandHandler>());
+            .UseJobs(x => x.AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>());
 
         _jobbyServer = builder.CreateJobbyServer();
         _jobsClient = builder.CreateJobsClient();

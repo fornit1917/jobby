@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Helpers;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
@@ -35,6 +36,20 @@ internal class JobsFactory : IJobsFactory
             JobParam = _serializer.SerializeJobParam(command),
             ScheduledStartAt = startTime,
             Status = JobStatus.Scheduled,
+        };
+    }
+
+    public Job CreateRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    {
+        return new Job
+        {
+            Id = Guid.NewGuid(),
+            JobParam = _serializer.SerializeJobParam(command),
+            JobName = TCommand.GetJobName(),
+            Cron = cron,
+            CreatedAt = DateTime.UtcNow,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = CronHelper.GetNext(cron, DateTime.UtcNow),
         };
     }
 
