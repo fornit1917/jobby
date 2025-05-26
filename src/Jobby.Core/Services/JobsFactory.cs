@@ -23,6 +23,7 @@ internal class JobsFactory : IJobsFactory
             JobParam = _serializer.SerializeJobParam(command),
             ScheduledStartAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
+            CanBeRestarted = command.CanBeRestarted()
         };
     }
 
@@ -36,6 +37,7 @@ internal class JobsFactory : IJobsFactory
             JobParam = _serializer.SerializeJobParam(command),
             ScheduledStartAt = startTime,
             Status = JobStatus.Scheduled,
+            CanBeRestarted = command.CanBeRestarted()
         };
     }
 
@@ -50,6 +52,7 @@ internal class JobsFactory : IJobsFactory
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = CronHelper.GetNext(cron, DateTime.UtcNow),
+            CanBeRestarted = command.CanBeRestarted()
         };
     }
 

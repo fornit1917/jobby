@@ -31,6 +31,8 @@ internal static class DataReaderExtensions
             StartedCount = reader.GetInt32(reader.GetOrdinal("started_count")),
             Cron = reader.GetNullableString("cron"),
             NextJobId = reader.GetNullableGuid("next_job_id"),
+            ServerId = reader.GetString(reader.GetOrdinal("server_id")),
+            CanBeRestarted = reader.GetBoolean(reader.GetOrdinal("can_be_restarted"))
         };
         return job;
     }

@@ -21,5 +21,7 @@ public class Job
 
     public string? ServerId { get; set; }
 
+    public bool CanBeRestarted { get; set; }
+
     public bool IsRecurrent => Cron != null;
 }

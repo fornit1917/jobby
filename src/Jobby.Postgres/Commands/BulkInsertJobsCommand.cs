@@ -21,7 +21,8 @@ internal class BulkInsertJobsCommand
                 status,
                 created_at,
                 scheduled_start_at,
-                next_job_id
+                next_job_id,
+                can_be_restarted
             )
             VALUES (
                 $1,
@@ -30,7 +31,8 @@ internal class BulkInsertJobsCommand
                 $4,
                 $5,
                 $6,
-                $7
+                $7,
+                $8
             )
         ";
     }
@@ -66,6 +68,7 @@ internal class BulkInsertJobsCommand
                     new() { Value = job.CreatedAt },
                     new() { Value = job.ScheduledStartAt },
                     new() { Value = (object?)job.NextJobId ?? DBNull.Value },
+                    new() { Value = job.CanBeRestarted },
                 }
             };
             batch.BatchCommands.Add(cmd);

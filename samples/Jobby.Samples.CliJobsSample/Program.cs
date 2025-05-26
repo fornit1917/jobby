@@ -23,7 +23,7 @@ internal class Program
             DbErrorPauseMs = 5000,
             MaxDegreeOfParallelism = 10,
             TakeToProcessingBatchSize = 10,
-            DeleteCompleted = true,
+            DeleteCompleted = false,
             CompleteWithBatching = true
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
@@ -154,6 +154,8 @@ internal class Program
         public bool ShouldBeFailed { get; set; }
 
         public static string GetJobName() => "TestJob";
+
+        public bool CanBeRestarted() => true;
     }
 
     private class TestJobHandler : IJobCommandHandler<TestJobParam>
@@ -177,6 +179,8 @@ internal class Program
         {
             return "TestRecurrentJob";
         }
+
+        public bool CanBeRestarted() => false;
     }
 
     private class TestRecurrentJobHandler : IJobCommandHandler<TestRecurrentJobCommand>
