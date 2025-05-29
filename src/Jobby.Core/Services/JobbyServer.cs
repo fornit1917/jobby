@@ -41,7 +41,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
             _cancellationTokenSource = new CancellationTokenSource();
         }
         _logger.LogInformation("Jobby server is running, serverId = {ServerId}", _serverId);
-        Task.Run(Heartbeat);
+        Task.Run(SendHeartbeatAndProcessLostServers);
         Task.Run(Poll);
     }
 
@@ -51,21 +51,56 @@ internal class JobbyServer : IJobbyServer, IDisposable
         _cancellationTokenSource.Cancel();
     }
 
-    private async Task Heartbeat()
+    private async Task SendHeartbeatAndProcessLostServers()
     {
+        List<string> deletedServerIds = new List<string>();
+        List<StuckJobModel> stuckJobs = new List<StuckJobModel>();
+
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
+            // send heartbeat
             try
             {
                 await _storage.SendHeartbeatAsync(_serverId);
-                if (!_cancellationTokenSource.IsCancellationRequested)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during send heartbeat");
+            }
+
+            // detect lost servers and restart their jobs
+            try
+            {
+                var minLastHearbeat = DateTime.UtcNow.AddSeconds(-1 * _settings.MaxNoHeartbeatIntervalSeconds);
+                await _storage.DeleteLostServersAndRestartTheirJobsAsync(minLastHearbeat, deletedServerIds, stuckJobs);
+                foreach (var serverId in deletedServerIds)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(_settings.HeatbeatIntervalSeconds));
+                    _logger.LogInformation("Lost server was found and deleted, serverId = {ServerId}", serverId);
+                }
+                foreach (var job in stuckJobs)
+                {
+                    if (job.CanBeRestarted)
+                    {
+                        _logger.LogInformation(
+                            "Job was restarted because server did not send hearbeat, jobName = {JobName}, id = {JobId}",
+                            job.JobName, job.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Probably job got stuck and can not be restarted automatically, its server did not send heartbeat, jobName = {JobName}, id = {JobId}",
+                            job.JobName, job.Id);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during send hearbeat");
+                _logger.LogError(ex, "Error during detect lost servers and restart their jobs");
+            }
+
+            if (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(_settings.HeartbeatIntervalSeconds));
             }
         }
     }

@@ -18,6 +18,8 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     private readonly TakeBatchToProcessingCommand _takeBatchToProcessingCommand;
     private readonly UpdateStatusCommand _updateStatusCommand;
     private readonly SendHeartbeatCommand _sendHeartbeatCommand;
+    private readonly FindAndDeleteLostServersCommands _findAndDeleteLostServersCommand;
+    private readonly FindAndRestartStuckJobsCommand _findAndRestartStuckJobsCommand;
 
     public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -32,6 +34,8 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _takeBatchToProcessingCommand = new TakeBatchToProcessingCommand(dataSource, settings);
         _updateStatusCommand = new UpdateStatusCommand(dataSource, settings);
         _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
+        _findAndDeleteLostServersCommand = new FindAndDeleteLostServersCommands(settings);
+        _findAndRestartStuckJobsCommand = new FindAndRestartStuckJobsCommand(settings);
     }
 
     public Task InsertAsync(JobCreationModel job)
@@ -98,5 +102,23 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     public Task SendHeartbeatAsync(string serverId)
     {
         return _sendHeartbeatCommand.ExecuteAsync(serverId, DateTime.UtcNow);
+    }
+
+    public async Task DeleteLostServersAndRestartTheirJobsAsync(DateTime minLastHeartbeat,
+        List<string> deletedServerIds, List<StuckJobModel> stuckJobs)
+    {
+        deletedServerIds.Clear();
+        stuckJobs.Clear();
+
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await conn.BeginTransactionAsync();
+        
+        await _findAndDeleteLostServersCommand.ExecuteInTransactionAsync(conn, transaction, minLastHeartbeat, deletedServerIds);
+        if (deletedServerIds.Count > 0)
+        {
+            await _findAndRestartStuckJobsCommand.ExecuteInTransactionAsync(conn, transaction, deletedServerIds, stuckJobs);
+        }
+
+        await transaction.CommitAsync();
     }
 }

@@ -50,7 +50,7 @@ internal class TakeBatchToProcessingCommand
             }
         };
 
-        var reader = await cmd.ExecuteReaderAsync();
+        await using var reader = await cmd.ExecuteReaderAsync();
         
         while (true)
         {

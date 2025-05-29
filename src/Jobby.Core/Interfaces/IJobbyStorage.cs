@@ -21,4 +21,6 @@ public interface IJobbyStorage
     Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);
 
     Task SendHeartbeatAsync(string serverId);
+    Task DeleteLostServersAndRestartTheirJobsAsync(DateTime minLastHeartbeat,
+        List<string> deletedServerIds, List<StuckJobModel> stuckJobs);
 }

@@ -24,7 +24,9 @@ internal class Program
             MaxDegreeOfParallelism = 10,
             TakeToProcessingBatchSize = 10,
             DeleteCompleted = false,
-            CompleteWithBatching = true
+            CompleteWithBatching = true,
+            HeartbeatIntervalSeconds = 3,
+            MaxNoHeartbeatIntervalSeconds = 10
         };
         var scopeFactory = new TestJobExecutionScopeFactory();
         var defaultRetryPolicy = new RetryPolicy
