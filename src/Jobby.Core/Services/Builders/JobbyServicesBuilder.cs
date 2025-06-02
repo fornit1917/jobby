@@ -16,6 +16,9 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
     private IRetryPolicyService? _retryPolicyService;
     private IJobsRegistry? _jobsRegistry;
 
+    public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
+    public bool IsLoggerFactorySpecified => _loggerFactory != null;
+
     private JobbyServerSettings _serverSettings = new JobbyServerSettings();
 
     public IJobbyServer CreateJobbyServer()

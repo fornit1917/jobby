@@ -1,0 +1,6 @@
+@Jobby.Samples.AspNetSimple_HostAddress = http://localhost:5075
+
+GET {{Jobby.Samples.AspNetSimple_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
