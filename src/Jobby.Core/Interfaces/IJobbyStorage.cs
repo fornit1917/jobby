@@ -19,6 +19,7 @@ public interface IJobbyStorage
 
     Task DeleteAsync(Guid jobId, Guid? nextJobId = null);
     Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);
+    void BulkDelete(IReadOnlyList<Guid> jobIds);
 
     Task DeleteRecurrentAsync(string jobName);
     void DeleteRecurrent(string jobName);

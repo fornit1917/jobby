@@ -63,4 +63,17 @@ internal class BulkDeleteJobsCommand
             await deleteCmd.ExecuteNonQueryAsync();
         }
     }
+
+    public void Execute(IReadOnlyList<Guid> jobIds)
+    {
+        using var conn = _dataSource.OpenConnection();
+        using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn)
+        {
+            Parameters =
+                {
+                    new() { Value = jobIds }
+                }
+        };
+        deleteCmd.ExecuteNonQuery();
+    }
 }

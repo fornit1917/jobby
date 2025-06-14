@@ -15,10 +15,17 @@ public class JobsController
         _jobbyClient = jobbyClient;
     }
 
-    [HttpPost("demo-job")]
+    [HttpPost("run-job")]
     public async Task<string> RunDemoJob([FromBody] DemoJobCommand command)
     {
-        await _jobbyClient.EnqueueCommandAsync(command);
+        var jobId = await _jobbyClient.EnqueueCommandAsync(command, command.StartAfter ?? DateTime.UtcNow);
+        return jobId.ToString();
+    }
+
+    [HttpPost("cancel-job/{jobId}")]
+    public async Task<string> CancelJob(Guid jobId)
+    {
+        await _jobbyClient.CancelJobsByIdsAsync(jobId);
         return "ok";
     }
 

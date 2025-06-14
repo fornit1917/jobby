@@ -96,6 +96,11 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         return _bulkDeleteJobsCommand.ExecuteAsync(jobIds, nextJobIds);
     }
 
+    public void BulkDelete(IReadOnlyList<Guid> jobIds)
+    {
+        _bulkDeleteJobsCommand.Execute(jobIds);
+    }
+
     public Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
     {
         return _bulkCompleteJobsCommand.ExecuteAsync(jobIds, nextJobIds);

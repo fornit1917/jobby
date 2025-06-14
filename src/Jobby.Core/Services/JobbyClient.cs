@@ -16,6 +16,16 @@ internal class JobbyClient : IJobbyClient
 
     public IJobsFactory Factory => _jobFactory;
 
+    public void CancelJobsByIds(params Guid[] ids)
+    {
+        _storage.BulkDelete(ids);
+    }
+
+    public Task CancelJobsByIdsAsync(params Guid[] ids)
+    {
+        return _storage.BulkDeleteAsync(ids);
+    }
+
     public void CancelRecurrent<TCommand>() where TCommand : IJobCommand
     {
         _storage.DeleteRecurrent(TCommand.GetJobName());
@@ -36,28 +46,32 @@ internal class JobbyClient : IJobbyClient
         return _storage.BulkInsertAsync(jobs);
     }
 
-    public void EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand
+    public Guid EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command);
         _storage.Insert(job);
+        return job.Id;
     }
 
-    public void EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
+    public Guid EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command, startTime);
         _storage.Insert(job);
+        return job.Id;
     }
 
-    public Task EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand
+    public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command);
-        return _storage.InsertAsync(job);
+        await _storage.InsertAsync(job);
+        return job.Id;
     }
 
-    public Task EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
+    public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command, startTime);
-        return _storage.InsertAsync(job);
+        await _storage.InsertAsync(job);
+        return job.Id;
     }
 
     public void ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
