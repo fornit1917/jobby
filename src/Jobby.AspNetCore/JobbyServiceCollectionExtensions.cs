@@ -7,12 +7,13 @@ namespace Jobby.AspNetCore;
 
 public static class JobbyServiceCollectionExtensions
 {
-    public static IServiceCollection AddJobby(this IServiceCollection services, Action<IJobbyServicesConfigurable> configure = null)
+    public static IServiceCollection AddJobby(this IServiceCollection services, Action<IJobbyServicesConfigurable> configure)
     {
         var jobbyServicesBuilder = new JobbyServicesBuilder();
         
-        configure?.Invoke(jobbyServicesBuilder);
+        configure.Invoke(jobbyServicesBuilder);
 
+        // register handlers for added jobs
         foreach (var jobTypesMetadata in jobbyServicesBuilder.AddedJobTypes)
         {
             services.AddScoped(jobTypesMetadata.HandlerType, jobTypesMetadata.HandlerImplType);
@@ -39,6 +40,14 @@ public static class JobbyServiceCollectionExtensions
             return jobbyServicesBuilder.CreateJobbyServer();
         });
         services.AddHostedService<JobbyHostedService>();
+        return services;
+    }
+
+    public static IServiceCollection AddJobbyClient(this IServiceCollection services, Action<IJobbyServicesConfigurable> configure)
+    {
+        var jobbyServicesBuilder = new JobbyServicesBuilder();
+        configure.Invoke(jobbyServicesBuilder);
+        services.AddSingleton<IJobsClient>(_ => jobbyServicesBuilder.CreateJobsClient());
         return services;
     }
 }
