@@ -1,9 +1,11 @@
 ﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Frozen;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Text.Json;
 
 namespace Jobby.Core.Services;
@@ -14,13 +16,13 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
     private IJobExecutionScopeFactory? _scopeFactory;
     private ILoggerFactory? _loggerFactory;
     private IJobParamSerializer? _serializer;
-    private IRetryPolicyService? _retryPolicyService;
-    private IJobsRegistry? _jobsRegistry;
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
     private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
+    private IRetryPolicyService? _retryPolicyService;
 
     private readonly Dictionary<string, JobExecutionMetadata> _jobExecMetadataByJobName = new();
+    private IJobsRegistry? _jobsRegistry;
 
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -166,7 +168,67 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
 
     public IJobbyServicesConfigurable AddJobsFromAssemblies(params Assembly[] assemblies)
     {
-        // todo: implement it
-        throw new NotImplementedException();
+        var commandTypesByJobName = new Dictionary<string, Type>();
+        var handlerImplTypesByCommandType = new Dictionary<Type, Type>();
+
+        var notAbstractTypes = assemblies.SelectMany(a => a.GetTypes()).Where(a => !a.IsAbstract);
+
+        foreach (var t in notAbstractTypes)
+        {
+            var jobName = ReflectionHelper.TryGetJobNameByType(t);
+            if (jobName != null)
+            {
+                if (commandTypesByJobName.ContainsKey(jobName))
+                {
+                    var error = $"Each implementation of IJobCommand must return unique value from GetJobName method, but name '{jobName}' is used in two commands: {commandTypesByJobName} and {t}";
+                    throw new InvalidJobsConfigException(error);
+                }
+
+                commandTypesByJobName[jobName] = t;
+            }
+
+            var commandFromHandler = ReflectionHelper.TryGetCommandTypeFromHandlerType(t);
+            if (commandFromHandler != null)
+            {
+                if (handlerImplTypesByCommandType.ContainsKey(commandFromHandler))
+                {
+                    var error = $"Each job command must have single handler, but command {commandFromHandler} has two handlers: {handlerImplTypesByCommandType[t]} and {t}";
+                    throw new InvalidJobsConfigException(error);
+                }
+
+                handlerImplTypesByCommandType[commandFromHandler] = t;
+            }
+        }
+
+        foreach (var keyVal in commandTypesByJobName)
+        {
+            var jobName = keyVal.Key;
+            var commandType = keyVal.Value;
+            if (!handlerImplTypesByCommandType.ContainsKey(commandType))
+            {
+                var error = $"Command {commandType} does not have handler. IJobCommandHandler<> should be implemented for this type";
+                throw new InvalidJobsConfigException(error);
+            }
+
+            var handlerType = typeof(IJobCommandHandler<>).MakeGenericType(commandType);
+            var handlerImplType = handlerImplTypesByCommandType[commandType];
+            var execMethod = handlerType.GetMethod("ExecuteAsync", [commandType, typeof(JobExecutionContext)]);
+            if (execMethod == null)
+            {
+                throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
+            }
+
+            var execMetadata = new JobExecutionMetadata
+            {
+                CommandType = commandType,
+                HandlerType = handlerType,
+                HandlerImplType = handlerImplType,
+                ExecMethod = execMethod
+            };
+
+            _jobExecMetadataByJobName[jobName] = execMetadata;
+        }
+
+        return this;
     }
 }

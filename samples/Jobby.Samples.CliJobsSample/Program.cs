@@ -46,8 +46,7 @@ internal class Program
             .UseExecutionScopeFactory(scopeFactory)
             .UseDefaultRetryPolicy(defaultRetryPolicy)
             .UseLoggerFactory(loggerFactory)
-            .AddJob<TestJobParam, TestJobHandler>()
-            .AddJob<TestRecurrentJobCommand, TestRecurrentJobHandler>();
+            .AddJobsFromAssemblies(typeof(TestJobParam).Assembly);
 
         var jobbyServer = builder.CreateJobbyServer();
         var jobsClient = builder.CreateJobsClient();

@@ -40,8 +40,7 @@ public class Program
                     MaxCount = 3,
                     IntervalsSeconds = [1, 2]
                 })
-                .AddJob<DemoJobCommand, DemoJobCommandHandler>()
-                .AddJob<EmptyRecurrentJobCommand, EmptyRecurrentJobCommandHandler>();
+                .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
         });
 
         var app = builder.Build();
