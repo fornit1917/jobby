@@ -1,4 +1,4 @@
-﻿using Jobby.Core.Interfaces.Builders;
+﻿using Jobby.Core.Interfaces;
 using Npgsql;
 
 namespace Jobby.Postgres.ConfigurationExtensions;

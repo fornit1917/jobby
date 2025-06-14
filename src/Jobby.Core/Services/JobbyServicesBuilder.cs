@@ -1,13 +1,14 @@
 ﻿using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
-using Jobby.Core.Interfaces.Builders;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Collections.Frozen;
+using System.Reflection;
 using System.Text.Json;
 
-namespace Jobby.Core.Services.Builders;
+namespace Jobby.Core.Services;
 
-public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBuilder
+public class JobbyServicesBuilder : IJobbyServicesConfigurable
 {
     private IJobbyStorage? _storage;
     private IJobExecutionScopeFactory? _scopeFactory;
@@ -15,6 +16,11 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
     private IJobParamSerializer? _serializer;
     private IRetryPolicyService? _retryPolicyService;
     private IJobsRegistry? _jobsRegistry;
+
+    private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
+    private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
+
+    private readonly Dictionary<string, JobExecutionMetadata> _jobExecMetadataByJobName = new();
 
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -28,7 +34,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
             throw new InvalidBuilderConfigException("Storage is not specified");
         }
 
-        if (_scopeFactory == null) 
+        if (_scopeFactory == null)
         {
             throw new InvalidBuilderConfigException("ExecutionScopeFactory is not specified");
         }
@@ -45,17 +51,15 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
 
         if (_retryPolicyService == null)
         {
-            var builder = new RetryPolicyBuilder();
-            _retryPolicyService = builder.Build();
+            _retryPolicyService = new RetryPolicyService(_defaultRetryPolicy, _retryPolicyByJobName);
         }
 
         if (_jobsRegistry == null)
         {
-            throw new InvalidBuilderConfigException("Jobs is not configured. UseJobs should be called");
+            _jobsRegistry = new JobsRegistry(_jobExecMetadataByJobName.ToFrozenDictionary());
         }
 
-
-        IJobCompletionService completionService = _serverSettings.CompleteWithBatching 
+        IJobCompletionService completionService = _serverSettings.CompleteWithBatching
             ? new BatchingJobCompletionService(_storage, _serverSettings)
             : new SimpleJobCompletionService(_storage, _serverSettings.DeleteCompleted);
 
@@ -98,25 +102,9 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
         return this;
     }
 
-    public IJobbyServicesConfigurable UseJobs(Action<IJobsRegistryConfigurable> configureJobsRegistry)
-    {
-        var builder = new JobsRegistryBuilder();
-        configureJobsRegistry(builder);
-        _jobsRegistry = builder.Build();
-        return this;
-    }
-
     public IJobbyServicesConfigurable UseLoggerFactory(ILoggerFactory loggerFactory)
     {
         _loggerFactory = loggerFactory;
-        return this;
-    }
-
-    public IJobbyServicesConfigurable UseRetryPolicy(Action<IRetryPolicyConfigurable> configureRetryPolicy)
-    {
-        var builder = new RetryPolicyBuilder();
-        configureRetryPolicy(builder);
-        _retryPolicyService = builder.Build();
         return this;
     }
 
@@ -136,5 +124,48 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable, IJobbyServicesBu
     {
         _serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
         return this;
+    }
+
+    public IJobbyServicesConfigurable UseDefaultRetryPolicy(RetryPolicy retryPolicy)
+    {
+        _defaultRetryPolicy = retryPolicy;
+        return this;
+    }
+
+    public IJobbyServicesConfigurable UseRetryPolicyForJob<TCommand>(RetryPolicy retryPolicy) where TCommand : IJobCommand
+    {
+        _retryPolicyByJobName[TCommand.GetJobName()] = retryPolicy;
+        return this;
+    }
+
+    public IJobbyServicesConfigurable AddJob<TCommand, THandler>()
+        where TCommand : IJobCommand
+        where THandler : IJobCommandHandler<TCommand>
+    {
+        var jobName = TCommand.GetJobName();
+        var handlerType = typeof(IJobCommandHandler<TCommand>);
+        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(TCommand), typeof(JobExecutionContext)]);
+        if (execMethod == null)
+        {
+            throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
+        }
+
+        var execMetadata = new JobExecutionMetadata
+        {
+            CommandType = typeof(TCommand),
+            HandlerType = handlerType,
+            HandlerImplType = typeof(THandler),
+            ExecMethod = execMethod
+        };
+
+        _jobExecMetadataByJobName[jobName] = execMetadata;
+
+        return this;
+    }
+
+    public IJobbyServicesConfigurable AddJobsFromAssemblies(params Assembly[] assemblies)
+    {
+        // todo: implement it
+        throw new NotImplementedException();
     }
 }

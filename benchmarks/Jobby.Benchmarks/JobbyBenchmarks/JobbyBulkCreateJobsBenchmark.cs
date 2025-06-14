@@ -2,7 +2,7 @@
 using BenchmarkDotNet.Running;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services.Builders;
+using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
 
 namespace Jobby.Benchmarks.JobbyBenchmarks;

@@ -1,6 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
-using Jobby.Core.Interfaces.Builders;
-using Jobby.Core.Services.Builders;
+using Jobby.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 

@@ -1,6 +1,6 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services.Builders;
+using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -44,11 +44,10 @@ internal class Program
             .UseServerSettings(jobbySettings)
             .UseSystemTextJson(jsonOptions)
             .UseExecutionScopeFactory(scopeFactory)
-            .UseRetryPolicy(x => x.UseByDefault(defaultRetryPolicy))
-            .UseJobs(x => x
-                .AddJob<TestJobParam, TestJobHandler>()
-                .AddJob<TestRecurrentJobCommand, TestRecurrentJobHandler>())
-            .UseLoggerFactory(loggerFactory);
+            .UseDefaultRetryPolicy(defaultRetryPolicy)
+            .UseLoggerFactory(loggerFactory)
+            .AddJob<TestJobParam, TestJobHandler>()
+            .AddJob<TestRecurrentJobCommand, TestRecurrentJobHandler>();
 
         var jobbyServer = builder.CreateJobbyServer();
         var jobsClient = builder.CreateJobsClient();

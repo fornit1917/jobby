@@ -1,7 +1,8 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
+using Jobby.Core;
 using Jobby.Core.Interfaces;
-using Jobby.Core.Services.Builders;
+using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
 
 namespace Jobby.Benchmarks.JobbyBenchmarks;

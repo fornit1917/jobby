@@ -35,20 +35,13 @@ public class Program
                     MaxDegreeOfParallelism = 10,
                     TakeToProcessingBatchSize = 10,
                 })
-                .UseRetryPolicy(retryOpts =>
+                .UseDefaultRetryPolicy(new RetryPolicy
                 {
-                    retryOpts.UseByDefault(new RetryPolicy
-                    {
-                        MaxCount = 3,
-                        IntervalsSeconds = [1, 2]
-                    });
+                    MaxCount = 3,
+                    IntervalsSeconds = [1, 2]
                 })
-                .UseJobs(jobs =>
-                {
-                    jobs
-                        .AddJob<DemoJobCommand, DemoJobCommandHandler>()
-                        .AddJob<EmptyRecurrentJobCommand, EmptyRecurrentJobCommandHandler>();
-                });
+                .AddJob<DemoJobCommand, DemoJobCommandHandler>()
+                .AddJob<EmptyRecurrentJobCommand, EmptyRecurrentJobCommandHandler>();
         });
         builder.Services.AddScoped<IJobCommandHandler<DemoJobCommand>, DemoJobCommandHandler>();
         builder.Services.AddScoped<IJobCommandHandler<EmptyRecurrentJobCommand>, EmptyRecurrentJobCommandHandler>();

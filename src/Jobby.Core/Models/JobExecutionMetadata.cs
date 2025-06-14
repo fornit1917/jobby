@@ -6,5 +6,6 @@ internal class JobExecutionMetadata
 {
     public required Type CommandType { get; init; }
     public required Type HandlerType { get; init; }
+    public required Type HandlerImplType { get; init; }
     public required MethodInfo ExecMethod { get; init; }
 }

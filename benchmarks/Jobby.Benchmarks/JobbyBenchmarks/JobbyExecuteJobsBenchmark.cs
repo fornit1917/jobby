@@ -2,7 +2,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services.Builders;
+using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -103,7 +103,7 @@ public class JobbyExecuteJobsBenchmarkAction
             .UsePostgresql(_dataSource)
             .UseServerSettings(serverSettings)
             .UseExecutionScopeFactory(scopeFactory)
-            .UseJobs(x => x.AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>());
+            .AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>();
 
         _jobbyServer = builder.CreateJobbyServer();
         _jobsClient = builder.CreateJobsClient();
