@@ -21,4 +21,19 @@ public class JobsController
         await _jobbyClient.EnqueueCommandAsync(command);
         return "ok";
     }
+
+    [HttpPost("schedule-recurrent")]
+    public async Task<string> ScheduleRecurrent([FromBody] string cron = "*/5 * * * * *")
+    {
+        var command = new EmptyRecurrentJobCommand();
+        await _jobbyClient.ScheduleRecurrentAsync(command, cron);
+        return "ok";
+    }
+
+    [HttpPost("cancel-recurrent")]
+    public async Task<string> CancelRecurrent()
+    {
+        await _jobbyClient.CancelRecurrentAsync<EmptyRecurrentJobCommand>();
+        return "ok";
+    }
 }

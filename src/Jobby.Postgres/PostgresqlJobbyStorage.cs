@@ -20,6 +20,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     private readonly SendHeartbeatCommand _sendHeartbeatCommand;
     private readonly FindAndDeleteLostServersCommands _findAndDeleteLostServersCommand;
     private readonly FindAndRestartStuckJobsCommand _findAndRestartStuckJobsCommand;
+    private readonly DeleteRecurrentJobByNameCommand _deleteRecurrentJobByNameCommand;
 
     public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -36,6 +37,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
         _findAndDeleteLostServersCommand = new FindAndDeleteLostServersCommands(settings);
         _findAndRestartStuckJobsCommand = new FindAndRestartStuckJobsCommand(settings);
+        _deleteRecurrentJobByNameCommand = new DeleteRecurrentJobByNameCommand(dataSource, settings);
     }
 
     public Task InsertAsync(JobCreationModel job)
@@ -120,5 +122,15 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         }
 
         await transaction.CommitAsync();
+    }
+
+    public Task DeleteRecurrentAsync(string jobName)
+    {
+        return _deleteRecurrentJobByNameCommand.ExecuteAsync(jobName);
+    }
+
+    public void DeleteRecurrent(string jobName)
+    {
+        _deleteRecurrentJobByNameCommand.Execute(jobName);
     }
 }

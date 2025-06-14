@@ -16,6 +16,16 @@ internal class JobbyClient : IJobbyClient
 
     public IJobsFactory Factory => _jobFactory;
 
+    public void CancelRecurrent<TCommand>() where TCommand : IJobCommand
+    {
+        _storage.DeleteRecurrent(TCommand.GetJobName());
+    }
+
+    public Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand
+    {
+        return _storage.DeleteRecurrentAsync(TCommand.GetJobName());
+    }
+
     public void EnqueueBatch(IReadOnlyList<JobCreationModel> jobs)
     {
         _storage.BulkInsert(jobs);

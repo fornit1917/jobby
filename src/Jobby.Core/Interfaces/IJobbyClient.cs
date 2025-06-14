@@ -16,4 +16,7 @@ public interface IJobbyClient
 
     Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
     void ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
+
+    Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;
+    void CancelRecurrent<TCommand>() where TCommand : IJobCommand;
 }
