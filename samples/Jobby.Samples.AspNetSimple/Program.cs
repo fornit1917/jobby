@@ -43,8 +43,6 @@ public class Program
                 .AddJob<DemoJobCommand, DemoJobCommandHandler>()
                 .AddJob<EmptyRecurrentJobCommand, EmptyRecurrentJobCommandHandler>();
         });
-        builder.Services.AddScoped<IJobCommandHandler<DemoJobCommand>, DemoJobCommandHandler>();
-        builder.Services.AddScoped<IJobCommandHandler<EmptyRecurrentJobCommand>, EmptyRecurrentJobCommandHandler>();
 
         var app = builder.Build();
 

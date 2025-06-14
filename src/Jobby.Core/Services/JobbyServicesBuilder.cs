@@ -24,6 +24,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
 
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
+    public IEnumerable<IJobTypesMetadata> AddedJobTypes => _jobExecMetadataByJobName.Values;
 
     private JobbyServerSettings _serverSettings = new JobbyServerSettings();
 

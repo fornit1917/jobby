@@ -13,6 +13,11 @@ public static class JobbyServiceCollectionExtensions
         
         configure?.Invoke(jobbyServicesBuilder);
 
+        foreach (var jobTypesMetadata in jobbyServicesBuilder.AddedJobTypes)
+        {
+            services.AddScoped(jobTypesMetadata.HandlerType, jobTypesMetadata.HandlerImplType);
+        }
+
         services.AddSingleton<IJobsClient>(_ => jobbyServicesBuilder.CreateJobsClient());
         services.AddSingleton<IJobbyServer>(sp =>
         {
@@ -34,7 +39,6 @@ public static class JobbyServiceCollectionExtensions
             return jobbyServicesBuilder.CreateJobbyServer();
         });
         services.AddHostedService<JobbyHostedService>();
-
         return services;
     }
 }

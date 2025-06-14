@@ -1,8 +1,9 @@
-﻿using System.Reflection;
+﻿using Jobby.Core.Interfaces;
+using System.Reflection;
 
 namespace Jobby.Core.Models;
 
-internal class JobExecutionMetadata
+internal class JobExecutionMetadata : IJobTypesMetadata
 {
     public required Type CommandType { get; init; }
     public required Type HandlerType { get; init; }
