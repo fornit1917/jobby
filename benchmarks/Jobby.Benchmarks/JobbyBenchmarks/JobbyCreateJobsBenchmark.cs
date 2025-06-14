@@ -21,14 +21,14 @@ public class JobbyCreateJobsBenchmark : IBenchmark
 [MemoryDiagnoser]
 public class JobbyCreateJobsBenchmarkAction
 {
-    private readonly IJobsClient _jobsClient;
+    private readonly IJobbyClient _jobbyClient;
 
     public JobbyCreateJobsBenchmarkAction()
     {
         var dataSource = DataSourceFactory.Create();
         var builder = new JobbyServicesBuilder();
         builder.UsePostgresql(dataSource);
-        _jobsClient = builder.CreateJobsClient();
+        _jobbyClient = builder.CreateJobbyClient();
     }
 
     [Benchmark]
@@ -40,6 +40,6 @@ public class JobbyCreateJobsBenchmarkAction
             Value = Guid.NewGuid().ToString(),
             DelayMs = 0,
         };
-        await _jobsClient.EnqueueCommandAsync(jobCommand);
+        await _jobbyClient.EnqueueCommandAsync(jobCommand);
     }
 }

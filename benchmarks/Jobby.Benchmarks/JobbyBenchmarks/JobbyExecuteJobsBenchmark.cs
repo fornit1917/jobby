@@ -67,7 +67,7 @@ public class JobbyExecuteJobsBenchmarkAction
 {
     private NpgsqlDataSource _dataSource;
     private IJobbyServer? _jobbyServer;
-    private IJobsClient? _jobsClient;
+    private IJobbyClient? _jobbyClient;
 
     public JobbyExecuteJobsBenchmarkAction()
     {
@@ -106,7 +106,7 @@ public class JobbyExecuteJobsBenchmarkAction
             .AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>();
 
         _jobbyServer = builder.CreateJobbyServer();
-        _jobsClient = builder.CreateJobsClient();
+        _jobbyClient = builder.CreateJobbyClient();
 
         Counter.Reset(JobsCount);
 
@@ -120,10 +120,10 @@ public class JobbyExecuteJobsBenchmarkAction
                 Value = Guid.NewGuid().ToString(),
                 DelayMs = 0,
             };
-            var job = _jobsClient.Factory.Create(jobCommand);
+            var job = _jobbyClient.Factory.Create(jobCommand);
             jobs.Add(job);
         }
-        _jobsClient.EnqueueBatch(jobs);
+        _jobbyClient.EnqueueBatch(jobs);
     }
 
 

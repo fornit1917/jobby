@@ -8,9 +8,9 @@ namespace Jobby.Samples.AspNetSimple.Controllers;
 [Route("jobs")]
 public class JobsController
 {
-    private readonly IJobsClient _jobbyClient;
+    private readonly IJobbyClient _jobbyClient;
 
-    public JobsController(IJobsClient jobbyClient)
+    public JobsController(IJobbyClient jobbyClient)
     {
         _jobbyClient = jobbyClient;
     }

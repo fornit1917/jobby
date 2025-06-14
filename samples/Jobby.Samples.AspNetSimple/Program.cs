@@ -56,7 +56,7 @@ public class Program
         app.MapControllers();
 
         // Add reccurent jobs
-        var jobbyClient = app.Services.GetRequiredService<IJobsClient>();
+        var jobbyClient = app.Services.GetRequiredService<IJobbyClient>();
         jobbyClient.ScheduleRecurrent(new EmptyRecurrentJobCommand(), "*/5 * * * * *");
 
         app.Run();

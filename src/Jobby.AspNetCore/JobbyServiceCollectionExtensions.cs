@@ -19,7 +19,7 @@ public static class JobbyServiceCollectionExtensions
             services.AddScoped(jobTypesMetadata.HandlerType, jobTypesMetadata.HandlerImplType);
         }
 
-        services.AddSingleton<IJobsClient>(_ => jobbyServicesBuilder.CreateJobsClient());
+        services.AddSingleton<IJobbyClient>(_ => jobbyServicesBuilder.CreateJobbyClient());
         services.AddSingleton<IJobbyServer>(sp =>
         {
             if (!jobbyServicesBuilder.IsExecutionScopeFactorySpecified)
@@ -47,7 +47,7 @@ public static class JobbyServiceCollectionExtensions
     {
         var jobbyServicesBuilder = new JobbyServicesBuilder();
         configure.Invoke(jobbyServicesBuilder);
-        services.AddSingleton<IJobsClient>(_ => jobbyServicesBuilder.CreateJobsClient());
+        services.AddSingleton<IJobbyClient>(_ => jobbyServicesBuilder.CreateJobbyClient());
         return services;
     }
 }

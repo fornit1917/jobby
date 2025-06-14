@@ -2,7 +2,7 @@
 
 namespace Jobby.Core.Interfaces;
 
-public interface IJobsClient
+public interface IJobbyClient
 {
     public IJobsFactory Factory { get; }
 

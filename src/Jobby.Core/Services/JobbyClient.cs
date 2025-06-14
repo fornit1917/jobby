@@ -3,12 +3,12 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
 
-internal class JobsClient : IJobsClient
+internal class JobbyClient : IJobbyClient
 {
     private readonly IJobsFactory _jobFactory;
     private readonly IJobbyStorage _storage;
 
-    public JobsClient(IJobsFactory jobFactory, IJobbyStorage jobsStorage)
+    public JobbyClient(IJobsFactory jobFactory, IJobbyStorage jobsStorage)
     {
         _jobFactory = jobFactory;
         _storage = jobsStorage;

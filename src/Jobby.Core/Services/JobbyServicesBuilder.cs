@@ -5,7 +5,6 @@ using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Frozen;
 using System.Reflection;
-using System.Reflection.Metadata;
 using System.Text.Json;
 
 namespace Jobby.Core.Services;
@@ -85,7 +84,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
             _serverSettings);
     }
 
-    public IJobsClient CreateJobsClient()
+    public IJobbyClient CreateJobbyClient()
     {
         if (_storage == null)
         {
@@ -96,7 +95,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
             _serializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
         }
         var jobsFactory = new JobsFactory(_serializer);
-        return new JobsClient(jobsFactory, _storage);
+        return new JobbyClient(jobsFactory, _storage);
     }
 
     public IJobbyServicesConfigurable UseExecutionScopeFactory(IJobExecutionScopeFactory scopeFactory)

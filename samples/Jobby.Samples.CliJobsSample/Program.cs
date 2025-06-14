@@ -49,7 +49,7 @@ internal class Program
             .AddJobsFromAssemblies(typeof(TestJobParam).Assembly);
 
         var jobbyServer = builder.CreateJobbyServer();
-        var jobsClient = builder.CreateJobsClient();
+        var jobbyClient = builder.CreateJobbyClient();
 
         jobbyServer.StartBackgroundService();
 
@@ -63,23 +63,23 @@ internal class Program
         switch (action)
         {
             case "1":
-                CreateSuccess(jobsClient, 5);
+                CreateSuccess(jobbyClient, 5);
                 break;
             case "2":
-                CreateFailed(jobsClient);
+                CreateFailed(jobbyClient);
                 break;
             case "3":
-                CreateRecurrent(jobsClient);
+                CreateRecurrent(jobbyClient);
                 break;
             case "4":
-                CreateSequence(jobsClient, 5);
+                CreateSequence(jobbyClient, 5);
                 break;
         }
         Console.ReadLine();
         jobbyServer.SendStopSignal();
     }
 
-    private static void CreateSuccess(IJobsClient client, int count)
+    private static void CreateSuccess(IJobbyClient client, int count)
     {
         for (int i = 1; i <= count; i++)
         {
@@ -93,7 +93,7 @@ internal class Program
         }
     }
 
-    private static void CreateFailed(IJobsClient client)
+    private static void CreateFailed(IJobbyClient client)
     {
         var jobParam = new TestJobParam
         {
@@ -104,12 +104,12 @@ internal class Program
         client.EnqueueCommand(jobParam);
     }
 
-    private static void CreateRecurrent(IJobsClient jobsClient)
+    private static void CreateRecurrent(IJobbyClient jobbyClient)
     {
-        jobsClient.ScheduleRecurrent(new TestRecurrentJobCommand(), "*/3 * * * * *");
+        jobbyClient.ScheduleRecurrent(new TestRecurrentJobCommand(), "*/3 * * * * *");
     }
 
-    private static void CreateSequence(IJobsClient client, int jobsCount)
+    private static void CreateSequence(IJobbyClient client, int jobsCount)
     {
         var builder = client.Factory.CreateSequenceBuilder();
         for (int i = 1; i <= jobsCount; i++)
