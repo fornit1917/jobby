@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 	cron TEXT DEFAULT NULL,
 	job_param TEXT DEFAULT NULL,
 	status int NOT NULL,
+	error TEXT DEFAULT NULL,
 	created_at timestamptz NOT NULL,
 	scheduled_start_at timestamptz NOT NULL,
 	last_started_at timestamptz DEFAULT NULL,

@@ -13,7 +13,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     private readonly ILogger<JobPostProcessingService> _logger;
     private readonly JobbyServerSettings _settings;
 
-    private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null);
+    private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
     public JobPostProcessingService(IJobbyStorage storage,
@@ -44,33 +44,33 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task HandleFailed(JobExecutionModel job, RetryPolicy retryPolicy)
+    public async Task HandleFailed(JobExecutionModel job, RetryPolicy retryPolicy, string error)
     {
         try
         {
-            await HandleFailedInternal(job, retryPolicy);
+            await HandleFailedInternal(job, retryPolicy, error);
         }
         catch (Exception statusEx)
         {
             _logger.LogError(statusEx,
                 "Error while change status of failed job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
 
-            _retryQueue.Enqueue(new RetryQueueItem(job, retryPolicy));
+            _retryQueue.Enqueue(new RetryQueueItem(job, retryPolicy, error));
         }
     }
 
-    public async Task RescheduleRecurrent(JobExecutionModel job)
+    public async Task RescheduleRecurrent(JobExecutionModel job, string? error = null)
     {
         try
         {
-            await RescheduleRecurrentInternal(job);
+            await RescheduleRecurrentInternal(job, error);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
                 "Error while reschedule next run for recurrent job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
 
-            _retryQueue.Enqueue(new RetryQueueItem(job));
+            _retryQueue.Enqueue(new RetryQueueItem(job, null, error));
         }
     }
 
@@ -80,7 +80,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         {
             if (queueItem.Job.Cron != null)
             {
-                await RescheduleRecurrentInternal(queueItem.Job);
+                await RescheduleRecurrentInternal(queueItem.Job, queueItem.Error);
             }
             else if (queueItem.RetryPolicy == null)
             {
@@ -88,7 +88,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
             }
             else
             {
-                await HandleFailedInternal(queueItem.Job, queueItem.RetryPolicy);
+                await HandleFailedInternal(queueItem.Job, queueItem.RetryPolicy, queueItem.Error ?? "");
             }
 
             _logger.LogInformation("Post processing for job successfully retried, jobName = {JobName}, id = {JobId}", queueItem.Job.JobName, queueItem.Job.Id);
@@ -101,25 +101,25 @@ internal class JobPostProcessingService : IJobPostProcessingService
         return _jobCompletingService.CompleteJob(job.Id, job.NextJobId);
     }
 
-    private Task HandleFailedInternal(JobExecutionModel job, RetryPolicy retryPolicy)
+    private Task HandleFailedInternal(JobExecutionModel job, RetryPolicy retryPolicy, string error)
     {
         TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
         if (retryInterval.HasValue)
         {
             var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-            return _storage.RescheduleAsync(job.Id, sheduledStartTime);
+            return _storage.RescheduleAsync(job.Id, sheduledStartTime, error);
         }
         else
         {
-            return _storage.MarkFailedAsync(job.Id);
+            return _storage.MarkFailedAsync(job.Id, error);
         }
     }
 
-    private Task RescheduleRecurrentInternal(JobExecutionModel job)
+    private Task RescheduleRecurrentInternal(JobExecutionModel job, string? error)
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
         var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
-        return _storage.RescheduleAsync(job.Id, nextStartAt);
+        return _storage.RescheduleAsync(job.Id, nextStartAt, error);
     }
 
     public void Dispose()

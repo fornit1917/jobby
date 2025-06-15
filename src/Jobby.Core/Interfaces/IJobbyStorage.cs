@@ -11,8 +11,8 @@ public interface IJobbyStorage
     
     Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<JobExecutionModel> result);
     
-    Task MarkFailedAsync(Guid jobId);
-    Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime);
+    Task MarkFailedAsync(Guid jobId, string error);
+    Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime, string? error = null);
 
     Task MarkCompletedAsync(Guid jobId, Guid? nextJobId = null);
     Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);

@@ -57,23 +57,23 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
 
     public Task MarkCompletedAsync(Guid jobId, Guid? nextJobId = null)
     {
-        return UpdateStatus(jobId, JobStatus.Completed, nextJobId);
+        return UpdateStatus(jobId, JobStatus.Completed, error: null, nextJobId);
     }
 
-    public Task MarkFailedAsync(Guid jobId)
+    public Task MarkFailedAsync(Guid jobId, string error)
     {
-        return UpdateStatus(jobId, JobStatus.Failed);
+        return UpdateStatus(jobId, JobStatus.Failed, error);
     }
 
-    public Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime)
+    public Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime, string? error = null)
     {
-        return _rescheduleJobCommand.ExecuteAsync(jobId, sheduledStartTime);
+        return _rescheduleJobCommand.ExecuteAsync(jobId, sheduledStartTime, error);
     }
 
-    private Task UpdateStatus(Guid jobId, JobStatus newStatus, Guid? nextJobId = null)
+    private Task UpdateStatus(Guid jobId, JobStatus newStatus, string? error = null, Guid? nextJobId = null)
     {
         var finishedAt = DateTime.UtcNow;
-        return _updateStatusCommand.ExecuteAsync(jobId, newStatus, nextJobId);
+        return _updateStatusCommand.ExecuteAsync(jobId, newStatus, error, nextJobId);
     }
 
     public Task DeleteAsync(Guid jobId, Guid? nextJobId = null)

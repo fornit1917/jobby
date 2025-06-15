@@ -19,8 +19,9 @@ internal class UpdateStatusCommand
             UPDATE {TableName.Jobs(settings)}
             SET
                 status = $1,
-                last_finished_at = $2
-            WHERE id = $3;
+                last_finished_at = $2,
+                error = $3
+            WHERE id = $4;
         ";
 
         _scheduleNextJobCommandText = @$"
@@ -28,7 +29,7 @@ internal class UpdateStatusCommand
         ";
     }
 
-    public async Task ExecuteAsync(Guid jobId, JobStatus newStatus, Guid? nextJobId = null)
+    public async Task ExecuteAsync(Guid jobId, JobStatus newStatus, string? error, Guid? nextJobId = null)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         var finishedAt = DateTime.UtcNow;
@@ -38,9 +39,10 @@ internal class UpdateStatusCommand
             {
                 Parameters =
                 {
-                    new() { Value = (int)newStatus },   // 1
-                    new() { Value = finishedAt },       // 2
-                    new() { Value = jobId }             // 3
+                    new() { Value = (int)newStatus },                  // 1
+                    new() { Value = finishedAt },                      // 2
+                    new() { Value = error as object ?? DBNull.Value }, // 3
+                    new() { Value = jobId }                            // 4
                 }
             };
             await cmd.ExecuteNonQueryAsync();
@@ -53,9 +55,10 @@ internal class UpdateStatusCommand
             {
                 Parameters =
                 {
-                    new() { Value = (int)newStatus },   // 1
-                    new() { Value = finishedAt },       // 2
-                    new() { Value = jobId }             // 3
+                    new() { Value = (int)newStatus },                  // 1
+                    new() { Value = finishedAt },                      // 2
+                    new() { Value = error as object ?? DBNull.Value }, // 3
+                    new() { Value = jobId }                            // 4
                 }
             };
 

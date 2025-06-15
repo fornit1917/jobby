@@ -2,6 +2,7 @@
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Jobby.Core.Services;
 
@@ -72,23 +73,29 @@ internal class JobExecutionService : IJobExecutionService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
+            
+            var error = ex.ToString();
 
-            if (!job.IsRecurrent)
+            if (job.IsRecurrent)
             {
-                await _postProcessingService.HandleFailed(job, retryPolicy);
+                await _postProcessingService.RescheduleRecurrent(job, error);
+            }
+            else
+            {
+                await _postProcessingService.HandleFailed(job, retryPolicy, error);
             }
         }
-        finally
+
+        if (completed)
         {
             if (job.IsRecurrent)
             {
-                await _postProcessingService.RescheduleRecurrent(job);
+                await _postProcessingService.RescheduleRecurrent(job, error: null);
             }
-        }
-
-        if (completed && !job.IsRecurrent)
-        {
-            await _postProcessingService.HandleCompleted(job);
+            else
+            {
+                await _postProcessingService.HandleCompleted(job);
+            }
         }
     }
 
