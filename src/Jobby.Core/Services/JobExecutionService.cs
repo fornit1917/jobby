@@ -2,7 +2,6 @@
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Jobby.Core.Services;
 
