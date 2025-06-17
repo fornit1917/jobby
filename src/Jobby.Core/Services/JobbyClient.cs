@@ -74,15 +74,17 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
 
-    public void ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    public Guid ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
     {
         var job = _jobFactory.CreateRecurrent(command, cron);
         _storage.Insert(job);
+        return job.Id;
     }
 
-    public Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
     {
         var job = _jobFactory.CreateRecurrent(command, cron);
-        return _storage.InsertAsync(job);
+        await _storage.InsertAsync(job);
+        return job.Id;
     }
 }
