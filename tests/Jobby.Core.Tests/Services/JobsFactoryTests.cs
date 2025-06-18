@@ -2,6 +2,7 @@
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
+using Jobby.TestsUtils.Jobs;
 using Moq;
 
 namespace Jobby.Core.Tests.Services;
@@ -86,13 +87,5 @@ public class JobsFactoryTests
         Assert.Equal(expectedStartTime, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
         Assert.Equal(canBeRestarted, job.CanBeRestarted);
-    }
-
-    private class TestJobCommand : IJobCommand
-    {
-        public bool Restartable { get; init; }
-
-        public static string GetJobName() => "TestJobName";
-        public bool CanBeRestarted() => Restartable;
     }
 }

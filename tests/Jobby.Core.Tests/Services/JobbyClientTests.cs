@@ -1,6 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
+using Jobby.TestsUtils.Jobs;
 using Moq;
 
 namespace Jobby.Core.Tests.Services;
@@ -155,11 +156,5 @@ public class JobbyClientTests
 
         _storageMock.Verify(x => x.InsertAsync(job));
         Assert.Equal(job.Id, id);
-    }
-
-    private class TestJobCommand : IJobCommand
-    {
-        public static string GetJobName() => "TestJobName";
-        public bool CanBeRestarted() => false;
     }
 }

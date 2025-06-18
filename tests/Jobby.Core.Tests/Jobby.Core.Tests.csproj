@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Jobby.Core\Jobby.Core.csproj" />
+    <ProjectReference Include="..\Jobby.TestsUtils\Jobby.TestsUtils.csproj" />
   </ItemGroup>
 
   <ItemGroup>
