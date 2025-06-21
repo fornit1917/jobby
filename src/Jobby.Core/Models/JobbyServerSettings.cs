@@ -35,7 +35,7 @@ public class JobbyServerSettings
         }
     }
     
-    private int _takeToProcessingBatchSize = Environment.ProcessorCount <= 9 ? Environment.ProcessorCount + 1 : 10;
+    private int _takeToProcessingBatchSize = Environment.ProcessorCount + 1;
     public int TakeToProcessingBatchSize 
     {
         get => _takeToProcessingBatchSize;
