@@ -131,30 +131,28 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public void ScheduleRecurrent_CreatesAndInsertsJobWithSpecifiedCronAndReturnsId()
+    public void ScheduleRecurrent_CreatesAndInsertsJobWithSpecifiedCron()
     {
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         _factoryMock.Setup(x => x.CreateRecurrent(command, cron)).Returns(job);
 
-        var id = _client.ScheduleRecurrent(command, cron);
+        _client.ScheduleRecurrent(command, cron);
 
         _storageMock.Verify(x => x.Insert(job));
-        Assert.Equal(job.Id, id);
     }
 
     [Fact]
-    public async Task ScheduleRecurrentAsync_CreatesAndInsertsJobWithSpecifiedCronAndReturnsId()
+    public async Task ScheduleRecurrentAsync_CreatesAndInsertsJobWithSpecifiedCron()
     {
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         _factoryMock.Setup(x => x.CreateRecurrent(command, cron)).Returns(job);
 
-        var id = await _client.ScheduleRecurrentAsync(command, cron);
+        await _client.ScheduleRecurrentAsync(command, cron);
 
         _storageMock.Verify(x => x.InsertAsync(job));
-        Assert.Equal(job.Id, id);
     }
 }

@@ -38,6 +38,7 @@ internal class InsertJobCommand
             )
             ON CONFLICT (job_name) WHERE cron IS NOT null DO 
             UPDATE SET
+                id = $1,
                 job_param = $3,
 	            cron = $7,
 	            scheduled_start_at = $6,

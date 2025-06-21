@@ -1,0 +1,14 @@
+version: '3.3'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: jobby_pg
+    environment:
+      POSTGRES_USER: jobby
+      POSTGRES_PASSWORD: jobby
+      POSTGRES_DB: jobby_tests_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./src/Jobby.Postgres/jobby.sql:/docker-entrypoint-initdb.d/jobby.sql

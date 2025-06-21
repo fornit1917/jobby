@@ -14,23 +14,29 @@ internal class TakeBatchToProcessingCommand
         _dataSource = dataSource;
 
         _commandText = $@"
-            WITH ready_jobs AS (
-	            SELECT id FROM {TableName.Jobs(settings)} 
-	            WHERE
-                    status = {(int)JobStatus.Scheduled}
-                    AND scheduled_start_at <= $1
-	            ORDER BY scheduled_start_at
-	            LIMIT $2
-	            FOR UPDATE SKIP LOCKED
-            )
-            UPDATE {TableName.Jobs(settings)}
-            SET
-	            status = {(int)JobStatus.Processing},
-	            last_started_at = $1,
-	            started_count = started_count + 1,
-                server_id = $3
-            WHERE id IN (SELECT id FROM ready_jobs)
-            RETURNING id, job_name, job_param, started_count, cron, next_job_id;
+            WITH
+                ready_jobs AS (
+	                SELECT id FROM {TableName.Jobs(settings)} 
+	                WHERE
+                        status = {(int)JobStatus.Scheduled}
+                        AND scheduled_start_at <= $1
+	                ORDER BY scheduled_start_at
+	                LIMIT $2
+	                FOR UPDATE SKIP LOCKED
+                ),
+                updated AS (
+                    UPDATE {TableName.Jobs(settings)}
+                    SET
+	                    status = {(int)JobStatus.Processing},
+	                    last_started_at = $1,
+	                    started_count = started_count + 1,
+                        server_id = $3
+                    WHERE id IN (SELECT id FROM ready_jobs)
+                    RETURNING id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at
+                )
+            SELECT id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at
+            FROM updated
+            ORDER BY scheduled_start_at
         ";
     }
 

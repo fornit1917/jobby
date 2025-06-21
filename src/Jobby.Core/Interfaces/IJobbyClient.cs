@@ -17,8 +17,8 @@ public interface IJobbyClient
     Task EnqueueBatchAsync(IReadOnlyList<JobCreationModel> jobs);
     void EnqueueBatch(IReadOnlyList<JobCreationModel> jobs);
 
-    Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
-    Guid ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
+    Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
+    void ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand;
 
     Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;
     void CancelRecurrent<TCommand>() where TCommand : IJobCommand;
