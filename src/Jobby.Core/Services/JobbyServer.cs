@@ -13,7 +13,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private readonly JobbyServerSettings _settings;
 
     private readonly SemaphoreSlim _semaphore;
-    private readonly string _serverId;
+    public string ServerId { get; private init; }
     private CancellationTokenSource _cancellationTokenSource;
 
     public JobbyServer(IJobbyStorage storage,
@@ -31,7 +31,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
         _cancellationTokenSource = new CancellationTokenSource();
-        _serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
+        ServerId = $"{Environment.MachineName}_{Guid.NewGuid()}";
     }
 
     public void StartBackgroundService()
@@ -40,14 +40,14 @@ internal class JobbyServer : IJobbyServer, IDisposable
         {
             _cancellationTokenSource = new CancellationTokenSource();
         }
-        _logger.LogInformation("Jobby server is running, serverId = {ServerId}", _serverId);
+        _logger.LogInformation("Jobby server is running, serverId = {ServerId}", ServerId);
         Task.Run(SendHeartbeatAndProcessLostServers);
         Task.Run(Poll);
     }
 
     public void SendStopSignal()
     {
-        _logger.LogInformation("Jobby server received stop signal, serverId = {ServerId}", _serverId);
+        _logger.LogInformation("Jobby server received stop signal, serverId = {ServerId}", ServerId);
         _cancellationTokenSource.Cancel();
     }
 
@@ -61,7 +61,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
             // send heartbeat
             try
             {
-                await _storage.SendHeartbeatAsync(_serverId);
+                await _storage.SendHeartbeatAsync(ServerId);
             }
             catch (Exception ex)
             {
@@ -135,7 +135,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
             try
             {
-                await _storage.TakeBatchToProcessingAsync(_serverId, maxBatchSize, jobs);
+                await _storage.TakeBatchToProcessingAsync(ServerId, maxBatchSize, jobs);
             }
             catch (Exception ex)
             {
