@@ -67,8 +67,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
 
         IJobPostProcessingService postProcessingService = new JobPostProcessingService(_storage,
             completionService,
-            _loggerFactory.CreateLogger<JobPostProcessingService>(),
-            _serverSettings);
+            _loggerFactory.CreateLogger<JobPostProcessingService>());
 
         IJobExecutionService executionService = new JobExecutionService(_scopeFactory,
             _jobsRegistry,

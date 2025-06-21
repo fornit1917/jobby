@@ -11,22 +11,18 @@ internal class JobPostProcessingService : IJobPostProcessingService
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
     private readonly ILogger<JobPostProcessingService> _logger;
-    private readonly JobbyServerSettings _settings;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        ILogger<JobPostProcessingService> logger,
-        JobbyServerSettings settings)
+        ILogger<JobPostProcessingService> logger)
     {
         _storage = storage;
-        _logger = logger;
-        _settings = settings;
-
-        _retryQueue = new ConcurrentQueue<RetryQueueItem>();
         _jobCompletingService = jobCompletingService;
+        _logger = logger;
+        _retryQueue = new ConcurrentQueue<RetryQueueItem>();
     }
 
     public bool IsRetryQueueEmpty => _retryQueue.IsEmpty;
