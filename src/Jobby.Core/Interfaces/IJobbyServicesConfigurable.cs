@@ -11,6 +11,7 @@ public interface IJobbyServicesConfigurable
 
     IJobbyServicesConfigurable UseLoggerFactory(ILoggerFactory loggerFactory);
 
+    IJobbyServicesConfigurable UseSerializer(IJobParamSerializer serializer);
     IJobbyServicesConfigurable UseSystemTextJson(JsonSerializerOptions jsonOptions);
 
     IJobbyServicesConfigurable UseServerSettings(JobbyServerSettings settings);
@@ -18,7 +19,6 @@ public interface IJobbyServicesConfigurable
     IJobbyServicesConfigurable UseExecutionScopeFactory(IJobExecutionScopeFactory scopeFactory);
 
     IJobbyServicesConfigurable UseDefaultRetryPolicy(RetryPolicy retryPolicy);
-
     IJobbyServicesConfigurable UseRetryPolicyForJob<TCommand>(RetryPolicy retryPolicy) where TCommand : IJobCommand;
 
     IJobbyServicesConfigurable AddJob<TCommand, THandler>()

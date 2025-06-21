@@ -15,6 +15,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
     private IJobExecutionScopeFactory? _scopeFactory;
     private ILoggerFactory? _loggerFactory;
     private IJobParamSerializer? _serializer;
+    private IJobsFactory? _jobsFactory;
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
     private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
@@ -89,12 +90,21 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
         {
             throw new InvalidBuilderConfigException("Jobs storage is not specified");
         }
-        if (_serializer == null)
+    
+        return new JobbyClient(CreateJobsFactory(), _storage);
+    }
+
+    public IJobsFactory CreateJobsFactory()
+    {
+        if (_jobsFactory == null)
         {
-            _serializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
+            if (_serializer == null)
+            {
+                _serializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
+            }
+            _jobsFactory = new JobsFactory(_serializer);
         }
-        var jobsFactory = new JobsFactory(_serializer);
-        return new JobbyClient(jobsFactory, _storage);
+        return _jobsFactory;
     }
 
     public IJobbyServicesConfigurable UseExecutionScopeFactory(IJobExecutionScopeFactory scopeFactory)
@@ -123,7 +133,14 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
 
     public IJobbyServicesConfigurable UseSystemTextJson(JsonSerializerOptions jsonOptions)
     {
-        _serializer = new SystemTextJsonJobParamSerializer(jsonOptions);
+        UseSerializer(new SystemTextJsonJobParamSerializer(jsonOptions));
+        return this;
+    }
+
+    public IJobbyServicesConfigurable UseSerializer(IJobParamSerializer serializer)
+    {
+        _serializer = serializer;
+        _jobsFactory = new JobsFactory(_serializer);
         return this;
     }
 

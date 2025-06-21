@@ -19,6 +19,7 @@ public static class JobbyServiceCollectionExtensions
             services.AddScoped(jobTypesMetadata.HandlerType, jobTypesMetadata.HandlerImplType);
         }
 
+        services.AddSingleton<IJobsFactory>(_ => jobbyServicesBuilder.CreateJobsFactory());
         services.AddSingleton<IJobbyClient>(_ => jobbyServicesBuilder.CreateJobbyClient());
         services.AddSingleton<IJobbyServer>(sp =>
         {

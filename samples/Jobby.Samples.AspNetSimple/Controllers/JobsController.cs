@@ -1,4 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
 using Jobby.Samples.AspNetSimple.Jobs;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,10 +10,12 @@ namespace Jobby.Samples.AspNetSimple.Controllers;
 public class JobsController
 {
     private readonly IJobbyClient _jobbyClient;
+    private readonly IJobsFactory _jobsFactory;
 
-    public JobsController(IJobbyClient jobbyClient)
+    public JobsController(IJobbyClient jobbyClient, IJobsFactory jobsFactory)
     {
         _jobbyClient = jobbyClient;
+        _jobsFactory = jobsFactory;
     }
 
     [HttpPost("run-job")]
@@ -42,5 +45,13 @@ public class JobsController
     {
         await _jobbyClient.CancelRecurrentAsync<EmptyRecurrentJobCommand>();
         return "ok";
+    }
+
+    [HttpGet("show-job-model")]
+    public JobCreationModel ShowJobModel(DateTime? startTime = null)
+    {
+        startTime ??= DateTime.UtcNow;
+        var command = new DemoJobCommand();
+        return _jobsFactory.Create(command, startTime.Value);
     }
 }
