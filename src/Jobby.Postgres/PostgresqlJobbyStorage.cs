@@ -72,7 +72,6 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
 
     private Task UpdateStatus(Guid jobId, JobStatus newStatus, string? error = null, Guid? nextJobId = null)
     {
-        var finishedAt = DateTime.UtcNow;
         return _updateStatusCommand.ExecuteAsync(jobId, newStatus, error, nextJobId);
     }
 
@@ -101,7 +100,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _bulkDeleteJobsCommand.Execute(jobIds);
     }
 
-    public Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    public Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid> nextJobIds)
     {
         return _bulkCompleteJobsCommand.ExecuteAsync(jobIds, nextJobIds);
     }

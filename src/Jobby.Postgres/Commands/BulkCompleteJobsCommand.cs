@@ -18,6 +18,7 @@ internal class BulkCompleteJobsCommand
             UPDATE {TableName.Jobs(settings)}
             SET
                 status = {(int)JobStatus.Completed},
+                error = null,
                 last_finished_at = $1
             WHERE id = ANY($2);
         ";

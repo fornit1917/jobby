@@ -15,7 +15,7 @@ public interface IJobbyStorage
     Task RescheduleAsync(Guid jobId, DateTime sheduledStartTime, string? error = null);
 
     Task MarkCompletedAsync(Guid jobId, Guid? nextJobId = null);
-    Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);
+    Task BulkMarkCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid> nextJobIds);
 
     Task DeleteAsync(Guid jobId, Guid? nextJobId = null);
     Task BulkDeleteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);
