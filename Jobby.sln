@@ -11,7 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{83E0
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Core", "src\Jobby.Core\Jobby.Core.csproj", "{5AA62F61-562E-4C2D-B723-4991026FCCBA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Core.Tests", "tests\Jobby.Core.Tests\Jobby.Core.Tests.csproj", "{D2578D1D-8D8F-422D-BAC4-DA8CA259BA9F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Tests.Core", "tests\Jobby.Tests.Core\Jobby.Tests.Core.csproj", "{D2578D1D-8D8F-422D-BAC4-DA8CA259BA9F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.CliJobsSample", "samples\Jobby.Samples.CliJobsSample\Jobby.Samples.CliJobsSample.csproj", "{8CDAE691-0E98-48B1-830A-77ED6DBF540C}"
 EndProject
@@ -21,7 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Benchmarks", "benchmarks\Jobby.Benchmarks\Jobby.Benchmarks.csproj", "{1B76E3CC-6E46-4D9A-B541-A0C044F29A16}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Postgres.Tests", "tests\Jobby.Postgres.Tests\Jobby.Postgres.Tests.csproj", "{6194735B-0FBF-4E74-86F7-0097D4A87327}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Tests.Postgres", "tests\Jobby.Tests.Postgres\Jobby.Tests.Postgres.csproj", "{6194735B-0FBF-4E74-86F7-0097D4A87327}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.AspNetCore", "src\Jobby.AspNetCore\Jobby.AspNetCore.csproj", "{25E9075D-E456-4729-AE9B-27AF993FF977}"
 EndProject
@@ -29,7 +29,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.AspNetSimple"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.TestsUtils", "tests\Jobby.TestsUtils\Jobby.TestsUtils.csproj", "{CE48A795-7CF0-40C6-98A0-25518F15E957}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jobby.Postgres.IntegrationTests", "tests\Jobby.Postgres.IntegrationTests\Jobby.Postgres.IntegrationTests.csproj", "{7FD9CADC-7E50-4778-BCA1-09DB88C9EF1F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.IntegrationTests.Postgres", "tests\Jobby.IntegrationTests.Postgres\Jobby.IntegrationTests.Postgres.csproj", "{7FD9CADC-7E50-4778-BCA1-09DB88C9EF1F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{037EFD35-6F28-4316-ACED-DF90DC22559F}"
 	ProjectSection(SolutionItems) = preProject
