@@ -49,6 +49,7 @@ public static class JobbyServiceCollectionExtensions
         var jobbyServicesBuilder = new JobbyServicesBuilder();
         configure.Invoke(jobbyServicesBuilder);
         services.AddSingleton<IJobbyClient>(_ => jobbyServicesBuilder.CreateJobbyClient());
+        services.AddSingleton<IJobsFactory>(_ => jobbyServicesBuilder.CreateJobsFactory());
         return services;
     }
 }
