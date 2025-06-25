@@ -8,22 +8,24 @@ internal static class DbHelper
     public static readonly NpgsqlDataSource DataSource = new NpgsqlDataSourceBuilder("Host=localhost;Username=jobby;Password=jobby;Database=jobby_tests_db").Build();
     public static DbContextOptions Options = new DbContextOptionsBuilder().UseNpgsql(DataSource).Options;
 
-    public static JobbyDbContext CreateContext()
+    public static JobbyTestingDbContext CreateContext()
     {
-        return new JobbyDbContext(Options);
+        return new JobbyTestingDbContext(Options);
     }
 
-    public static JobbyDbContext CreateContextAndClearJobsTable()
+    public static JobbyTestingDbContext CreateContextAndClearDb()
     {
         var ctx = CreateContext();
         ctx.Jobs.Where(x => true).ExecuteDelete();
+        ctx.Servers.Where(x => true).ExecuteDelete();
         return ctx;
     }
 
-    public static async Task<JobbyDbContext> CreateContextAndClearJobsTableAsync()
+    public static async Task<JobbyTestingDbContext> CreateContextAndClearDbAsync()
     {
         var ctx = CreateContext();
         await ctx.Jobs.Where(x => true).ExecuteDeleteAsync();
+        await ctx.Servers.Where(x => true).ExecuteDeleteAsync();
         return ctx;
     }
 

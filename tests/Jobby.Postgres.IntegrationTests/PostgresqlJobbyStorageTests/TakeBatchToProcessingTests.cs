@@ -10,7 +10,7 @@ public class TakeBatchToProcessingTests
     [Fact]
     public async Task TakeBatchToProcessingAsync_ReturnsReadyToRunAndUpdatesStatusAndCount()
     {
-        await using var dbContext = DbHelper.CreateContextAndClearJobsTable();
+        await using var dbContext = DbHelper.CreateContextAndClearDb();
 
         var firstExpected = new JobDbModel
         {

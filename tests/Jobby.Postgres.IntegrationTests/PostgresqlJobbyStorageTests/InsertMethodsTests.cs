@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Jobby.Postgres.IntegrationTests.PostgresqlJobbyStorageTests;
 
 [Collection("Jobby.Postgres.IntegrationTests")]
-public class InsertTests
+public class InsertMethodsTests
 {
     [Fact]
     public async Task InsertAsync_Inserts()

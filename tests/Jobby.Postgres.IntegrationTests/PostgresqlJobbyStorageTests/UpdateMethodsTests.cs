@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Jobby.Postgres.IntegrationTests.PostgresqlJobbyStorageTests;
 
 [Collection("Jobby.Postgres.IntegrationTests")]
-public class UpdateStatusTests
+public class UpdateMethodsTests
 {
     [Fact]
     public async Task MarkFailedAsync_MarksFailed()
