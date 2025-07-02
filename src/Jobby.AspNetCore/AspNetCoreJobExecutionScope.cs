@@ -5,20 +5,20 @@ namespace Jobby.AspNetCore;
 
 internal class AspNetCoreJobExecutionScope : IJobExecutionScope
 {
-    private readonly IServiceScope _diScope;
+    private readonly IServiceScope _containerScope;
 
-    public AspNetCoreJobExecutionScope(IServiceScope diScope)
+    public AspNetCoreJobExecutionScope(IServiceScope containerScope)
     {
-        _diScope = diScope;
+        _containerScope = containerScope;
     }
 
     public object? GetService(Type type)
     {
-        return _diScope.ServiceProvider.GetService(type);
+        return _containerScope.ServiceProvider.GetService(type);
     }
 
     public void Dispose()
     {
-        _diScope.Dispose();
+        _containerScope.Dispose();
     }
 }
