@@ -1,6 +1,6 @@
 ﻿using Jobby.Core.Interfaces;
 
-namespace Jobby.Samples.AspNetSimple.Jobs
+namespace Jobby.Samples.AspNet.Jobs
 {
     public class DemoJobCommand : IJobCommand
     {

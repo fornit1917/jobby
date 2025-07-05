@@ -25,7 +25,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Tests.Postgres", "tes
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.AspNetCore", "src\Jobby.AspNetCore\Jobby.AspNetCore.csproj", "{25E9075D-E456-4729-AE9B-27AF993FF977}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.AspNetSimple", "samples\Jobby.Samples.AspNetSimple\Jobby.Samples.AspNetSimple.csproj", "{FAE1EF23-A878-43F6-B0F6-87FADC6D538E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Samples.AspNet", "samples\Jobby.Samples.AspNet\Jobby.Samples.AspNet.csproj", "{FAE1EF23-A878-43F6-B0F6-87FADC6D538E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.TestsUtils", "tests\Jobby.TestsUtils\Jobby.TestsUtils.csproj", "{CE48A795-7CF0-40C6-98A0-25518F15E957}"
 EndProject
@@ -36,7 +36,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.postgresql.yml = docker-compose.postgresql.yml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jobby.Tests.AspNetCore", "tests\Jobby.Tests.AspNetCore\Jobby.Tests.AspNetCore.csproj", "{862D2279-DCA4-4CCC-A665-BF46C769E817}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Tests.AspNetCore", "tests\Jobby.Tests.AspNetCore\Jobby.Tests.AspNetCore.csproj", "{862D2279-DCA4-4CCC-A665-BF46C769E817}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

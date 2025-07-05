@@ -1,7 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 
-namespace Jobby.Samples.AspNetSimple.Jobs;
+namespace Jobby.Samples.AspNet.Jobs;
 
 public class EmptyRecurrentJobCommandHandler : IJobCommandHandler<EmptyRecurrentJobCommand>
 {

@@ -3,10 +3,10 @@ using Jobby.AspNetCore;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Postgres.ConfigurationExtensions;
-using Jobby.Samples.AspNetSimple.Jobs;
+using Jobby.Samples.AspNet.Jobs;
 using Npgsql;
 
-namespace Jobby.Samples.AspNetSimple;
+namespace Jobby.Samples.AspNet;
 
 public class Program
 {

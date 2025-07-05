@@ -1,9 +1,9 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Samples.AspNetSimple.Jobs;
+using Jobby.Samples.AspNet.Jobs;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Jobby.Samples.AspNetSimple.Controllers;
+namespace Jobby.Samples.AspNet.Controllers;
 
 [ApiController]
 [Route("jobs")]
