@@ -3,7 +3,9 @@ using Jobby.AspNetCore;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Postgres.ConfigurationExtensions;
+using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Jobby.Samples.AspNet;
@@ -25,6 +27,13 @@ public class Program
 
         var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
         var dataSource = NpgsqlDataSource.Create(connectionString);
+
+        builder.Services.AddDbContext<JobbySampleDbContext>(opts =>
+        {
+            opts.UseNpgsql(dataSource);
+            opts.UseSnakeCaseNamingConvention();
+        });
+
         builder.Services.AddJobby(jobby =>
         {
             jobby

@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,18 +12,29 @@ public class JobsController
 {
     private readonly IJobbyClient _jobbyClient;
     private readonly IJobsFactory _jobsFactory;
+    private readonly JobbySampleDbContext _dbContext;
 
-    public JobsController(IJobbyClient jobbyClient, IJobsFactory jobsFactory)
+    public JobsController(IJobbyClient jobbyClient, IJobsFactory jobsFactory, JobbySampleDbContext dbContext)
     {
         _jobbyClient = jobbyClient;
         _jobsFactory = jobsFactory;
+        _dbContext = dbContext;
     }
 
-    [HttpPost("run-job")]
-    public async Task<string> RunDemoJob([FromBody] DemoJobCommand command)
+    [HttpPost("enqueue-job")]
+    public async Task<string> EnqueueDemoJob([FromBody] DemoJobCommand command)
     {
         var jobId = await _jobbyClient.EnqueueCommandAsync(command, command.StartAfter ?? DateTime.UtcNow);
         return jobId.ToString();
+    }
+
+    [HttpPost("enqueue-job-by-ef")]
+    public async Task<string> EnqueueDemoJobByEF([FromBody] DemoJobCommand command)
+    {
+        var job = _jobsFactory.Create(command);
+        _dbContext.Jobs.Add(job);
+        await _dbContext.SaveChangesAsync();
+        return job.Id.ToString();
     }
 
     [HttpPost("cancel-job/{jobId}")]
