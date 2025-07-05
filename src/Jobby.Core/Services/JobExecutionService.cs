@@ -2,6 +2,7 @@
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace Jobby.Core.Services;
 
@@ -33,7 +34,7 @@ internal class JobExecutionService : IJobExecutionService
     {
         using var scope = _scopeFactory.CreateJobExecutionScope();
         var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
-        var completed = false;
+        Exception? thrownException = null;
         try
         {
             var execMetadata = _jobsRegistry.GetJobExecutionMetadata(job.JobName);
@@ -61,19 +62,44 @@ internal class JobExecutionService : IJobExecutionService
                 IsLastAttempt = retryPolicy.IsLastAttempt(job),
                 CancellationToken = cancellationToken,
             };
-            var result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
-            if (result is Task)
+
+            object? result = null;
+            try
+            {
+                result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
+            }
+            catch (TargetInvocationException e) when (e.InnerException != null)
+            {
+                thrownException = e.InnerException;
+            }
+            
+            if (result != null && result is Task)
             {
                 await(Task)result;
             }
-
-            completed = true;
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            _logger.LogError(ex, "Error executing job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
-            
-            var error = ex.ToString();
+            thrownException = e;
+        }
+
+        if (thrownException == null)
+        {
+            // completed
+            if (job.IsRecurrent)
+            {
+                await _postProcessingService.RescheduleRecurrent(job, error: null);
+            }
+            else
+            {
+                await _postProcessingService.HandleCompleted(job);
+            }
+        }
+        else
+        {
+            _logger.LogError(thrownException, "Error executing job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
+
+            var error = thrownException.ToString();
 
             if (job.IsRecurrent)
             {
@@ -85,17 +111,6 @@ internal class JobExecutionService : IJobExecutionService
             }
         }
 
-        if (completed)
-        {
-            if (job.IsRecurrent)
-            {
-                await _postProcessingService.RescheduleRecurrent(job, error: null);
-            }
-            else
-            {
-                await _postProcessingService.HandleCompleted(job);
-            }
-        }
     }
 
     public void Dispose()
