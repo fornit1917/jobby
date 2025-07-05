@@ -2,6 +2,8 @@
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
+using Jobby.Samples.CliJobsSample.HandlerFactory;
+using Jobby.Samples.CliJobsSample.Jobs;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Text.Json;
@@ -28,7 +30,7 @@ internal class Program
             HeartbeatIntervalSeconds = 3,
             MaxNoHeartbeatIntervalSeconds = 10
         };
-        var scopeFactory = new TestJobExecutionScopeFactory();
+        var scopeFactory = new SimpleJobExecutionScopeFactory();
         var defaultRetryPolicy = new RetryPolicy
         {
             MaxCount = 3,
@@ -46,19 +48,18 @@ internal class Program
             .UseExecutionScopeFactory(scopeFactory)
             .UseDefaultRetryPolicy(defaultRetryPolicy)
             .UseLoggerFactory(loggerFactory)
-            .AddJobsFromAssemblies(typeof(TestJobParam).Assembly);
+            .AddJobsFromAssemblies(typeof(TestCliJobCommand).Assembly);
 
         var jobbyServer = builder.CreateJobbyServer();
         var jobbyClient = builder.CreateJobbyClient();
 
-        jobbyServer.StartBackgroundService();
+        Console.WriteLine("1. Enqueue success jobs");
+        Console.WriteLine("2. Enqueue failed job");
+        Console.WriteLine("3. Enqueue jobs sequence");
+        Console.WriteLine("4. Schedule recurrent job");
+        Console.WriteLine("5. Cancel recurrent job");
 
-        Console.WriteLine("1. Demo success jobs");
-        Console.WriteLine("2. Demo failed job");
-        Console.WriteLine("3. Demo recurrent job");
-        Console.WriteLine("4. Demo jobs sequence");
-
-        string action = Console.ReadLine();
+        string? action = Console.ReadLine();
 
         switch (action)
         {
@@ -69,131 +70,65 @@ internal class Program
                 CreateFailed(jobbyClient);
                 break;
             case "3":
-                CreateRecurrent(jobbyClient);
-                break;
-            case "4":
                 CreateSequence(jobbyClient, 5);
                 break;
+            case "4":
+                CreateRecurrent(jobbyClient);
+                break;
+            case "5":
+                CancelRecurrent(jobbyClient);
+                break;
         }
+
+        jobbyServer.StartBackgroundService();
+
         Console.ReadLine();
+
         jobbyServer.SendStopSignal();
     }
 
-    private static void CreateSuccess(IJobbyClient client, int count)
+    private static void CreateSuccess(IJobbyClient jobbtClient, int jobsCount)
     {
-        for (int i = 1; i <= count; i++)
+        for (int i = 1; i <= jobsCount; i++)
         {
-            var jobParam = new TestJobParam
+            var jobParam = new TestCliJobCommand
             {
                 Id = i,
                 ShouldBeFailed = false,
                 Name = "SomeValue"
             };
-            client.EnqueueCommand(jobParam);
+            jobbtClient.EnqueueCommand(jobParam);
         }
     }
 
-    private static void CreateFailed(IJobbyClient client)
+    private static void CreateFailed(IJobbyClient jobbyClient)
     {
-        var jobParam = new TestJobParam
+        var jobParam = new TestCliJobCommand
         {
             Id = 500,
             ShouldBeFailed = true,
             Name = "SomeValue"
         };
-        client.EnqueueCommand(jobParam);
+        jobbyClient.EnqueueCommand(jobParam);
     }
 
     private static void CreateRecurrent(IJobbyClient jobbyClient)
     {
-        jobbyClient.ScheduleRecurrent(new TestRecurrentJobCommand(), "*/3 * * * * *");
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand(), "*/3 * * * * *");
     }
 
-    private static void CreateSequence(IJobbyClient client, int jobsCount)
+    private static void CreateSequence(IJobbyClient jobbyClient, int jobsCount)
     {
-        var builder = client.Factory.CreateSequenceBuilder();
+        var builder = jobbyClient.Factory.CreateSequenceBuilder();
         for (int i = 1; i <= jobsCount; i++)
         {
-            builder.Add(new TestJobParam { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false });
+            builder.Add(new TestCliJobCommand { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false });
         }
-        client.EnqueueBatch(builder.GetJobs());
+        jobbyClient.EnqueueBatch(builder.GetJobs());
     }
 
-    private class TestJobExecutionScope : IJobExecutionScope
+    private static void CancelRecurrent(IJobbyClient client)
     {
-        public void Dispose()
-        {
-        }
-
-        public object? GetService(Type type)
-        {
-            if (type == typeof(IJobCommandHandler<TestJobParam>))
-            {
-                return new TestJobHandler();
-            }
-            if (type == typeof(IJobCommandHandler<TestRecurrentJobCommand>))
-            {
-                return new TestRecurrentJobHandler();
-            }
-            return null;
-        }
-    }
-
-    private class TestJobExecutionScopeFactory : IJobExecutionScopeFactory
-    {
-        public IJobExecutionScope CreateJobExecutionScope()
-        {
-            return new TestJobExecutionScope();
-        }
-    }
-
-    private class TestJobParam : IJobCommand
-    {
-        public int Id { get; set; }
-        public string? Name { get; set; }
-        public bool ShouldBeFailed { get; set; }
-
-        public static string GetJobName() => "TestJob";
-
-        public bool CanBeRestarted() => Id % 2 == 0;
-    }
-
-    private class TestJobHandler : IJobCommandHandler<TestJobParam>
-    {
-        public Task ExecuteAsync(TestJobParam command, JobExecutionContext ctx)
-        {
-            if (command.ShouldBeFailed)
-            {
-                Console.WriteLine($"Exception will be thrown, Id = {command.Id}");
-                throw new Exception("Error message");
-            }
-
-            Console.WriteLine($"Executed, Id = {command.Id}");
-            return Task.CompletedTask;
-        }
-    }
-
-    private class TestRecurrentJobCommand : IJobCommand
-    {
-        public static string GetJobName()
-        {
-            return "TestRecurrentJob";
-        }
-
-        public bool CanBeRestarted() => false;
-    }
-
-    private class TestRecurrentJobHandler : IJobCommandHandler<TestRecurrentJobCommand>
-    {
-        public static string GetRecurrentJobName()
-        {
-            return "TestRecurrentJob";
-        }
-
-        public Task ExecuteAsync(TestRecurrentJobCommand command, JobExecutionContext ctx)
-        {
-            Console.WriteLine($"Recurrent Job {ctx.JobName}, {DateTime.Now}");
-            return Task.CompletedTask;
-        }
+        client.CancelRecurrent<TestCliRecurrentJobCommand>();
     }
 }

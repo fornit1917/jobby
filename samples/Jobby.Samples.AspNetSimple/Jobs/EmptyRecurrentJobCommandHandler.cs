@@ -14,7 +14,7 @@ public class EmptyRecurrentJobCommandHandler : IJobCommandHandler<EmptyRecurrent
 
     public Task ExecuteAsync(EmptyRecurrentJobCommand command, JobExecutionContext ctx)
     {
-        _logger.LogInformation("EmptyRecurrentJob executed");
+        _logger.LogInformation("EmptyRecurrentJob executed, {Time}", DateTime.UtcNow);
         return Task.CompletedTask;
     }
 }

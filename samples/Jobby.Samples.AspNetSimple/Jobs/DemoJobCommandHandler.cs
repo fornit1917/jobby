@@ -14,14 +14,14 @@ public class DemoJobCommandHandler : IJobCommandHandler<DemoJobCommand>
 
     public async Task ExecuteAsync(DemoJobCommand command, JobExecutionContext ctx)
     {
-        _logger.LogInformation("Job {JobName} started, attempt number is {Attempt}", 
-            DemoJobCommand.GetJobName(), ctx.StartedCount);
+        _logger.LogInformation("Job {JobName} started, attempt number is {Attempt}, {Time}", 
+            DemoJobCommand.GetJobName(), ctx.StartedCount, DateTime.UtcNow);
         
         if (command.ShouldBeFailed)
             throw new Exception("Job is configured to fail");
 
         await Task.Delay(command.DelayMs);
 
-        _logger.LogInformation("Job {JobName} completed", DemoJobCommand.GetJobName());
+        _logger.LogInformation("Job {JobName} completed, {Time}", DemoJobCommand.GetJobName(), DateTime.UtcNow);
     }
 }
