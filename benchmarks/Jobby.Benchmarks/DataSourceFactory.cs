@@ -10,10 +10,6 @@ internal static class DataSourceFactory
     {
         var connectionStringBuilder = new NpgsqlConnectionStringBuilder(ConnectionString)
         {
-            Pooling = true,
-            MaxPoolSize = 20,
-            MinPoolSize = 5,
-            ConnectionIdleLifetime = 30,
             Enlist = enlist
         };
         var dataSource = NpgsqlDataSource.Create(ConnectionString);

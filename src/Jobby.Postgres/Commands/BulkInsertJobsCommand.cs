@@ -41,6 +41,9 @@ internal class BulkInsertJobsCommand
 
     public async Task ExecuteAsync(IReadOnlyList<JobCreationModel> jobs)
     {
+        if (jobs is not { Count: > 0 })
+            return;
+
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var batch = new NpgsqlBatch(conn);
         PrepareCommand(batch, jobs);
@@ -49,6 +52,9 @@ internal class BulkInsertJobsCommand
 
     public void Execute(IReadOnlyList<JobCreationModel> jobs)
     {
+        if (jobs is not { Count: > 0 })
+            return;
+
         using var conn = _dataSource.OpenConnection();
         using var batch = new NpgsqlBatch(conn);
         PrepareCommand(batch, jobs);

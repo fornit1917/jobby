@@ -17,6 +17,8 @@ public class HangfireBulkCreateJobsBenchmark : IBenchmark
 }
 
 [MemoryDiagnoser]
+[WarmupCount(10)]
+[IterationCount(10)]
 public class HangfireBulkCreateJobsBenchmarkAction
 {
     public HangfireBulkCreateJobsBenchmarkAction()

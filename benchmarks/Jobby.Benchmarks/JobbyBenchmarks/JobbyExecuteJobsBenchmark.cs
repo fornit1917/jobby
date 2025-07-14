@@ -90,7 +90,7 @@ public class JobbyExecuteJobsBenchmarkAction
         var serverSettings = new JobbyServerSettings
         {
             MaxDegreeOfParallelism = DegreeOfParallelism,
-            TakeToProcessingBatchSize = 10,
+            TakeToProcessingBatchSize = DegreeOfParallelism,
             PollingIntervalMs = 1000,
             DbErrorPauseMs = 5000,
             DeleteCompleted = true,
@@ -122,6 +122,11 @@ public class JobbyExecuteJobsBenchmarkAction
             };
             var job = _jobbyClient.Factory.Create(jobCommand);
             jobs.Add(job);
+            if (jobs.Count == 1000)
+            {
+                _jobbyClient.EnqueueBatch(jobs);
+                jobs.Clear();
+            }
         }
         _jobbyClient.EnqueueBatch(jobs);
     }

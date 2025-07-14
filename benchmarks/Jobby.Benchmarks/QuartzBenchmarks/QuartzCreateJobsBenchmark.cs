@@ -16,6 +16,8 @@ public class QuartzCreateJobsBenchmark : IBenchmark
 }
 
 [MemoryDiagnoser]
+[WarmupCount(10)]
+[IterationCount(10)]
 public class QuartzCreateJobsBenchmarkAction
 {
     private readonly IScheduler _scheduler;

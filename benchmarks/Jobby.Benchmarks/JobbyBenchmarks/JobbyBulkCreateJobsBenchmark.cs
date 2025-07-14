@@ -19,6 +19,8 @@ public class JobbyBulkCreateJobsBenchmark : IBenchmark
 }
 
 [MemoryDiagnoser]
+[WarmupCount(10)]
+[IterationCount(10)]
 public class JobbyBulkCreateJobsBenchmarkAction
 {
     private readonly IJobbyClient _jobbyClient;
