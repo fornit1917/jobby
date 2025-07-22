@@ -98,11 +98,11 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
             {
                 if (_settings.DeleteCompleted)
                 {
-                    await _storage.BulkDeleteAsync(jobIds, nextJobIds);
+                    await _storage.BulkDeleteProcessingJobsAsync(jobIds, nextJobIds);
                 }
                 else
                 {
-                    await _storage.BulkMarkCompletedAsync(jobIds, nextJobIds);
+                    await _storage.BulkUpdateProcessingJobsToCompletedAsync(jobIds, nextJobIds);
                 }
                 
                 SetCompletedForTasks(taskCompletionSources);

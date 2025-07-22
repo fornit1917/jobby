@@ -103,11 +103,11 @@ internal class JobPostProcessingService : IJobPostProcessingService
         if (retryInterval.HasValue)
         {
             var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-            return _storage.RescheduleAsync(job.Id, sheduledStartTime, error);
+            return _storage.RescheduleProcessingJobAsync(job.Id, sheduledStartTime, error);
         }
         else
         {
-            return _storage.MarkFailedAsync(job.Id, error);
+            return _storage.UpdateProcessingJobToFailedAsync(job.Id, error);
         }
     }
 
@@ -115,7 +115,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
         var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
-        return _storage.RescheduleAsync(job.Id, nextStartAt, error);
+        return _storage.RescheduleProcessingJobAsync(job.Id, nextStartAt, error);
     }
 
     public void Dispose()

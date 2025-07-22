@@ -21,19 +21,19 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public void CancelJobsByIds_CallsBulkDelete()
+    public void CancelJobsByIds_CallsBulkDeleteNotStarted()
     {
         Guid[] ids = [Guid.NewGuid()];
         _client.CancelJobsByIds(ids);
-        _storageMock.Verify(x => x.BulkDelete(ids));
+        _storageMock.Verify(x => x.BulkDeleteNotStartedJobs(ids));
     }
 
     [Fact]
-    public async Task CancelJobsByIdsAsync_CallsBulkDeleteAsync()
+    public async Task CancelJobsByIdsAsync_CallsBulkDeleteNotStartedAsync()
     {
         Guid[] ids = [Guid.NewGuid()];
         await _client.CancelJobsByIdsAsync(ids);
-        _storageMock.Verify(x => x.BulkDeleteAsync(ids, null));
+        _storageMock.Verify(x => x.BulkDeleteNotStartedJobsAsync(ids));
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class JobbyClientTests
 
         _client.EnqueueBatch(jobs);
 
-        _storageMock.Verify(x => x.BulkInsert(jobs));
+        _storageMock.Verify(x => x.BulkInsertJobs(jobs));
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class JobbyClientTests
 
         await _client.EnqueueBatchAsync(jobs);
 
-        _storageMock.Verify(x => x.BulkInsertAsync(jobs));
+        _storageMock.Verify(x => x.BulkInsertJobsAsync(jobs));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class JobbyClientTests
 
         var id = _client.EnqueueCommand(command);
 
-        _storageMock.Verify(x => x.Insert(job));
+        _storageMock.Verify(x => x.InsertJob(job));
         Assert.Equal(job.Id, id);
     }
 
@@ -99,7 +99,7 @@ public class JobbyClientTests
 
         var id = _client.EnqueueCommand(command, startTime);
 
-        _storageMock.Verify(x => x.Insert(job));
+        _storageMock.Verify(x => x.InsertJob(job));
         Assert.Equal(job.Id, id);
     }
 
@@ -112,7 +112,7 @@ public class JobbyClientTests
 
         var id = await _client.EnqueueCommandAsync(command);
 
-        _storageMock.Verify(x => x.InsertAsync(job));
+        _storageMock.Verify(x => x.InsertJobAsync(job));
         Assert.Equal(job.Id, id);
     }
 
@@ -126,7 +126,7 @@ public class JobbyClientTests
 
         var id = await _client.EnqueueCommandAsync(command, startTime);
 
-        _storageMock.Verify(x => x.InsertAsync(job));
+        _storageMock.Verify(x => x.InsertJobAsync(job));
         Assert.Equal(job.Id, id);
     }
 
@@ -140,7 +140,7 @@ public class JobbyClientTests
 
         _client.ScheduleRecurrent(command, cron);
 
-        _storageMock.Verify(x => x.Insert(job));
+        _storageMock.Verify(x => x.InsertJob(job));
     }
 
     [Fact]
@@ -153,6 +153,6 @@ public class JobbyClientTests
 
         await _client.ScheduleRecurrentAsync(command, cron);
 
-        _storageMock.Verify(x => x.InsertAsync(job));
+        _storageMock.Verify(x => x.InsertJobAsync(job));
     }
 }

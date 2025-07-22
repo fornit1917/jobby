@@ -8,7 +8,7 @@ namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 public class UpdateMethodsTests
 {
     [Fact]
-    public async Task MarkFailedAsync_MarksFailed()
+    public async Task UpdateProcessingJobToFailedAsync_Updates()
     {
         await using var dbContext = DbHelper.CreateContext();
 
@@ -28,7 +28,7 @@ public class UpdateMethodsTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var failedReason = "some error message";
-        await storage.MarkFailedAsync(job.Id, failedReason);
+        await storage.UpdateProcessingJobToFailedAsync(job.Id, failedReason);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Failed, actualJob.Status);
@@ -37,10 +37,37 @@ public class UpdateMethodsTests
         Assert.Equal(failedReason, actualJob.Error);
     }
 
+    [Fact]
+    public async Task UpdateProcessingJobToFailedAsync_NotInProcessingStatus_DoesNothing()
+    {
+        await using var dbContext = DbHelper.CreateContext();
+
+        var job = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = Guid.NewGuid().ToString(),
+            Cron = null,
+            JobParam = "param",
+            StartedCount = 1,
+            NextJobId = null,
+            Status = JobStatus.Completed,
+            ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+        };
+        await dbContext.AddAsync(job);
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var failedReason = "some error message";
+        await storage.UpdateProcessingJobToFailedAsync(job.Id, failedReason);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
+        Assert.Equal(JobStatus.Completed, actualJob.Status);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("some error message")]
-    public async Task RescheduleAsync_Reschedules(string error)
+    public async Task RescheduleProcessingJobAsync_Reschedules(string error)
     {
         await using var dbContext = DbHelper.CreateContext();
 
@@ -60,7 +87,7 @@ public class UpdateMethodsTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var newStartTime = DateTime.UtcNow.AddDays(2);
-        await storage.RescheduleAsync(job.Id, newStartTime, error);
+        await storage.RescheduleProcessingJobAsync(job.Id, newStartTime, error);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Scheduled, actualJob.Status);
@@ -71,7 +98,34 @@ public class UpdateMethodsTests
     }
 
     [Fact]
-    public async Task MarkCompletedAsync_NoNextJob_CompletesCurrent()
+    public async Task RescheduleProcessingJobAsync_NotInProcessingStatus_DoesNothing()
+    {
+        await using var dbContext = DbHelper.CreateContext();
+
+        var job = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = Guid.NewGuid().ToString(),
+            JobParam = "param",
+            StartedCount = 1,
+            NextJobId = null,
+            Status = JobStatus.Completed,
+            ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+        };
+        await dbContext.AddAsync(job);
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var newStartTime = DateTime.UtcNow.AddDays(2);
+        await storage.RescheduleProcessingJobAsync(job.Id, newStartTime, null);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
+        Assert.Equal(JobStatus.Completed, actualJob.Status);
+        Assert.Equal(job.ScheduledStartAt, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task UpdateProcessingJobToCompletedAsync_NoNextJob_UpdatesCurrent()
     {
         await using var dbContext = DbHelper.CreateContext();
 
@@ -91,7 +145,7 @@ public class UpdateMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.MarkCompletedAsync(job.Id);
+        await storage.UpdateProcessingJobToCompletedAsync(job.Id);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
@@ -101,7 +155,7 @@ public class UpdateMethodsTests
     }
 
     [Fact]
-    public async Task MarkCompletedAsync_HasNextJob_CompletesCurrentAndSchedulesNext()
+    public async Task UpdateProcessingJobToCompletedAsync_HasNextJob_CompletesCurrentAndSchedulesNext()
     {
         await using var dbContext = DbHelper.CreateContext();
         var nextJob = new JobDbModel
@@ -127,7 +181,7 @@ public class UpdateMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.MarkCompletedAsync(job.Id, job.NextJobId);
+        await storage.UpdateProcessingJobToCompletedAsync(job.Id, job.NextJobId);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
@@ -140,7 +194,43 @@ public class UpdateMethodsTests
     }
 
     [Fact]
-    public async Task BulkMarkCompletedAsync_NoNextJobs_Completes()
+    public async Task UpdateProcessingJobToCompletedAsync_CurrentNotProcessingAndNextNotWaiting_DoesNothing()
+    {
+        await using var dbContext = DbHelper.CreateContext();
+        var nextJob = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = Guid.NewGuid().ToString(),
+            JobParam = "param",
+            Status = JobStatus.Failed,
+            ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+        };
+        var job = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = Guid.NewGuid().ToString(),
+            JobParam = "param",
+            StartedCount = 2,
+            NextJobId = nextJob.Id,
+            Status = JobStatus.Failed,
+            ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            Error = "prev error"
+        };
+        await dbContext.AddRangeAsync([nextJob, job]);
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.UpdateProcessingJobToCompletedAsync(job.Id, job.NextJobId);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
+        Assert.Equal(JobStatus.Failed, actualJob.Status);
+
+        var actualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.NextJobId);
+        Assert.Equal(JobStatus.Failed, actualNextJob.Status);
+    }
+
+    [Fact]
+    public async Task BulkUpdateProcessingJobsToCompletedAsync_NoNextJobs_Completes()
     {
         var jobs = new List<JobDbModel>
         {
@@ -171,7 +261,7 @@ public class UpdateMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.BulkMarkCompletedAsync(jobs.Select(x => x.Id).ToList(), Array.Empty<Guid>());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.Select(x => x.Id).ToList(), Array.Empty<Guid>());
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Completed, firstActualJob.Status);
@@ -187,7 +277,7 @@ public class UpdateMethodsTests
     }
 
     [Fact]
-    public async Task BulkMarkCompletedAsync_HaveNextJobs_CompletesCurrentAndSchedulesNext()
+    public async Task BulkUpdateProcessingJobsToCompletedAsync_HaveNextJobs_CompletesCurrentAndSchedulesNext()
     {
         var nextJobs = new List<JobDbModel>
         {
@@ -240,7 +330,7 @@ public class UpdateMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.BulkMarkCompletedAsync(jobs.Select(x => x.Id).ToList(), nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.Select(x => x.Id).ToList(), nextJobs.Select(x => x.Id).ToList());
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Completed, firstActualJob.Status);
@@ -259,5 +349,74 @@ public class UpdateMethodsTests
 
         var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
         Assert.Equal(JobStatus.Scheduled, secondActualNextJob.Status);
+    }
+
+    [Fact]
+    public async Task BulkUpdateProcessingJobsToCompletedAsync_CurrentNotProcessingAndNextNotWaiting_DoesNothing()
+    {
+        var nextJobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Failed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Failed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                NextJobId = nextJobs[0].Id,
+                Status = JobStatus.Failed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+                Error = "prev error"
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                NextJobId = nextJobs[1].Id,
+                Status = JobStatus.Failed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+                Error = "prev error"
+            },
+        };
+
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobs));
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.Select(x => x.Id).ToList(), nextJobs.Select(x => x.Id).ToList());
+
+        var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
+        Assert.Equal(JobStatus.Failed, firstActualJob.Status);
+        
+        var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[1].Id);
+        Assert.Equal(JobStatus.Failed, secondActualJob.Status);
+
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[0].Id);
+        Assert.Equal(JobStatus.Failed, firstActualNextJob.Status);
+
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
+        Assert.Equal(JobStatus.Failed, secondActualNextJob.Status);
     }
 }

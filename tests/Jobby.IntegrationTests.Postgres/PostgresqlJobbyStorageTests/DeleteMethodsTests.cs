@@ -8,7 +8,7 @@ namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 public class DeleteMethodsTests
 {
     [Fact]
-    public async Task DeleteAsync_NoNextJob_Deletes()
+    public async Task DeleteProcessingJobAsync_NoNextJob_Deletes()
     {
         var job = new JobDbModel
         {
@@ -23,14 +23,14 @@ public class DeleteMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteAsync(job.Id);
+        await storage.DeleteProcessingJobAsync(job.Id);
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.False(jobExists);
     }
 
     [Fact]
-    public async Task DeleteAsync_HasNextJob_DeletesCurrentAndSchedulesNext()
+    public async Task DeleteProcessingJobAsync_HasNextJob_DeletesCurrentAndSchedulesNext()
     {
         var nextJob = new JobDbModel
         {
@@ -54,7 +54,7 @@ public class DeleteMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteAsync(job.Id, job.NextJobId);
+        await storage.DeleteProcessingJobAsync(job.Id, job.NextJobId);
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.False(jobExists);
@@ -65,7 +65,42 @@ public class DeleteMethodsTests
     }
 
     [Fact]
-    public async Task BulkDeleteAsync_NoNextJobs_Deletes()
+    public async Task DeleteProcessingJobAsync_CurrentIsNotProcessingAndNextIsNotWaiting_DoesNothing()
+    {
+        var nextJob = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = Guid.NewGuid().ToString(),
+            JobParam = "param",
+            ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            Status = JobStatus.Completed,
+        };
+        var job = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            NextJobId = nextJob.Id,
+            JobName = Guid.NewGuid().ToString(),
+            JobParam = "param",
+            ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            Status = JobStatus.Completed,
+        };
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync([job, nextJob]);
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.DeleteProcessingJobAsync(job.Id, job.NextJobId);
+
+        var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
+        Assert.True(jobExists);
+
+        var actualNextJob = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == nextJob.Id).FirstOrDefaultAsync();
+        Assert.NotNull(actualNextJob);
+        Assert.Equal(JobStatus.Completed, actualNextJob.Status);
+    }
+
+    [Fact]
+    public async Task BulkDeleteProcessingJobsAsync_NoNextJobs_Deletes()
     {
         var jobs = new List<JobDbModel>
         {
@@ -92,7 +127,7 @@ public class DeleteMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.BulkDeleteAsync(jobs.Select(x => x.Id).ToList());
+        await storage.BulkDeleteProcessingJobsAsync(jobs.Select(x => x.Id).ToList());
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
@@ -100,7 +135,7 @@ public class DeleteMethodsTests
     }
 
     [Fact]
-    public async Task BulkDeleteAsync_HaveNextJobs_DeletesCurrentAndSchedulesNext()
+    public async Task BulkDeleteProcessingJobsAsync_HaveNextJobs_DeletesCurrentAndSchedulesNext()
     {
         var nextJobs = new List<JobDbModel>
         {
@@ -150,7 +185,7 @@ public class DeleteMethodsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.BulkDeleteAsync(jobs.Select(x => x.Id).ToList(), nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkDeleteProcessingJobsAsync(jobs.Select(x => x.Id).ToList(), nextJobs.Select(x => x.Id).ToList());
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
@@ -163,7 +198,73 @@ public class DeleteMethodsTests
     }
 
     [Fact]
-    public void BulkDelete_Deletes()
+    public async Task BulkDeleteProcessingJobsAsync_CurrentIsNotProcessingAndNextIsNotWaiting_DoesNothing()
+    {
+        var nextJobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Completed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Completed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                NextJobId = nextJobs[0].Id,
+                Status = JobStatus.Completed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                NextJobId = nextJobs[1].Id,
+                Status = JobStatus.Completed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobs));
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.BulkDeleteProcessingJobsAsync(jobs.Select(x => x.Id).ToList(), nextJobs.Select(x => x.Id).ToList());
+
+        var actualJobs = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+
+        Assert.Equal(2, actualJobs.Count);
+        Assert.Contains(actualJobs, x => x.Id == jobs[0].Id && x.Status == JobStatus.Completed);
+        Assert.Contains(actualJobs, x => x.Id == jobs[1].Id && x.Status == JobStatus.Completed);
+
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[0].Id);
+        Assert.Equal(JobStatus.Completed, firstActualNextJob.Status);
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
+        Assert.Equal(JobStatus.Completed, secondActualNextJob.Status);
+    }
+
+    [Fact]
+    public void BulkDeleteProcessingJobs_Deletes()
     {
         var jobs = new List<JobDbModel>
         {
@@ -190,11 +291,89 @@ public class DeleteMethodsTests
         dbContext.SaveChanges();
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.BulkDelete(jobs.Select(x => x.Id).ToList());
+        storage.BulkDeleteProcessingJobs(jobs.Select(x => x.Id).ToList());
 
         var actualJobs = dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToList();
         Assert.Empty(actualJobs);
+    }
+
+    [Fact]
+    public async Task BulkDeleteNotStartedJobsAsync_NotStartedStatuses_Deletes()
+    {
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.WaitingPrev,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync(jobs);
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.BulkDeleteNotStartedJobsAsync(jobs.Select(x => x.Id).ToList());
+
+        var actualJobs = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+        Assert.Empty(actualJobs);
+    }
+
+    [Fact]
+    public async Task BulkDeleteNotStartedJobsAsync_AlreadyStarted_DoesNothing()
+    {
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Completed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Failed,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync(jobs);
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.BulkDeleteNotStartedJobsAsync(jobs.Select(x => x.Id).ToList());
+
+        var actualJobs = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id || x.Id == jobs[2].Id).ToListAsync();
+        Assert.Equal(3, actualJobs.Count);
     }
 
     [Fact]

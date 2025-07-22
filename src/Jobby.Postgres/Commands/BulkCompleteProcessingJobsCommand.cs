@@ -4,13 +4,13 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class BulkCompleteJobsCommand
+internal class BulkCompleteProcessingJobsCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _updateStatusCommandText;
     private readonly string _scheduleNextJobCommandText;
 
-    public BulkCompleteJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public BulkCompleteProcessingJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 
@@ -20,11 +20,17 @@ internal class BulkCompleteJobsCommand
                 status = {(int)JobStatus.Completed},
                 error = null,
                 last_finished_at = $1
-            WHERE id = ANY($2);
+            WHERE
+                id = ANY($2)
+                AND status = {(int)JobStatus.Processing}
         ";
 
         _scheduleNextJobCommandText = @$"
-            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = ANY($1)
+            UPDATE {TableName.Jobs(settings)}
+            SET status={(int)JobStatus.Scheduled}
+            WHERE
+                id = ANY($1)
+                AND status = {(int)JobStatus.WaitingPrev}
         ";
     }
 

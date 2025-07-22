@@ -4,12 +4,12 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class RescheduleCommand
+internal class RescheduleProcessingJobCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
 
-    public RescheduleCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public RescheduleProcessingJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 
@@ -20,7 +20,9 @@ internal class RescheduleCommand
                 last_finished_at = $1,
                 scheduled_start_at = $2,
                 error = $3
-            WHERE id = $4;
+            WHERE 
+                id = $4
+                AND status = {(int)JobStatus.Processing}
         ";
     }
 

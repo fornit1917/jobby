@@ -39,8 +39,8 @@ public class InsertMethodsTests
         };
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.InsertAsync(firstJob);
-        await storage.InsertAsync(secondJob);
+        await storage.InsertJobAsync(firstJob);
+        await storage.InsertJobAsync(secondJob);
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == firstJob.Id);
         var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == secondJob.Id);
@@ -84,8 +84,8 @@ public class InsertMethodsTests
 
         var storage = DbHelper.CreateJobbyStorage();
 
-        storage.Insert(firstJob);
-        storage.Insert(secondJob);
+        storage.InsertJob(firstJob);
+        storage.InsertJob(secondJob);
 
         var firstActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == firstJob.Id);
         var secondActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == secondJob.Id);
@@ -125,8 +125,8 @@ public class InsertMethodsTests
         };
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.InsertAsync(job);
-        await storage.InsertAsync(newJob);
+        await storage.InsertJobAsync(job);
+        await storage.InsertJobAsync(newJob);
 
         var actualJobWithOldId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == job.Id);
         Assert.Null(actualJobWithOldId);
@@ -164,8 +164,8 @@ public class InsertMethodsTests
         };
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.Insert(job);
-        storage.Insert(newJob);
+        storage.InsertJob(job);
+        storage.InsertJob(newJob);
 
         var actualJobWithOldId = dbContext.Jobs.FirstOrDefault(x => x.Id == job.Id);
         Assert.Null(actualJobWithOldId);
@@ -207,7 +207,7 @@ public class InsertMethodsTests
 
         var storage = DbHelper.CreateJobbyStorage();
 
-        await storage.BulkInsertAsync([firstJob, secondJob]);
+        await storage.BulkInsertJobsAsync([firstJob, secondJob]);
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == firstJob.Id);
         var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == secondJob.Id);
@@ -250,7 +250,7 @@ public class InsertMethodsTests
         };
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.BulkInsert([firstJob, secondJob]);
+        storage.BulkInsertJobs([firstJob, secondJob]);
 
         var firstActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == firstJob.Id);
         var secondActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == secondJob.Id);

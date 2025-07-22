@@ -23,7 +23,7 @@ public class BatchingJobCompletionServiceTests
         _storageMock = new Mock<IJobbyStorage>();
 
         _storageMock
-            .Setup(x => x.BulkDeleteAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<IReadOnlyList<Guid>>()))
+            .Setup(x => x.BulkDeleteProcessingJobsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<IReadOnlyList<Guid>>()))
             .Callback<IReadOnlyList<Guid>, IReadOnlyList<Guid>>((jobIds, nextJobIds) =>
             {
                 _completedJobIds.AddRange(jobIds);
@@ -32,7 +32,7 @@ public class BatchingJobCompletionServiceTests
             });
 
         _storageMock
-            .Setup(x => x.BulkMarkCompletedAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<IReadOnlyList<Guid>>()))
+            .Setup(x => x.BulkUpdateProcessingJobsToCompletedAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<IReadOnlyList<Guid>>()))
             .Callback<IReadOnlyList<Guid>, IReadOnlyList<Guid>>((jobIds, nextJobIds) =>
             {
                 _completedJobIds.AddRange(jobIds);

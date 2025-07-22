@@ -16,7 +16,7 @@ internal class SimpleJobCompletionService : IJobCompletionService
     public Task CompleteJob(Guid jobId, Guid? nextJobId)
     {
         return _deleteCompleted
-            ? _storage.DeleteAsync(jobId, nextJobId)
-            : _storage.MarkCompletedAsync(jobId, nextJobId);
+            ? _storage.DeleteProcessingJobAsync(jobId, nextJobId)
+            : _storage.UpdateProcessingJobToCompletedAsync(jobId, nextJobId);
     }
 }

@@ -4,20 +4,28 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class DeleteJobCommand
+internal class DeleteProcessingJobCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _deleteJobCommandText;
     private readonly string _scheduleNextJobCommandText;
 
-    public DeleteJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public DeleteProcessingJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
         
-        _deleteJobCommandText = $"DELETE FROM {TableName.Jobs(settings)} WHERE id = $1";
+        _deleteJobCommandText = @$"
+            DELETE FROM {TableName.Jobs(settings)}
+            WHERE
+                id = $1
+                AND status = {(int)JobStatus.Processing}";
         
         _scheduleNextJobCommandText = @$"
-            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = $1
+            UPDATE {TableName.Jobs(settings)}
+            SET status={(int)JobStatus.Scheduled}
+            WHERE
+                id = $1
+                AND status = {(int)JobStatus.WaitingPrev}
         ";
     }
 

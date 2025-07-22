@@ -19,8 +19,8 @@ public class SimpleJobCompletionServiceTests
 
         await _service.CompleteJob(jobId, nextJobId);
 
-        _storageMock.Verify(x => x.DeleteAsync(jobId, nextJobId), Times.Once);
-        _storageMock.Verify(x => x.MarkCompletedAsync(jobId, nextJobId), Times.Never);
+        _storageMock.Verify(x => x.DeleteProcessingJobAsync(jobId, nextJobId), Times.Once);
+        _storageMock.Verify(x => x.UpdateProcessingJobToCompletedAsync(jobId, nextJobId), Times.Never);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class SimpleJobCompletionServiceTests
 
         await _service.CompleteJob(jobId, nextJobId);
 
-        _storageMock.Verify(x => x.DeleteAsync(jobId, nextJobId), Times.Never);
-        _storageMock.Verify(x => x.MarkCompletedAsync(jobId, nextJobId), Times.Once);
+        _storageMock.Verify(x => x.DeleteProcessingJobAsync(jobId, nextJobId), Times.Never);
+        _storageMock.Verify(x => x.UpdateProcessingJobToCompletedAsync(jobId, nextJobId), Times.Once);
     }
 }

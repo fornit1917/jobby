@@ -4,14 +4,14 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class UpdateStatusCommand
+internal class UpdateFromProcessingStatusCommand
 {
     private readonly NpgsqlDataSource _dataSource;
 
     private readonly string _updateStatusCommandText;
     private readonly string _scheduleNextJobCommandText;
 
-    public UpdateStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public UpdateFromProcessingStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
 
@@ -21,15 +21,21 @@ internal class UpdateStatusCommand
                 status = $1,
                 last_finished_at = $2,
                 error = $3
-            WHERE id = $4;
+            WHERE
+                id = $4
+                AND status = {(int)JobStatus.Processing}
         ";
 
         _scheduleNextJobCommandText = @$"
-            UPDATE {TableName.Jobs(settings)} SET status={(int)JobStatus.Scheduled} WHERE id = $1
+            UPDATE {TableName.Jobs(settings)} 
+            SET status={(int)JobStatus.Scheduled}
+            WHERE 
+                id = $1
+                AND status = {(int)JobStatus.WaitingPrev}
         ";
     }
 
-    public async Task ExecuteAsync(Guid jobId, JobStatus newStatus, string? error, Guid? nextJobId = null)
+    public async Task ExecuteAsync(Guid jobId, JobStatus newStatus, string? error, Guid? nextJobId)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         var finishedAt = DateTime.UtcNow;
