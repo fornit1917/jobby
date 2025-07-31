@@ -119,12 +119,12 @@ internal class Program
 
     private static void CreateSequence(IJobbyClient jobbyClient, int jobsCount)
     {
-        var builder = jobbyClient.Factory.CreateSequenceBuilder();
+        var sequenceBuilder = jobbyClient.Factory.CreateSequenceBuilder();
         for (int i = 1; i <= jobsCount; i++)
         {
-            builder.Add(new TestCliJobCommand { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false });
+            sequenceBuilder.Add(new TestCliJobCommand { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false });
         }
-        jobbyClient.EnqueueBatch(builder.GetJobs());
+        jobbyClient.EnqueueBatch(sequenceBuilder.GetJobs());
     }
 
     private static void CancelRecurrent(IJobbyClient client)

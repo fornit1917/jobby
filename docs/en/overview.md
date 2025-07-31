@@ -1,11 +1,6 @@
 # Jobby  
 
-High-performance and reliable .NET library for background tasks, designed for distributed applications.
-
-- Website (not available yet)
-- [Samples](https://github.com/fornit1917/jobby/tree/master/samples)
-- [Usage Guide in Russian](https://github.com/fornit1917/jobby/tree/master/docs/ru/overview.md)
-
+High-performance and reliable .NET library for background tasks, designed for distributed applications.  
 
 ## Key Features  
 
@@ -22,8 +17,6 @@ High-performance and reliable .NET library for background tasks, designed for di
 ## Usage Guide  
 
 ### Installation  
-
-**Note**: The library is not currently available on NuGet. Watch for official announcements.
 
 To use Jobby, install the Jobby.Core package and a storage package (currently only PostgreSQL is supported):  
 

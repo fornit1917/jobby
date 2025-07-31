@@ -34,9 +34,9 @@ public class Program
             opts.UseSnakeCaseNamingConvention();
         });
 
-        builder.Services.AddJobby(jobby =>
+        builder.Services.AddJobby(jobbyBuilder =>
         {
-            jobby
+            jobbyBuilder
                 .UsePostgresql(dataSource)
                 .UseServerSettings(new JobbyServerSettings
                 {
