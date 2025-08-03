@@ -23,8 +23,6 @@ High-performance and reliable .NET library for background tasks, designed for di
 
 ### Installation  
 
-**Note**: The library is not currently available on NuGet. Watch for official announcements.
-
 To use Jobby, install the Jobby.Core package and a storage package (currently only PostgreSQL is supported):  
 
 ```

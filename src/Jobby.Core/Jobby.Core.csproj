@@ -3,9 +3,13 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-    </PropertyGroup>
+		<PackageReadmeFile>overview.md</PackageReadmeFile>
+	</PropertyGroup>
     <ItemGroup>
       <PackageReference Include="Cronos" Version="0.9.0" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
     </ItemGroup>
+    <ItemGroup>
+       <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>	
 </Project>

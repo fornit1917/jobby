@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageReadmeFile>overview.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,4 +15,8 @@
     <ProjectReference Include="..\Jobby.Core\Jobby.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\" />
+  </ItemGroup>	
+	
 </Project>

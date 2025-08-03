@@ -42,4 +42,6 @@ msbuild.log
 msbuild.err
 msbuild.wrn
 
+nupkgs
+
 BenchmarkDotNet.Artifacts
