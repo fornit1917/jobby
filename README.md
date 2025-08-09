@@ -1,5 +1,7 @@
 # Jobby  
 
+<img width="256" src="./docs/logo/jobby_logo_1024.png" alt="Jobby Logo">
+
 High-performance and reliable .NET library for background tasks, designed for distributed applications.
 
 - Website (not available yet)
