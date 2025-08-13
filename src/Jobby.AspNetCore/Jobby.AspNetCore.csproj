@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageReadmeFile>overview.md</PackageReadmeFile>
+    <PackageIcon>jobby_package_icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\"/>
     <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
