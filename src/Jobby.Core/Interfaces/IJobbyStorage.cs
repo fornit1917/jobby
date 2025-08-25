@@ -11,16 +11,12 @@ public interface IJobbyStorage
     
     Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<JobExecutionModel> result);
     
-    Task UpdateProcessingJobToFailedAsync(Guid jobId, string error);
-
-    Task RescheduleProcessingJobAsync(Guid jobId, DateTime sheduledStartTime, string? error = null);
-
-    Task UpdateProcessingJobToCompletedAsync(Guid jobId, Guid? nextJobId = null);
-    Task BulkUpdateProcessingJobsToCompletedAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid> nextJobIds);
-
-    Task DeleteProcessingJobAsync(Guid jobId, Guid? nextJobId = null);
-    Task BulkDeleteProcessingJobsAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null);
-    void BulkDeleteProcessingJobs(IReadOnlyList<Guid> jobIds);
+    Task UpdateProcessingJobToFailedAsync(ProcessingJob job, string error);
+    Task RescheduleProcessingJobAsync(ProcessingJob job, DateTime sheduledStartTime, string? error = null);
+    Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null);
+    Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds);
+    Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null);
+    Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null);
 
     Task BulkDeleteNotStartedJobsAsync(IReadOnlyList<Guid> jobIds);
     void BulkDeleteNotStartedJobs(IReadOnlyList<Guid> jobIds);

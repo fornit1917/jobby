@@ -62,13 +62,16 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
             _jobsRegistry = new JobsRegistry(_jobExecMetadataByJobName.ToFrozenDictionary());
         }
 
+        var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
+
         IJobCompletionService completionService = _serverSettings.CompleteWithBatching
-            ? new BatchingJobCompletionService(_storage, _serverSettings)
-            : new SimpleJobCompletionService(_storage, _serverSettings.DeleteCompleted);
+            ? new BatchingJobCompletionService(_storage, _serverSettings, serverId)
+            : new SimpleJobCompletionService(_storage, _serverSettings.DeleteCompleted, serverId);
 
         IJobPostProcessingService postProcessingService = new JobPostProcessingService(_storage,
             completionService,
-            _loggerFactory.CreateLogger<JobPostProcessingService>());
+            _loggerFactory.CreateLogger<JobPostProcessingService>(),
+            serverId);
 
         IJobExecutionService executionService = new JobExecutionService(_scopeFactory,
             _jobsRegistry,
@@ -81,7 +84,8 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
             executionService,
             postProcessingService,
             _loggerFactory.CreateLogger<JobbyServer>(),
-            _serverSettings);
+            _serverSettings,
+            serverId);
     }
 
     public IJobbyClient CreateJobbyClient()

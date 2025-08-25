@@ -47,4 +47,12 @@ internal class JobDbModel
 
     [Column("can_be_restarted")]
     public bool CanBeRestarted { get; set; }
+
+    public ProcessingJob ToProcessingJob()
+    {
+        if (ServerId == null)
+            throw new ArgumentException("ServerId is null");
+        
+        return new ProcessingJob(Id, ServerId);
+    }
 }

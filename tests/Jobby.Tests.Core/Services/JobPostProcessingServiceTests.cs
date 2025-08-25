@@ -16,12 +16,18 @@ public class JobPostProcessingServiceTests
 
     private readonly JobPostProcessingService _postProcessingService;
 
+    private const string ServerId = "serverId";
+
     public JobPostProcessingServiceTests()
     {
         _storageMock = new Mock<IJobbyStorage>();
         _completionServiceMock = new Mock<IJobCompletionService>();
         _loggerMock = new Mock<ILogger<JobPostProcessingService>>();
-        _postProcessingService = new JobPostProcessingService(_storageMock.Object, _completionServiceMock.Object, _loggerMock.Object);
+        _postProcessingService = new JobPostProcessingService(
+            _storageMock.Object,
+            _completionServiceMock.Object,
+            _loggerMock.Object,
+            ServerId);
     }
 
     [Fact]
@@ -56,9 +62,10 @@ public class JobPostProcessingServiceTests
 
         await _postProcessingService.HandleFailed(job, retryPolicy, failedReason);
 
-        Expression<Func<DateTime, bool>> verifyNewStartTime = x => x.Subtract(DateTime.UtcNow) > TimeSpan.FromSeconds(9)
+        Expression<Func<DateTime, bool>> expectedNewStartTime = x => x.Subtract(DateTime.UtcNow) > TimeSpan.FromSeconds(9)
                                                                    && x.Subtract(DateTime.UtcNow) < TimeSpan.FromSeconds(11);
-        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job.Id, It.Is(verifyNewStartTime), failedReason), Times.Once);
+        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == job.Id && x.ServerId == ServerId;
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(It.Is(expectedJob), It.Is(expectedNewStartTime), failedReason), Times.Once);
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
     }
 
@@ -79,7 +86,8 @@ public class JobPostProcessingServiceTests
 
         await _postProcessingService.HandleFailed(job, retryPolicy, failedReason);
 
-        _storageMock.Verify(x => x.UpdateProcessingJobToFailedAsync(job.Id, failedReason), Times.Once);
+        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == job.Id && x.ServerId == ServerId;
+        _storageMock.Verify(x => x.UpdateProcessingJobToFailedAsync(It.Is(expectedJob), failedReason), Times.Once);
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
     }
 
@@ -95,8 +103,9 @@ public class JobPostProcessingServiceTests
 
         await _postProcessingService.RescheduleRecurrent(job, error);
 
-        Expression<Func<DateTime, bool>> verifyNewStartTime = x => CronHelper.GetNext(job.Cron, DateTime.UtcNow).Subtract(x) < TimeSpan.FromSeconds(1);
-        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job.Id, It.Is(verifyNewStartTime), error), Times.Once());
+        Expression<Func<DateTime, bool>> expectedNewStartTime = x => CronHelper.GetNext(job.Cron, DateTime.UtcNow).Subtract(x) < TimeSpan.FromSeconds(1);
+        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == job.Id && x.ServerId == ServerId;
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(It.Is(expectedJob), It.Is(expectedNewStartTime), error), Times.Once());
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
     }
 
@@ -138,8 +147,9 @@ public class JobPostProcessingServiceTests
             MaxCount = 2
         };
         var error = "error";
+        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == job.Id && x.ServerId == ServerId;
         _storageMock
-            .SetupSequence(x => x.UpdateProcessingJobToFailedAsync(job.Id, error))
+            .SetupSequence(x => x.UpdateProcessingJobToFailedAsync(It.Is(expectedJob), error))
             .Throws(new Exception())
             .Returns(Task.CompletedTask);
 
@@ -150,7 +160,7 @@ public class JobPostProcessingServiceTests
         await _postProcessingService.DoRetriesFromQueue();
 
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
-        _storageMock.Verify(x => x.UpdateProcessingJobToFailedAsync(job.Id, error), Times.Exactly(2));
+        _storageMock.Verify(x => x.UpdateProcessingJobToFailedAsync(It.Is(expectedJob), error), Times.Exactly(2));
     }
 
     [Fact]
@@ -162,8 +172,9 @@ public class JobPostProcessingServiceTests
             Cron = "0 3 1 12 *"
         };
         var error = "error";
+        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == job.Id && x.ServerId == ServerId;
         _storageMock
-            .SetupSequence(x => x.RescheduleProcessingJobAsync(job.Id, It.IsAny<DateTime>(), error))
+            .SetupSequence(x => x.RescheduleProcessingJobAsync(It.Is(expectedJob), It.IsAny<DateTime>(), error))
             .Throws(new Exception())
             .Returns(Task.CompletedTask);
 
@@ -174,14 +185,14 @@ public class JobPostProcessingServiceTests
         await _postProcessingService.DoRetriesFromQueue();
 
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
-        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job.Id, It.IsAny<DateTime>(), error));
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(It.Is(expectedJob), It.IsAny<DateTime>(), error));
     }
 
     [Fact]
     public void Dispose_CallsDisposeInJobCompletionServiceIfItIsDisposable()
     {
         var completionService = new DisposableCompletionService();
-        var postProcessingService = new JobPostProcessingService(_storageMock.Object, completionService, _loggerMock.Object);
+        var postProcessingService = new JobPostProcessingService(_storageMock.Object, completionService, _loggerMock.Object, ServerId);
 
         postProcessingService.Dispose();
 

@@ -13,6 +13,8 @@ public class JobbyServerTests
     private readonly Mock<IJobPostProcessingService> _postProcessingServiceMock;
     private readonly Mock<ILogger<JobbyServer>> _loggerMock;
 
+    private const string ServerId = "serverId";
+
     public JobbyServerTests()
     {
         _storageMock = new Mock<IJobbyStorage>();
@@ -171,6 +173,7 @@ public class JobbyServerTests
             _executionServiceMock.Object,
             _postProcessingServiceMock.Object,
             _loggerMock.Object,
-            settings);
+            settings,
+            ServerId);
     }
 }

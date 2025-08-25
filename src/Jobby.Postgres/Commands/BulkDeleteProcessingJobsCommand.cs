@@ -8,7 +8,7 @@ internal class BulkDeleteProcessingJobsCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _deleteCommandText;
-    private readonly string _scheduleNextJobsCommandText;
+    private readonly string _deleteAndUnlockNextCommandText;
 
     public BulkDeleteProcessingJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -19,45 +19,45 @@ internal class BulkDeleteProcessingJobsCommand
             WHERE
                 id = ANY($1)
                 AND status={(int)JobStatus.Processing}
+                AND server_id = $2
         ";
-        
-        _scheduleNextJobsCommandText = @$"
-            UPDATE {TableName.Jobs(settings)}
-            SET status={(int)JobStatus.Scheduled}
-            WHERE 
-                id = ANY($1)
-                AND status={(int)JobStatus.WaitingPrev}
+
+        _deleteAndUnlockNextCommandText = $@"
+            WITH complete_and_get_next_job_id AS (
+	            DELETE FROM jobby_jobs 
+	            WHERE 
+		            id = ANY($1)
+		            AND status = {(int)JobStatus.Processing}
+		            AND server_id = $2
+	            RETURNING next_job_id
+            )
+            UPDATE jobby_jobs
+            SET
+	            status = {(int)JobStatus.Scheduled}
+            WHERE
+                id IN (SELECT next_job_id FROM complete_and_get_next_job_id)
+                AND id = ANY($3)
+                AND status = {(int)JobStatus.WaitingPrev}
         ";
     }
 
-    public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds, IReadOnlyList<Guid>? nextJobIds = null)
+    public async Task ExecuteAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
 
         if (nextJobIds is { Count : > 0})
         {
-            await using var batch = new NpgsqlBatch(conn);
-            
-            var deleteCmd = new NpgsqlBatchCommand(_deleteCommandText)
+            await using var deleteAndUnlockNextCmd = new NpgsqlCommand(_deleteAndUnlockNextCommandText, conn)
             {
                 Parameters =
                 {
-                    new() { Value = jobIds }
-                },
-            };
-            
-            var scheduleNextCmd = new NpgsqlBatchCommand(_scheduleNextJobsCommandText)
-            {
-                Parameters =
-                {
+                    new() { Value = jobs.JobIds },
+                    new() { Value = jobs.ServerId },
                     new() { Value = nextJobIds }
                 }
             };
 
-            batch.BatchCommands.Add(deleteCmd);
-            batch.BatchCommands.Add(scheduleNextCmd);
-
-            await batch.ExecuteNonQueryAsync();
+            await deleteAndUnlockNextCmd.ExecuteNonQueryAsync();
         }
         else
         {
@@ -65,24 +65,12 @@ internal class BulkDeleteProcessingJobsCommand
             {
                 Parameters =
                 {
-                    new() { Value = jobIds }
+                    new() { Value = jobs.JobIds },
+                    new() { Value = jobs.ServerId },
                 }
             };
 
             await deleteCmd.ExecuteNonQueryAsync();
         }
-    }
-
-    public void Execute(IReadOnlyList<Guid> jobIds)
-    {
-        using var conn = _dataSource.OpenConnection();
-        using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn)
-        {
-            Parameters =
-                {
-                    new() { Value = jobIds }
-                }
-        };
-        deleteCmd.ExecuteNonQuery();
     }
 }

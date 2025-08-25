@@ -23,10 +23,11 @@ internal class RescheduleProcessingJobCommand
             WHERE 
                 id = $4
                 AND status = {(int)JobStatus.Processing}
+                AND server_id = $5
         ";
     }
 
-    public async Task ExecuteAsync(Guid jobId, DateTime scheduledStartTime, string? error)
+    public async Task ExecuteAsync(ProcessingJob job, DateTime scheduledStartTime, string? error)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = new NpgsqlCommand(_commandText, conn)
@@ -36,7 +37,8 @@ internal class RescheduleProcessingJobCommand
                 new() { Value = DateTime.UtcNow },
                 new() { Value = scheduledStartTime },
                 new() { Value = error as object ?? DBNull.Value },
-                new() { Value = jobId }
+                new() { Value = job.JobId },
+                new() { Value = job.ServerId }
             }
         };
         await cmd.ExecuteNonQueryAsync();

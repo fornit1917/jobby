@@ -8,18 +8,15 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
 {
     private readonly IJobbyStorage _storage;
     private readonly JobbyServerSettings _settings;
+    private readonly string _serverId;
 
     private readonly record struct QueueItem(TaskCompletionSource Tcs, Guid JobId, Guid? NextJobId);
     private Channel<QueueItem> _chan;
 
-    private readonly int[] _stat;
-
-    public BatchingJobCompletionService(IJobbyStorage storage, JobbyServerSettings settings)
+    public BatchingJobCompletionService(IJobbyStorage storage, JobbyServerSettings settings, string serverId)
     {
         _storage = storage;
         _settings = settings;
-
-        _stat = new int[settings.MaxDegreeOfParallelism];
 
         var chanOpts = new BoundedChannelOptions(capacity: _settings.MaxDegreeOfParallelism)
         {
@@ -31,6 +28,7 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
         };
         _chan = Channel.CreateBounded<QueueItem>(chanOpts);
         Task.Run(Process);
+        _serverId = serverId;
     }
 
     public Task CompleteJob(Guid jobId, Guid? nextJobId)
@@ -91,18 +89,17 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
                 continue;
             }
 
-            _stat[jobIds.Count - 1]++;
-
             // If batch is not empty - send bulk command to DB
             try
             {
+                var processingJobsList = new ProcessingJobsList(jobIds, _serverId);
                 if (_settings.DeleteCompleted)
                 {
-                    await _storage.BulkDeleteProcessingJobsAsync(jobIds, nextJobIds);
+                    await _storage.BulkDeleteProcessingJobsAsync(processingJobsList, nextJobIds);
                 }
                 else
                 {
-                    await _storage.BulkUpdateProcessingJobsToCompletedAsync(jobIds, nextJobIds);
+                    await _storage.BulkUpdateProcessingJobsToCompletedAsync(processingJobsList, nextJobIds);
                 }
                 
                 SetCompletedForTasks(taskCompletionSources);

@@ -9,7 +9,7 @@ internal class UpdateFromProcessingStatusCommand
     private readonly NpgsqlDataSource _dataSource;
 
     private readonly string _updateStatusCommandText;
-    private readonly string _scheduleNextJobCommandText;
+    private readonly string _updateAndUnlockNextCommandText;
 
     public UpdateFromProcessingStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -24,22 +24,37 @@ internal class UpdateFromProcessingStatusCommand
             WHERE
                 id = $4
                 AND status = {(int)JobStatus.Processing}
+                AND server_id = $5
         ";
 
-        _scheduleNextJobCommandText = @$"
-            UPDATE {TableName.Jobs(settings)} 
-            SET status={(int)JobStatus.Scheduled}
-            WHERE 
-                id = $1
+        _updateAndUnlockNextCommandText = @$"
+            WITH complete_and_get_next_job_id AS (
+	            UPDATE jobby_jobs 
+	            SET
+		            status = $1,
+		            last_finished_at = $2,
+		            error = $3
+	            WHERE 
+		            id = $4
+		            AND status = {(int)JobStatus.Processing}
+		            AND server_id = $5
+	            RETURNING next_job_id 
+            )
+            UPDATE jobby_jobs 
+            SET
+	            status = {(int)JobStatus.Scheduled}
+            WHERE
+                id IN (SELECT next_job_id FROM complete_and_get_next_job_id)
+                AND id = $6
                 AND status = {(int)JobStatus.WaitingPrev}
         ";
     }
 
-    public async Task ExecuteAsync(Guid jobId, JobStatus newStatus, string? error, Guid? nextJobId)
+    public async Task ExecuteAsync(ProcessingJob job, JobStatus newStatus, string? error, Guid? nextJobId)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         var finishedAt = DateTime.UtcNow;
-        if (nextJobId == null)
+        if (nextJobId == null || newStatus != JobStatus.Completed)
         {
             await using var cmd = new NpgsqlCommand(_updateStatusCommandText, conn)
             {
@@ -48,38 +63,27 @@ internal class UpdateFromProcessingStatusCommand
                     new() { Value = (int)newStatus },                  // 1
                     new() { Value = finishedAt },                      // 2
                     new() { Value = error as object ?? DBNull.Value }, // 3
-                    new() { Value = jobId }                            // 4
+                    new() { Value = job.JobId },                       // 4
+                    new() { Value = job.ServerId }                     // 5 
                 }
             };
             await cmd.ExecuteNonQueryAsync();
         }
         else
         {
-            await using var batch = new NpgsqlBatch(conn);
-
-            var updateCmd = new NpgsqlBatchCommand(_updateStatusCommandText)
+            await using var updateAndUnlockNextCmd = new NpgsqlCommand(_updateAndUnlockNextCommandText, conn)
             {
                 Parameters =
                 {
                     new() { Value = (int)newStatus },                  // 1
                     new() { Value = finishedAt },                      // 2
                     new() { Value = error as object ?? DBNull.Value }, // 3
-                    new() { Value = jobId }                            // 4
+                    new() { Value = job.JobId },                       // 4
+                    new() { Value = job.ServerId },                    // 5
+                    new() { Value = nextJobId }                        // 6
                 }
             };
-
-            var scheduleNextCommand = new NpgsqlBatchCommand(_scheduleNextJobCommandText)
-            {
-                Parameters =
-                {
-                    new() { Value = nextJobId.Value }
-                }
-            };
-
-            batch.BatchCommands.Add(updateCmd);
-            batch.BatchCommands.Add(scheduleNextCommand);
-
-            await batch.ExecuteNonQueryAsync();
+            await updateAndUnlockNextCmd.ExecuteNonQueryAsync();
         }
     }
 }

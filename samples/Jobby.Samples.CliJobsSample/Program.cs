@@ -25,7 +25,7 @@ internal class Program
             DbErrorPauseMs = 5000,
             MaxDegreeOfParallelism = 10,
             TakeToProcessingBatchSize = 10,
-            DeleteCompleted = false,
+            DeleteCompleted = true,
             CompleteWithBatching = true,
             HeartbeatIntervalSeconds = 3,
             MaxNoHeartbeatIntervalSeconds = 10
@@ -80,7 +80,11 @@ internal class Program
                 break;
         }
 
-        jobbyServer.StartBackgroundService();
+
+        Console.Write("Start server? (y/n): ");
+        var runServer = Console.ReadLine();
+        if (runServer != "n")
+            jobbyServer.StartBackgroundService();
 
         Console.ReadLine();
 

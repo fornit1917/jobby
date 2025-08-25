@@ -11,18 +11,21 @@ internal class JobPostProcessingService : IJobPostProcessingService
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
     private readonly ILogger<JobPostProcessingService> _logger;
+    private readonly string _serverId;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        ILogger<JobPostProcessingService> logger)
+        ILogger<JobPostProcessingService> logger,
+        string serverId)
     {
         _storage = storage;
         _jobCompletingService = jobCompletingService;
         _logger = logger;
         _retryQueue = new ConcurrentQueue<RetryQueueItem>();
+        _serverId = serverId;
     }
 
     public bool IsRetryQueueEmpty => _retryQueue.IsEmpty;
@@ -103,11 +106,11 @@ internal class JobPostProcessingService : IJobPostProcessingService
         if (retryInterval.HasValue)
         {
             var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-            return _storage.RescheduleProcessingJobAsync(job.Id, sheduledStartTime, error);
+            return _storage.RescheduleProcessingJobAsync(new ProcessingJob(job.Id, _serverId), sheduledStartTime, error);
         }
         else
         {
-            return _storage.UpdateProcessingJobToFailedAsync(job.Id, error);
+            return _storage.UpdateProcessingJobToFailedAsync(new ProcessingJob(job.Id, _serverId), error);
         }
     }
 
@@ -115,7 +118,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
         var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
-        return _storage.RescheduleProcessingJobAsync(job.Id, nextStartAt, error);
+        return _storage.RescheduleProcessingJobAsync(new ProcessingJob(job.Id, _serverId), nextStartAt, error);
     }
 
     public void Dispose()

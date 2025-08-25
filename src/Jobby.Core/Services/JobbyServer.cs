@@ -20,8 +20,8 @@ internal class JobbyServer : IJobbyServer, IDisposable
         IJobExecutionService executionService,
         IJobPostProcessingService postProcessingService,
         ILogger<JobbyServer> logger,
-        JobbyServerSettings settings
-        )
+        JobbyServerSettings settings,
+        string serverId)
     {
         _storage = storage;
         _executionService = executionService;
@@ -31,7 +31,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
 
         _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
         _cancellationTokenSource = new CancellationTokenSource();
-        ServerId = $"{Environment.MachineName}_{Guid.NewGuid()}";
+        ServerId = serverId;
     }
 
     public void StartBackgroundService()
