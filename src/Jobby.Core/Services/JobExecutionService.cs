@@ -2,7 +2,6 @@
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
-using System.Reflection;
 
 namespace Jobby.Core.Services;
 
@@ -34,26 +33,15 @@ internal class JobExecutionService : IJobExecutionService
     {
         using var scope = _scopeFactory.CreateJobExecutionScope();
         var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
-        Exception? thrownException = null;
+        string? error = null;
         try
         {
-            var execMetadata = _jobsRegistry.GetJobExecutionMetadata(job.JobName);
-            if (execMetadata == null)
+            var jobExecutorFactory = _jobsRegistry.GetJobExecutorFactory(job.JobName);
+            if (jobExecutorFactory == null)
             {
                 throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
             }
-
-            var handlerInstance = scope.GetService(execMetadata.HandlerType);
-            if (handlerInstance == null)
-            {
-                throw new InvalidJobHandlerException($"Could not create instance of handler with type {execMetadata.HandlerType}");
-            }
-
-            var command = _serializer.DeserializeJobParam(job.JobParam, execMetadata.CommandType);
-            if (command == null)
-            {
-                throw new InvalidJobHandlerException($"Could not deserialize job parameter with type {execMetadata.CommandType}");
-            }
+            var jobExecutor = jobExecutorFactory.CreateJobExecutor(scope, _serializer, job.JobParam);
 
             var ctx = new JobExecutionContext
             {
@@ -63,54 +51,25 @@ internal class JobExecutionService : IJobExecutionService
                 CancellationToken = cancellationToken,
             };
 
-            object? result = null;
-            try
-            {
-                result = execMetadata.ExecMethod.Invoke(handlerInstance, [command, ctx]);
-            }
-            catch (TargetInvocationException e) when (e.InnerException != null)
-            {
-                thrownException = e.InnerException;
-            }
-            
-            if (result != null && result is Task)
-            {
-                await(Task)result;
-            }
+            await jobExecutor.ExecuteJob(ctx);
         }
         catch (Exception e)
         {
-            thrownException = e;
+            _logger.LogError(e, "Error executing job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
+            error = e.ToString();
         }
 
-        if (thrownException == null)
+        if (job.IsRecurrent)
         {
-            // completed
-            if (job.IsRecurrent)
-            {
-                await _postProcessingService.RescheduleRecurrent(job, error: null);
-            }
-            else
-            {
-                await _postProcessingService.HandleCompleted(job);
-            }
+            await _postProcessingService.RescheduleRecurrent(job, error);
         }
         else
         {
-            _logger.LogError(thrownException, "Error executing job, jobName = {JobName}, id = {JobId}", job.JobName, job.Id);
-
-            var error = thrownException.ToString();
-
-            if (job.IsRecurrent)
-            {
-                await _postProcessingService.RescheduleRecurrent(job, error);
-            }
+            if (error is null)
+                await _postProcessingService.HandleCompleted(job);
             else
-            {
                 await _postProcessingService.HandleFailed(job, retryPolicy, error);
-            }
         }
-
     }
 
     public void Dispose()

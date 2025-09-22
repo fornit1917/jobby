@@ -38,29 +38,16 @@ public class JobExecutionServiceTests
             .Setup(x => x.DeserializeJobParam(SerializedCommandNotAsync, typeof(TestNoAsyncJobCommand)))
             .Returns(() => _jobCommandNotAsync);
 
-        var execMetadata = new JobExecutionMetadata
-        {
-            CommandType = typeof(TestJobCommand),
-            HandlerType = typeof(IJobCommandHandler<TestJobCommand>),
-            HandlerImplType = typeof(TestJobCommandHandler),
-            ExecMethod = typeof(TestJobCommandHandler).GetMethod(nameof(TestJobCommandHandler.ExecuteAsync))
-                    ?? throw new Exception("Method ExecuteAsync not found")
-        };
+        var jobExecutorFactory = new JobExecutorFactory<TestJobCommand, TestJobCommandHandler>();
+        
         jobsRegistryMock
-            .Setup(x => x.GetJobExecutionMetadata(TestJobCommand.GetJobName()))
-            .Returns(execMetadata);
+            .Setup(x => x.GetJobExecutorFactory(TestJobCommand.GetJobName()))
+            .Returns(jobExecutorFactory);
 
-        var execMetadataNotAsync = new JobExecutionMetadata
-        {
-            CommandType = typeof(TestNoAsyncJobCommand),
-            HandlerType = typeof(IJobCommandHandler<TestNoAsyncJobCommand>),
-            HandlerImplType = typeof(TestNoAsyncJobCommandHandler),
-            ExecMethod = typeof(TestNoAsyncJobCommandHandler).GetMethod(nameof(TestNoAsyncJobCommandHandler.ExecuteAsync))
-                    ?? throw new Exception("Method ExecuteAsync not found")
-        };
+        var jobExecutorFactoryNotAsync = new JobExecutorFactory<TestNoAsyncJobCommand, TestNoAsyncJobCommandHandler>();
         jobsRegistryMock
-            .Setup(x => x.GetJobExecutionMetadata(TestNoAsyncJobCommand.GetJobName()))
-            .Returns(execMetadataNotAsync);
+            .Setup(x => x.GetJobExecutorFactory(TestNoAsyncJobCommand.GetJobName()))
+            .Returns(jobExecutorFactoryNotAsync);
 
         retryPolicyServiceMock.Setup(x => x.GetRetryPolicy(It.Is<JobExecutionModel>(x => x == _job))).Returns(UsingRetryPolicy);
 
@@ -68,8 +55,8 @@ public class JobExecutionServiceTests
         _handlerNotAsync = new TestNoAsyncJobCommandHandler();
 
         var scopeMock = new Mock<IJobExecutionScope>();
-        scopeMock.Setup(x => x.GetService(execMetadata.HandlerType)).Returns(_handler);
-        scopeMock.Setup(x => x.GetService(execMetadataNotAsync.HandlerType)).Returns(_handlerNotAsync);
+        scopeMock.Setup(x => x.GetService(jobExecutorFactory.GetJobTypesMetadata().HandlerType)).Returns(_handler);
+        scopeMock.Setup(x => x.GetService(jobExecutorFactoryNotAsync.GetJobTypesMetadata().HandlerType)).Returns(_handlerNotAsync);
 
         scopeFactoryMock
             .Setup(x => x.CreateJobExecutionScope())

@@ -11,10 +11,10 @@ public class JobsRegistryTests
     [Fact]
     public void GetJobExecutionMetadata_NotExistingJob_ReturnsNull()
     {
-        var jobs = new Dictionary<string, JobExecutionMetadata>();
+        var jobs = new Dictionary<string, IJobExecutorFactory>();
         var jobsRegistry = new JobsRegistry(jobs);
 
-        var jobMetadata = jobsRegistry.GetJobExecutionMetadata("not_existing");
+        var jobMetadata = jobsRegistry.GetJobExecutorFactory("not_existing");
 
         Assert.Null(jobMetadata);
     }
@@ -22,19 +22,13 @@ public class JobsRegistryTests
     [Fact]
     public void GetJobExecutionMetadata_ExistingJob_ReturnsJobMetadata()
     {
-        var jobs = new Dictionary<string, JobExecutionMetadata>();
+        var jobs = new Dictionary<string, IJobExecutorFactory>();
         var jobName = "jobName";
-        var jobMetadata = new JobExecutionMetadata
-        {
-            CommandType = typeof(TestJobCommand),
-            HandlerType = typeof(IJobCommandHandler<TestJobCommand>),
-            HandlerImplType = typeof(TestJobCommandHandler),
-            ExecMethod = typeof(TestJobCommandHandler).GetMethod("ExecuteAsync") ?? throw new Exception("Method Execute not found")
-        };
-        jobs.Add(jobName, jobMetadata);
+        var jobExecutorFactory = new JobExecutorFactory<TestJobCommand, TestJobCommandHandler>();
+        jobs.Add(jobName, jobExecutorFactory);
         var jobsRegistry = new JobsRegistry(jobs.ToFrozenDictionary());
 
-        var actualJobMetadata = jobsRegistry.GetJobExecutionMetadata(jobName);
-        Assert.Equal(jobMetadata, actualJobMetadata);
+        var actualJobMetadata = jobsRegistry.GetJobExecutorFactory(jobName);
+        Assert.Equal(jobExecutorFactory, actualJobMetadata);
     }
 }
