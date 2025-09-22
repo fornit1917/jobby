@@ -5,15 +5,15 @@ namespace Jobby.Core.Services;
 internal readonly struct JobExecutor<TCommand> : IJobExecutor
     where TCommand : IJobCommand
 {
-    private readonly TCommand _command;
-    private readonly IJobCommandHandler<TCommand> _handler;
+    public readonly TCommand Command;
+    public readonly IJobCommandHandler<TCommand> Handler;
 
     public JobExecutor(TCommand command, IJobCommandHandler<TCommand> handler)
     {
-        _command = command;
-        _handler = handler;
+        Command = command;
+        Handler = handler;
     }
 
     public Task ExecuteJob(JobExecutionContext ctx)
-        => _handler.ExecuteAsync(_command, ctx);
+        => Handler.ExecuteAsync(Command, ctx);
 }
