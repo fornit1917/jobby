@@ -10,7 +10,7 @@ public class JobExecutorFactoryTests
     private const string SerializedCommand = "serialized";
 
     [Fact]
-    public void CreateJobExecutor_CreateAppropriateConcreteExecutor()
+    public void CreateJobExecutor_CreatesAppropriateConcreteExecutor()
     {
         var command = new TestJobCommand();
         var handler = new TestJobCommandHandler();
@@ -38,5 +38,17 @@ public class JobExecutorFactoryTests
                 expected: new JobExecutor<TestJobCommand>(command, handler),
                 actual: jobExecutor
             );
+    }
+
+    [Fact]
+    public void GetJobTypesMetadata_ReturnsCorrentGetJobTypesMetadata()
+    {
+        var jobExecutorFactory = new JobExecutorFactory<TestJobCommand, TestJobCommandHandler>();
+
+        var typesMetadata = jobExecutorFactory.GetJobTypesMetadata();
+
+        Assert.Equal(typeof(TestJobCommand), typesMetadata.CommandType);
+        Assert.Equal(typeof(IJobCommandHandler<TestJobCommand>), typesMetadata.HandlerType);
+        Assert.Equal(typeof(TestJobCommandHandler), typesMetadata.HandlerImplType);
     }
 }

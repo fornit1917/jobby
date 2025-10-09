@@ -7,7 +7,7 @@ namespace Jobby.Tests.Core.Services;
 public class JobExecutorTests
 {
     [Fact]
-    public async Task ExecuteJob_InvokeHandlerWithSpecifiedCommand()
+    public async Task ExecuteJob_InvokesHandlerWithSpecifiedCommand()
     {
         var command = new TestJobCommand();
         var handler = new TestJobCommandHandler();

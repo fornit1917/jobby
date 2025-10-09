@@ -1,3 +1,3 @@
 ﻿namespace Jobby.Core.Models;
 
-public readonly record struct JobTypesMetadata(Type HandlerType, Type HandlerImplType);
+public readonly record struct JobTypesMetadata(Type CommandType, Type HandlerType, Type HandlerImplType);

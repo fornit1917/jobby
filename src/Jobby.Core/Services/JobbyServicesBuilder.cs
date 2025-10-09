@@ -165,9 +165,19 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
         where THandler : IJobCommandHandler<TCommand>
     {
         var jobName = TCommand.GetJobName();
+        if (!_jobExecutorFactoriesByJobName.TryAdd(jobName, new JobExecutorFactory<TCommand, THandler>()))
+        {
+            throw new InvalidJobsConfigException($"Handler for {typeof(TCommand)} has already been added");
+        }
+        return this;
+    }
 
-        _jobExecutorFactoriesByJobName.Add(jobName, new JobExecutorFactory<TCommand, THandler>());
-
+    public IJobbyServicesConfigurable AddOrReplaceJob<TCommand, THandler>()
+        where TCommand : IJobCommand
+        where THandler : IJobCommandHandler<TCommand>
+    {
+        var jobName = TCommand.GetJobName();
+        _jobExecutorFactoriesByJobName[jobName] = new JobExecutorFactory<TCommand, THandler>();
         return this;
     }
 
@@ -212,16 +222,15 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
                 throw new InvalidJobsConfigException(error);
             }
 
-            var handlerType = typeof(JobExecutorFactory<,>).MakeGenericType(commandType, handlerImplType);
-            var handler = Activator.CreateInstance(handlerType) as IJobExecutorFactory;
+            var jobExecutorFactoryType = typeof(JobExecutorFactory<,>).MakeGenericType(commandType, handlerImplType);
+            var jobExecutorFactory = Activator.CreateInstance(jobExecutorFactoryType) as IJobExecutorFactory;
 
-            if (handler is null)
+            if (jobExecutorFactory is null)
             {
-                throw new ArgumentException($"Failed to create JobExecutor of type {handlerType}");
+                throw new InvalidJobsConfigException($"Could not create instance of JobExecutorFactory with type {jobExecutorFactoryType}");
             }
 
-            if (!_jobExecutorFactoriesByJobName.TryAdd(jobName, handler))
-                throw new InvalidOperationException($"Handler for Job {jobName} was already been added");
+            _jobExecutorFactoriesByJobName.Add(jobName, jobExecutorFactory);
         }
 
         return this;

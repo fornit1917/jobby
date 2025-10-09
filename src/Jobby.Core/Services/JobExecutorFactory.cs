@@ -24,5 +24,7 @@ internal class JobExecutorFactory<TCommand, THandler> : IJobExecutorFactory
         return new JobExecutor<TCommand>(command, handlerInstance);
     }
 
-    public JobTypesMetadata GetJobTypesMetadata() => new JobTypesMetadata(typeof(IJobCommandHandler<TCommand>), typeof(THandler));
+    public JobTypesMetadata GetJobTypesMetadata() => new JobTypesMetadata(typeof(TCommand), 
+        typeof(IJobCommandHandler<TCommand>), 
+        typeof(THandler));
 }

@@ -6,7 +6,7 @@ namespace Jobby.IntegrationTests.Postgres.Helpers;
 public class ServerDbModel
 {
     [Column("id")]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
 
     [Column("heartbeat_ts")]
     public DateTime HeartbeatTs { get; set; }
