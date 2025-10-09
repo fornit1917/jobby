@@ -13,6 +13,29 @@ public class JobbyServerSettings
         }
     }
 
+    private int _pollingIntervalStartMs = 0;
+    public int PollingIntervalStartMs
+    {
+        get => _pollingIntervalStartMs > 0 ? _pollingIntervalStartMs : _pollingIntervalMs;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(PollingIntervalStartMs));
+            _pollingIntervalStartMs = value;
+        }
+    }
+
+    private int _pollingIntervalFactor = 2;
+    public int PollingIntervalFactor
+    {
+        get => _pollingIntervalFactor;
+        init 
+        {
+            if (value < 1)
+                throw new ArgumentException("The PollingIntervalFactor property value should be not less than 1");
+            _pollingIntervalFactor = value;
+        }
+    }
+
     private int _dbErrorPauseMs = 5000;
     public int DbErrorPauseMs 
     {

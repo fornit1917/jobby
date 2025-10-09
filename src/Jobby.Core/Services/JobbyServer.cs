@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Helpers;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -108,6 +109,12 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private async Task Poll()
     {
         var jobs = new List<JobExecutionModel>(capacity: _settings.TakeToProcessingBatchSize);
+        var pollingInterval = new GeometryProgression(
+            start: _settings.PollingIntervalStartMs, 
+            factor: _settings.PollingIntervalFactor, 
+            max: _settings.PollingIntervalMs
+        );
+
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
             await _semaphore.WaitAsync();
@@ -150,11 +157,13 @@ internal class JobbyServer : IJobbyServer, IDisposable
                 _semaphore.Release();
                 if (!_cancellationTokenSource.IsCancellationRequested)
                 {
-                    await Task.Delay(_settings.PollingIntervalMs);
+                    await Task.Delay(pollingInterval.GetNextValue());
                 }
             }
             else
             {
+                pollingInterval.Reset();
+                
                 var actualBatchSize = jobs.Count;
                 for (int i = 1; i < actualBatchSize; i++)
                 {

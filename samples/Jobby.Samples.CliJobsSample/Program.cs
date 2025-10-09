@@ -22,6 +22,8 @@ internal class Program
         var jobbySettings = new JobbyServerSettings
         {
             PollingIntervalMs = 1000,
+            PollingIntervalStartMs = 50,
+            PollingIntervalFactor = 2,
             DbErrorPauseMs = 5000,
             MaxDegreeOfParallelism = 10,
             TakeToProcessingBatchSize = 10,
