@@ -1,5 +1,10 @@
 # Versions
 
+## v0.3.0 (2025-10-12)
+
+- Calling jobs without reflection
+- Increasing polling interval
+
 ## v0.2.0 (2025-08-25)
 
 - MIT license

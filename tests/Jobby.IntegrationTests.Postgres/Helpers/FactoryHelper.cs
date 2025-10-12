@@ -28,7 +28,7 @@ public class FactoryHelper
         _builder.UseStorage(_storage);
         _builder.UseExecutionScopeFactory(new TestJobbyExecutionScopeFactory(ExecutedCommands));
         _builder.UseServerSettings(serverSettings);
-        _builder.AddJob<TestJobCommand, TestJobCommandHandler>();
+        _builder.AddOrReplaceJob<TestJobCommand, TestJobCommandHandler>();
         return _builder.CreateJobbyServer();
     }
 }

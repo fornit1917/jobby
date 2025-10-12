@@ -21,12 +21,12 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
     private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
     private IRetryPolicyService? _retryPolicyService;
 
-    private readonly Dictionary<string, JobExecutionMetadata> _jobExecMetadataByJobName = new();
+    private readonly Dictionary<string, IJobExecutorFactory> _jobExecutorFactoriesByJobName = new();
     private IJobsRegistry? _jobsRegistry;
 
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
-    public IEnumerable<IJobTypesMetadata> AddedJobTypes => _jobExecMetadataByJobName.Values;
+    public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorFactoriesByJobName.Values.Select(x => x.GetJobTypesMetadata());
 
     private JobbyServerSettings _serverSettings = new JobbyServerSettings();
 
@@ -59,7 +59,7 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
 
         if (_jobsRegistry == null)
         {
-            _jobsRegistry = new JobsRegistry(_jobExecMetadataByJobName.ToFrozenDictionary());
+            _jobsRegistry = new JobsRegistry(_jobExecutorFactoriesByJobName.ToFrozenDictionary());
         }
 
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
@@ -165,23 +165,19 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
         where THandler : IJobCommandHandler<TCommand>
     {
         var jobName = TCommand.GetJobName();
-        var handlerType = typeof(IJobCommandHandler<TCommand>);
-        var execMethod = handlerType.GetMethod("ExecuteAsync", [typeof(TCommand), typeof(JobExecutionContext)]);
-        if (execMethod == null)
+        if (!_jobExecutorFactoriesByJobName.TryAdd(jobName, new JobExecutorFactory<TCommand, THandler>()))
         {
-            throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
+            throw new InvalidJobsConfigException($"Handler for {typeof(TCommand)} has already been added");
         }
+        return this;
+    }
 
-        var execMetadata = new JobExecutionMetadata
-        {
-            CommandType = typeof(TCommand),
-            HandlerType = handlerType,
-            HandlerImplType = typeof(THandler),
-            ExecMethod = execMethod
-        };
-
-        _jobExecMetadataByJobName[jobName] = execMetadata;
-
+    public IJobbyServicesConfigurable AddOrReplaceJob<TCommand, THandler>()
+        where TCommand : IJobCommand
+        where THandler : IJobCommandHandler<TCommand>
+    {
+        var jobName = TCommand.GetJobName();
+        _jobExecutorFactoriesByJobName[jobName] = new JobExecutorFactory<TCommand, THandler>();
         return this;
     }
 
@@ -197,25 +193,21 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
             var jobName = ReflectionHelper.TryGetJobNameByType(t);
             if (jobName != null)
             {
-                if (commandTypesByJobName.ContainsKey(jobName))
+                if (!commandTypesByJobName.TryAdd(jobName, t))
                 {
                     var error = $"Each implementation of IJobCommand must return unique value from GetJobName method, but name '{jobName}' is used in two commands: {commandTypesByJobName} and {t}";
                     throw new InvalidJobsConfigException(error);
                 }
-
-                commandTypesByJobName[jobName] = t;
             }
 
             var commandFromHandler = ReflectionHelper.TryGetCommandTypeFromHandlerType(t);
             if (commandFromHandler != null)
             {
-                if (handlerImplTypesByCommandType.ContainsKey(commandFromHandler))
+                if (!handlerImplTypesByCommandType.TryAdd(commandFromHandler, t))
                 {
                     var error = $"Each job command must have single handler, but command {commandFromHandler} has two handlers: {handlerImplTypesByCommandType[t]} and {t}";
                     throw new InvalidJobsConfigException(error);
                 }
-
-                handlerImplTypesByCommandType[commandFromHandler] = t;
             }
         }
 
@@ -223,29 +215,22 @@ public class JobbyServicesBuilder : IJobbyServicesConfigurable
         {
             var jobName = keyVal.Key;
             var commandType = keyVal.Value;
-            if (!handlerImplTypesByCommandType.ContainsKey(commandType))
+
+            if (!handlerImplTypesByCommandType.TryGetValue(commandType, out var handlerImplType))
             {
                 var error = $"Command {commandType} does not have handler. IJobCommandHandler<> should be implemented for this type";
                 throw new InvalidJobsConfigException(error);
             }
 
-            var handlerType = typeof(IJobCommandHandler<>).MakeGenericType(commandType);
-            var handlerImplType = handlerImplTypesByCommandType[commandType];
-            var execMethod = handlerType.GetMethod("ExecuteAsync", [commandType, typeof(JobExecutionContext)]);
-            if (execMethod == null)
+            var jobExecutorFactoryType = typeof(JobExecutorFactory<,>).MakeGenericType(commandType, handlerImplType);
+            var jobExecutorFactory = Activator.CreateInstance(jobExecutorFactoryType) as IJobExecutorFactory;
+
+            if (jobExecutorFactory is null)
             {
-                throw new ArgumentException($"Type {handlerType} does not have suitable ExecuteAsync method");
+                throw new InvalidJobsConfigException($"Could not create instance of JobExecutorFactory with type {jobExecutorFactoryType}");
             }
 
-            var execMetadata = new JobExecutionMetadata
-            {
-                CommandType = commandType,
-                HandlerType = handlerType,
-                HandlerImplType = handlerImplType,
-                ExecMethod = execMethod
-            };
-
-            _jobExecMetadataByJobName[jobName] = execMetadata;
+            _jobExecutorFactoriesByJobName.Add(jobName, jobExecutorFactory);
         }
 
         return this;

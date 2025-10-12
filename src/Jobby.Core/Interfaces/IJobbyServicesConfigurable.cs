@@ -25,5 +25,9 @@ public interface IJobbyServicesConfigurable
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>;
 
+    IJobbyServicesConfigurable AddOrReplaceJob<TCommand, THandler>()
+        where TCommand : IJobCommand
+        where THandler : IJobCommandHandler<TCommand>;
+
     IJobbyServicesConfigurable AddJobsFromAssemblies(params Assembly[] assemblies);
 }
