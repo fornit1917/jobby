@@ -78,34 +78,38 @@ public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
 
 #### Настройка в asp.net core
 
-Для добавления Jobby в AspNetCore-приложение необходимо использовать метод-расширение `AddJobby`,
+Для добавления Jobby в AspNetCore-приложение необходимо использовать метод-расширение `AddJobbyServerAndClient`,
 который добавит в DI-контейнер сервисы для создания задач, а также добавит background-сервис для их выполнения.
 
 ```csharp
-var dataSource = NpgsqlDataSource.Create(databaseConnectionString);
+builder.Services.AddSingleton<NpgsqlDataSource>(NpgsqlDataSource.Create(databaseConnectionString));
 
-builder.Services.AddJobby(jobbyBuilder =>
+builder.Services.AddJobbyServerAndClient(jobbyBuilder =>  
 {
-    jobbyBuilder
-        .UsePostgresql(dataSource)
-        .UseServerSettings(new JobbyServerSettings
-        {
+    // Указать сборки, содержащие код ваших реализаций IJobCommand и IJobCommandHandler
+
+    jobbyBuilder.AddJobsFromAssemblies(typeof(SendEmailCommand).Assembly);
+
+    // Настройка jobby
+    jobbyBuilder.ConfigureJobby((serviceProvider, jobby) => {
+        jobby.UsePostgresql(serviceProvider.GetRequiredService<NpgsqlDataSource>());  
+        jobby.UseServerSettings(new JobbyServerSettings  
+        {  
             // Максимальное количество одновременно выполняемых задач
-            MaxDegreeOfParallelism = 10,
+            MaxDegreeOfParallelism = 10,  
 
             // Максимальное количество задач, извлекаемых из очереди за один запрос
-            TakeToProcessingBatchSize = 10,
-        })
-        .UseDefaultRetryPolicy(new RetryPolicy
-        {
-            // Максимальное количество попыток запуска задачи
-            MaxCount = 3,
+            TakeToProcessingBatchSize = 10,  
+        });
+        jobby.UseDefaultRetryPolicy(new RetryPolicy  
+        {  
+            // Максимальное количество попыток запуска задачи  
+            MaxCount = 3,  
 
             // Паузы между попытками запуска в случае провала задач
             IntervalsSeconds = [1, 2]
-        })
-        // Сборки, содержащие код ваших реализаций IJobCommand и IJobCommandHandler
-        .AddJobsFromAssemblies(typeof(SendEmailCommand).Assembly);
+        });
+    }); 
 });
 ```
 
@@ -113,13 +117,12 @@ builder.Services.AddJobby(jobbyBuilder =>
 
 #### Настройка без использования asp.net core
 
-При использовании библиотеки без интеграции с AspNetCore, необходимо создать объект класса `JobbyServicesBuilder`, который настраивается
-аналогично примеру выше. Затем из этого объекта можно получить сервисы для добавления задач и объект для запуска background-сервиса для их выполнения.
+При использовании библиотеки без интеграции с AspNetCore, необходимо создать объект класса `JobbyBuilder`, который настраивается подобно примеру выше. Затем из этого объекта можно получить сервисы для добавления задач и объект для запуска background-сервиса для их выполнения.
 
 Однако если вы не используете AspNetCore, вам необходимо самим реализовать фабрику для ваших объектов `IJobHandler<T>`.
 
 ```csharp
-var jobbyBuilder = new JobbyServicesBuilder();
+var jobbyBuilder = new JobbyBuilder();
 jobbyBuilder
         .UsePostgresql(dataSource)
         // scopeFactory - экземпляр вашей реализации фабрики
@@ -141,7 +144,7 @@ jobbyServer.SendStopSignal(); // Остановка
 ### Добавление задачи в очередь на запуск
 
 Для добавления задач в очередь используется сервис `IJobbyClient`, экземпляр которого в случае использования AspNetCore можно получить
-из DI-контейнера, или из `JobbyServicesBuilder` в ином случае.
+из DI-контейнера, или из `JobbyBuilder` в ином случае.
 
 #### Добавление одной задачи
 

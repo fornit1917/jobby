@@ -84,33 +84,36 @@ public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
 
 #### ASP.NET Core Configuration  
 
-To add Jobby to an ASP.NET Core application, use the `AddJobby` extension method:  
+To add Jobby to an ASP.NET Core application, use the `AddJobbyServerAndClient` extension method:  
 
 ```csharp
-var dataSource = NpgsqlDataSource.Create(databaseConnectionString);  
+builder.Services.AddSingleton<NpgsqlDataSource>(NpgsqlDataSource.Create(databaseConnectionString));
 
-builder.Services.AddJobby(jobbyBuilder =>  
-{  
-    jobbyBuilder  
-        .UsePostgresql(dataSource)  
-        .UseServerSettings(new JobbyServerSettings  
+builder.Services.AddJobbyServerAndClient(jobbyBuilder =>  
+{
+    // Specify assemblies containing your IJobCommand and IJobCommandHandler implementations  
+    jobbyBuilder.AddJobsFromAssemblies(typeof(SendEmailCommand).Assembly);
+
+    // Configure jobby
+    jobbyBuilder.ConfigureJobby((serviceProvider, jobby) => {
+        jobby.UsePostgresql(serviceProvider.GetRequiredService<NpgsqlDataSource>());  
+        jobby.UseServerSettings(new JobbyServerSettings  
         {  
             // Maximum number of concurrently executing tasks  
             MaxDegreeOfParallelism = 10,  
 
             // Maximum number of tasks fetched from queue per query  
             TakeToProcessingBatchSize = 10,  
-        })  
-        .UseDefaultRetryPolicy(new RetryPolicy  
+        });
+        jobby.UseDefaultRetryPolicy(new RetryPolicy  
         {  
             // Maximum number of task execution attempts  
             MaxCount = 3,  
 
             // Delays between retry attempts (in seconds)  
-            IntervalsSeconds = [1, 2]  
-        })  
-        // Assemblies containing your IJobCommand and IJobCommandHandler implementations  
-        .AddJobsFromAssemblies(typeof(SendEmailCommand).Assembly);  
+            IntervalsSeconds = [1, 2]
+        });
+    }); 
 });  
 ```
 
@@ -118,10 +121,10 @@ Full ASP.NET Core example: [Jobby.Samples.AspNet](https://github.com/fornit1917/
 
 #### Non-ASP.NET Core Configuration  
 
-For non-ASP.NET Core usage, create a `JobbyServicesBuilder` instance:  
+For non-ASP.NET Core usage, create a `JobbyBuilder` instance:  
 
 ```csharp
-var jobbyBuilder = new JobbyServicesBuilder();  
+var jobbyBuilder = new JobbyBuilder();  
 jobbyBuilder  
         .UsePostgresql(dataSource)  
         // scopeFactory - your custom scope factory implementation  
@@ -142,7 +145,7 @@ Full console application example: [Jobby.Samples.CliJobsSample](https://github.c
 
 ### Enqueueing Tasks  
 
-Use the `IJobbyClient` service to enqueue tasks (available via DI in ASP.NET Core or from `JobbyServicesBuilder` otherwise).  
+Use the `IJobbyClient` service to enqueue tasks (available via DI in ASP.NET Core or from `JobbyBuilder` otherwise).  
 
 #### Single Task  
 

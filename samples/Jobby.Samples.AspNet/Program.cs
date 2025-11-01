@@ -26,30 +26,33 @@ public class Program
         builder.Services.AddSwaggerGen();
 
         var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
-        var dataSource = NpgsqlDataSource.Create(connectionString);
+        builder.Services.AddSingleton<NpgsqlDataSource>(NpgsqlDataSource.Create(connectionString));
 
-        builder.Services.AddDbContext<JobbySampleDbContext>(opts =>
+        builder.Services.AddDbContext<JobbySampleDbContext>((sp, opts) =>
         {
-            opts.UseNpgsql(dataSource);
+            opts.UseNpgsql(sp.GetRequiredService<NpgsqlDataSource>());
             opts.UseSnakeCaseNamingConvention();
         });
 
-        builder.Services.AddJobby(jobbyBuilder =>
+        builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
         {
-            jobbyBuilder
-                .UsePostgresql(dataSource)
-                .UseServerSettings(new JobbyServerSettings
-                {
-                    PollingIntervalMs = 500,
-                    MaxDegreeOfParallelism = 10,
-                    TakeToProcessingBatchSize = 10,
-                })
-                .UseDefaultRetryPolicy(new RetryPolicy
-                {
-                    MaxCount = 3,
-                    IntervalsSeconds = [1, 2]
-                })
-                .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
+            jobbyBuilder.AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
+            jobbyBuilder.ConfigureJobby((sp, jobby) =>
+            {
+                jobby
+                    .UsePostgresql(sp.GetRequiredService<NpgsqlDataSource>())
+                    .UseServerSettings(new JobbyServerSettings
+                    {
+                        PollingIntervalMs = 500,
+                        MaxDegreeOfParallelism = 10,
+                        TakeToProcessingBatchSize = 10,
+                    })
+                    .UseDefaultRetryPolicy(new RetryPolicy
+                    {
+                        MaxCount = 3,
+                        IntervalsSeconds = [1, 2]
+                    });
+            });
         });
 
         var app = builder.Build();

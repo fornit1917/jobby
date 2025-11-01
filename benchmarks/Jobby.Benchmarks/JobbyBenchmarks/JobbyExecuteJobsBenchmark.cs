@@ -98,12 +98,13 @@ public class JobbyExecuteJobsBenchmarkAction
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
 
-        var builder = new JobbyServicesBuilder();
+        var builder = new JobbyBuilder();
+        builder.AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>();
         builder
             .UsePostgresql(_dataSource)
             .UseServerSettings(serverSettings)
-            .UseExecutionScopeFactory(scopeFactory)
-            .AddJob<JobbyTestJobCommand, JobbyTestJobCommandHandler>();
+            .UseExecutionScopeFactory(scopeFactory);
+            
 
         _jobbyServer = builder.CreateJobbyServer();
         _jobbyClient = builder.CreateJobbyClient();
