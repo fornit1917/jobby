@@ -51,4 +51,21 @@ public class RetryPolicyTests
         var interval4 = retryPolicy.GetIntervalForNextAttempt(job);
         Assert.Null(interval4);
     }
+
+    [Fact]
+    public void JitterSpecified_ReturnsIntervalWithJitter()
+    {
+        var retryPolicy = new RetryPolicy
+        {
+            MaxCount = 4,
+            IntervalsSeconds = [10, 20],
+            JitterMaxValuesMs = [1000]
+        };
+
+        var job = new JobExecutionModel { StartedCount = 1 };
+        var interval = retryPolicy.GetIntervalForNextAttempt(job);
+
+        var intervalWithoutJitter = TimeSpan.FromSeconds(10);
+        Assert.True(interval > intervalWithoutJitter);
+    }
 }

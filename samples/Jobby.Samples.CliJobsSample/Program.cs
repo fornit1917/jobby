@@ -36,7 +36,8 @@ internal class Program
         var defaultRetryPolicy = new RetryPolicy
         {
             MaxCount = 3,
-            IntervalsSeconds = [1]
+            IntervalsSeconds = [1],
+            JitterMaxValuesMs = [500]
         };
 
         var builder = new JobbyBuilder();
