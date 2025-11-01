@@ -39,7 +39,8 @@ internal class Program
             IntervalsSeconds = [1]
         };
 
-        var builder = new JobbyServicesBuilder();
+        var builder = new JobbyBuilder();
+        builder.AddJobsFromAssemblies(typeof(TestCliJobCommand).Assembly);
         builder
             .UsePostgresql(pgOpts =>
             {
@@ -49,8 +50,8 @@ internal class Program
             .UseSystemTextJson(jsonOptions)
             .UseExecutionScopeFactory(scopeFactory)
             .UseDefaultRetryPolicy(defaultRetryPolicy)
-            .UseLoggerFactory(loggerFactory)
-            .AddJobsFromAssemblies(typeof(TestCliJobCommand).Assembly);
+            .UseLoggerFactory(loggerFactory);
+            
 
         var jobbyServer = builder.CreateJobbyServer();
         var jobbyClient = builder.CreateJobbyClient();

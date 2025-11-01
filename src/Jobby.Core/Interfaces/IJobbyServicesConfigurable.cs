@@ -5,6 +5,7 @@ using System.Text.Json;
 
 namespace Jobby.Core.Interfaces;
 
+[Obsolete("Use IJobbyComponentsConfigurable and IJobbyJobsConfigurable instead of IJobbyServicesConfigurable. It will be removed in 1.0.0")]
 public interface IJobbyServicesConfigurable
 {
     IJobbyServicesConfigurable UseStorage(IJobbyStorage storage);

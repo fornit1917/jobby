@@ -7,10 +7,71 @@ namespace Jobby.AspNetCore;
 
 public static class JobbyServiceCollectionExtensions
 {
+    public static IServiceCollection AddJobbyServerAndClient(this IServiceCollection services, Action<IAspNetCoreJobbyConfigurable> configure)
+    {
+        var wrappedBuilder = new AspNetCoreJobbyBuilder();
+        configure.Invoke(wrappedBuilder);
+
+        // register handlers for added jobs
+        foreach (var jobTypesMetadata in wrappedBuilder.JobbyBuilder.AddedJobTypes)
+        {
+            services.AddScoped(jobTypesMetadata.HandlerType, jobTypesMetadata.HandlerImplType);
+        }
+
+        services.AddSingleton<JobbyBuilder>(sp =>
+        {
+            wrappedBuilder.ApplyJobbyComponentsConfigureAction(sp);
+            return wrappedBuilder.JobbyBuilder;
+        });
+
+        services.AddSingleton<IJobsFactory>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobsFactory());
+        services.AddSingleton<IJobbyClient>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobbyClient());
+        services.AddSingleton<IJobbyServer>(sp =>
+        {
+            var jobbyBuilder = sp.GetRequiredService<JobbyBuilder>();
+            if (!jobbyBuilder.IsExecutionScopeFactorySpecified)
+            {
+                var aspNetScopeExecutionFactory = new AspNetCoreJobExecutionScopeFactory(sp);
+                jobbyBuilder.UseExecutionScopeFactory(aspNetScopeExecutionFactory);
+            }
+
+            if (!jobbyBuilder.IsLoggerFactorySpecified)
+            {
+                var loggerFactoryFromDi = sp.GetService<ILoggerFactory>();
+                if (loggerFactoryFromDi != null)
+                {
+                    jobbyBuilder.UseLoggerFactory(loggerFactoryFromDi);
+                }
+            }
+
+            return jobbyBuilder.CreateJobbyServer();
+        });
+        services.AddHostedService<JobbyHostedService>();
+        return services;
+    }
+
+    public static IServiceCollection AddJobbyClient(this IServiceCollection services, Action<IAspNetCoreJobbyConfigurable> configure)
+    {
+        var wrappedBuilder = new AspNetCoreJobbyBuilder();
+        
+        configure.Invoke(wrappedBuilder);
+        
+        services.AddSingleton<JobbyBuilder>(sp =>
+        {
+            wrappedBuilder.ApplyJobbyComponentsConfigureAction(sp);
+            return wrappedBuilder.JobbyBuilder;
+        });
+
+        services.AddSingleton<IJobsFactory>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobsFactory());
+        services.AddSingleton<IJobbyClient>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobbyClient());
+        return services;
+    }
+
+    [Obsolete("Use AddJobbyServerAndClient(Action<IAspNetCoreJobbyConfigurable>)")]
     public static IServiceCollection AddJobby(this IServiceCollection services, Action<IJobbyServicesConfigurable> configure)
     {
         var jobbyServicesBuilder = new JobbyServicesBuilder();
-        
+
         configure.Invoke(jobbyServicesBuilder);
 
         // register handlers for added jobs
@@ -44,6 +105,7 @@ public static class JobbyServiceCollectionExtensions
         return services;
     }
 
+    [Obsolete("Use AddJobbyClient(Action<IAspNetCoreJobbyConfigurable>)")]
     public static IServiceCollection AddJobbyClient(this IServiceCollection services, Action<IJobbyServicesConfigurable> configure)
     {
         var jobbyServicesBuilder = new JobbyServicesBuilder();

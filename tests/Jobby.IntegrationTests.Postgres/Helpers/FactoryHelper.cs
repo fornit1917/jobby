@@ -8,7 +8,7 @@ namespace Jobby.IntegrationTests.Postgres.Helpers;
 
 public class FactoryHelper
 {
-    private static readonly JobbyServicesBuilder _builder = new JobbyServicesBuilder();
+    private static readonly JobbyBuilder _builder = new JobbyBuilder();
     private static readonly IJobbyStorage _storage = DbHelper.CreateJobbyStorage();
     public static ExecutedCommandsList ExecutedCommands { get; } = new ExecutedCommandsList();
 

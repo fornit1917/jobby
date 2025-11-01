@@ -11,7 +11,7 @@
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
     </ItemGroup>
     <ItemGroup>
-       <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\"/>
-       <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\"/>
+       <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\" />
+       <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 </Project>

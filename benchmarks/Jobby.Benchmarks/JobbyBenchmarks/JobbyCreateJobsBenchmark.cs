@@ -28,7 +28,7 @@ public class JobbyCreateJobsBenchmarkAction
     public JobbyCreateJobsBenchmarkAction()
     {
         var dataSource = DataSourceFactory.Create();
-        var builder = new JobbyServicesBuilder();
+        var builder = new JobbyBuilder();
         builder.UsePostgresql(dataSource);
         _jobbyClient = builder.CreateJobbyClient();
     }
