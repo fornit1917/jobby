@@ -6,6 +6,7 @@ public class RetryPolicy
 
     public int MaxCount { get; init; }
     public IReadOnlyList<int> IntervalsSeconds { get; init; } = Array.Empty<int>();
+    public IReadOnlyList<int> JitterMaxValuesMs { get; init; } = Array.Empty<int>();
 
     public TimeSpan? GetIntervalForNextAttempt(JobExecutionModel job)
     {
@@ -21,6 +22,16 @@ public class RetryPolicy
             intervalSeconds = IntervalsSeconds.Count > intervalIndex
                 ? IntervalsSeconds[intervalIndex]
                 : IntervalsSeconds[IntervalsSeconds.Count - 1];
+        }
+
+        if (JitterMaxValuesMs.Count > 0)
+        {
+            var jitterMaxMs = JitterMaxValuesMs.Count > intervalIndex
+                ? JitterMaxValuesMs[intervalIndex]
+                : JitterMaxValuesMs[JitterMaxValuesMs.Count - 1];
+            var jitterMs = Random.Shared.Next(jitterMaxMs + 1);
+
+            return TimeSpan.FromMilliseconds(intervalSeconds * 1000 + jitterMs);
         }
 
         return TimeSpan.FromSeconds(intervalSeconds);
