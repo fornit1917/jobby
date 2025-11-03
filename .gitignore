@@ -45,3 +45,5 @@ msbuild.wrn
 nupkgs
 
 BenchmarkDotNet.Artifacts
+
+.env

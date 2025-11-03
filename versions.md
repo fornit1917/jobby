@@ -1,5 +1,14 @@
 # Versions
 
+## v0.4.0 (2025-11-03)
+
+- Random additional delay in retry policies (Jitter)
+- Ability to use IServiceProvider for jobby configuration
+- Deprecated (will be removed in v1.0.0):
+    - JobbyServicesBuilder (use JubbyBuilder instead)
+    - IJobbyServicesConfigurable (use IJobbyComponentsConfigurable and IJobbyJobsConfigurable instead)
+    - IServiceCollection.AddJobby (use IServiceCollection.AddJobbyServerAndClient instead)
+
 ## v0.3.0 (2025-10-12)
 
 - Calling jobs without reflection
