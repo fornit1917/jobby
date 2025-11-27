@@ -9,6 +9,8 @@ public class TestJobCommandHandler : IJobCommandHandler<TestJobCommand>
 
     public TestJobCommand? LatestCommand { get; private set; } = null;
 
+    public JobExecutionContext LatestExecutionContext { get; private set; }
+
     public TestJobCommandHandler()
     {
     }
@@ -21,6 +23,8 @@ public class TestJobCommandHandler : IJobCommandHandler<TestJobCommand>
     public async Task ExecuteAsync(TestJobCommand command, JobExecutionContext ctx)
     {
         LatestCommand = command;
+        LatestExecutionContext = ctx;
+
         _executedCommands?.Add(command);
         await Task.Delay(0);
         if (command.ExceptionToThrow != null)

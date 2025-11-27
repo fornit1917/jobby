@@ -2,5 +2,5 @@
 
 internal interface IJobsRegistry
 {
-    IJobExecutorFactory? GetJobExecutorFactory(string jobName);
+    IJobExecutor? GetJobExecutor(string jobName);
 }

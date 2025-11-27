@@ -4,5 +4,10 @@ namespace Jobby.Core.Interfaces;
 
 internal interface IJobExecutor
 {
-    Task ExecuteJob(JobExecutionContext ctx);
+    Task Execute(JobExecutionModel job,
+        JobExecutionContext ctx,
+        IJobExecutionScope scope,
+        IJobParamSerializer serializer);
+
+    JobTypesMetadata GetJobTypesMetadata();
 }

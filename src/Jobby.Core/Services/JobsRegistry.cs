@@ -4,13 +4,13 @@ namespace Jobby.Core.Services;
 
 internal class JobsRegistry : IJobsRegistry
 {
-    private readonly IReadOnlyDictionary<string, IJobExecutorFactory> _cmdExecMetadataByJobName;
+    private readonly IReadOnlyDictionary<string, IJobExecutor> _jobExecutorsByJobName;
 
-    public JobsRegistry(IReadOnlyDictionary<string, IJobExecutorFactory> execMetadataByJobName)
+    public JobsRegistry(IReadOnlyDictionary<string, IJobExecutor> jobExecutorsByJobName)
     {
-        _cmdExecMetadataByJobName = execMetadataByJobName;
+        _jobExecutorsByJobName = jobExecutorsByJobName;
     }
 
-    public IJobExecutorFactory? GetJobExecutorFactory(string jobName)
-        => _cmdExecMetadataByJobName.GetValueOrDefault(jobName);
+    public IJobExecutor? GetJobExecutor(string jobName)
+        => _jobExecutorsByJobName.GetValueOrDefault(jobName);
 }
