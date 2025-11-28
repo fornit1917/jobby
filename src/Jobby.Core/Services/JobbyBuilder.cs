@@ -22,12 +22,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
     private IRetryPolicyService? _retryPolicyService;
 
-    private readonly Dictionary<string, IJobExecutorFactory> _jobExecutorFactoriesByJobName = new();
+    private readonly Dictionary<string, IJobExecutor> _jobExecutorsByJobName = new();
     private IJobsRegistry? _jobsRegistry;
 
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
-    public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorFactoriesByJobName.Values.Select(x => x.GetJobTypesMetadata());
+    public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorsByJobName.Values.Select(x => x.GetJobTypesMetadata());
 
     private JobbyServerSettings _serverSettings = new JobbyServerSettings();
 
@@ -60,7 +60,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         if (_jobsRegistry == null)
         {
-            _jobsRegistry = new JobsRegistry(_jobExecutorFactoriesByJobName.ToFrozenDictionary());
+            _jobsRegistry = new JobsRegistry(_jobExecutorsByJobName.ToFrozenDictionary());
         }
 
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
@@ -166,7 +166,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         where THandler : IJobCommandHandler<TCommand>
     {
         var jobName = TCommand.GetJobName();
-        if (!_jobExecutorFactoriesByJobName.TryAdd(jobName, new JobExecutorFactory<TCommand, THandler>()))
+        if (!_jobExecutorsByJobName.TryAdd(jobName, new JobExecutor<TCommand, THandler>()))
         {
             throw new InvalidJobsConfigException($"Handler for {typeof(TCommand)} has already been added");
         }
@@ -178,7 +178,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         where THandler : IJobCommandHandler<TCommand>
     {
         var jobName = TCommand.GetJobName();
-        _jobExecutorFactoriesByJobName[jobName] = new JobExecutorFactory<TCommand, THandler>();
+        _jobExecutorsByJobName[jobName] = new JobExecutor<TCommand, THandler>();
         return this;
     }
 
@@ -223,15 +223,15 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
                 throw new InvalidJobsConfigException(error);
             }
 
-            var jobExecutorFactoryType = typeof(JobExecutorFactory<,>).MakeGenericType(commandType, handlerImplType);
-            var jobExecutorFactory = Activator.CreateInstance(jobExecutorFactoryType) as IJobExecutorFactory;
+            var jobExecutorType = typeof(JobExecutor<,>).MakeGenericType(commandType, handlerImplType);
+            var jobExecutor = Activator.CreateInstance(jobExecutorType) as IJobExecutor;
 
-            if (jobExecutorFactory is null)
+            if (jobExecutor is null)
             {
-                throw new InvalidJobsConfigException($"Could not create instance of JobExecutorFactory with type {jobExecutorFactoryType}");
+                throw new InvalidJobsConfigException($"Could not create instance of JobExecutorFactory with type {jobExecutorType}");
             }
 
-            _jobExecutorFactoriesByJobName.Add(jobName, jobExecutorFactory);
+            _jobExecutorsByJobName.Add(jobName, jobExecutor);
         }
 
         return this;

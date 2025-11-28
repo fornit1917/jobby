@@ -36,22 +36,22 @@ internal class JobExecutionService : IJobExecutionService
         string? error = null;
         try
         {
-            var jobExecutorFactory = _jobsRegistry.GetJobExecutorFactory(job.JobName);
-            if (jobExecutorFactory == null)
+            var jobExecutor = _jobsRegistry.GetJobExecutor(job.JobName);
+            if (jobExecutor == null)
             {
                 throw new InvalidJobHandlerException($"Job {job.JobName} does not have suitable handler");
             }
-            var jobExecutor = jobExecutorFactory.CreateJobExecutor(scope, _serializer, job.JobParam);
 
             var ctx = new JobExecutionContext
             {
+                CancellationToken = cancellationToken,
+                IsRecurrent = job.IsRecurrent,
+                IsLastAttempt = job.IsRecurrent ? false : retryPolicy.IsLastAttempt(job),
                 JobName = job.JobName,
                 StartedCount = job.StartedCount,
-                IsLastAttempt = retryPolicy.IsLastAttempt(job),
-                CancellationToken = cancellationToken,
             };
 
-            await jobExecutor.ExecuteJob(ctx);
+            await jobExecutor.Execute(job, ctx, scope, _serializer);
         }
         catch (Exception e)
         {

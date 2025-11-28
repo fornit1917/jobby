@@ -11,10 +11,10 @@ public class JobsRegistryTests
     [Fact]
     public void GetJobExecutionMetadata_NotExistingJob_ReturnsNull()
     {
-        var jobs = new Dictionary<string, IJobExecutorFactory>();
+        var jobs = new Dictionary<string, IJobExecutor>();
         var jobsRegistry = new JobsRegistry(jobs);
 
-        var jobMetadata = jobsRegistry.GetJobExecutorFactory("not_existing");
+        var jobMetadata = jobsRegistry.GetJobExecutor("not_existing");
 
         Assert.Null(jobMetadata);
     }
@@ -22,13 +22,13 @@ public class JobsRegistryTests
     [Fact]
     public void GetJobExecutionMetadata_ExistingJob_ReturnsJobMetadata()
     {
-        var jobs = new Dictionary<string, IJobExecutorFactory>();
+        var jobs = new Dictionary<string, IJobExecutor>();
         var jobName = "jobName";
-        var jobExecutorFactory = new JobExecutorFactory<TestJobCommand, TestJobCommandHandler>();
+        var jobExecutorFactory = new JobExecutor<TestJobCommand, TestJobCommandHandler>();
         jobs.Add(jobName, jobExecutorFactory);
         var jobsRegistry = new JobsRegistry(jobs.ToFrozenDictionary());
 
-        var actualJobMetadata = jobsRegistry.GetJobExecutorFactory(jobName);
+        var actualJobMetadata = jobsRegistry.GetJobExecutor(jobName);
         Assert.Equal(jobExecutorFactory, actualJobMetadata);
     }
 }

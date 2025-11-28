@@ -9,168 +9,183 @@ namespace Jobby.Tests.Core.Services;
 
 public class JobExecutionServiceTests
 {
+    private readonly Mock<IJobExecutionScopeFactory> _scopeFactoryMock;
+    private readonly Mock<IJobsRegistry> _jobsRegistryMock;
+    private readonly Mock<IRetryPolicyService> _retryPolicyServiceMock;
+    private readonly Mock<IJobParamSerializer> _serializerMock;
     private readonly Mock<IJobPostProcessingService> _postProcessingServiceMock;
+    private readonly Mock<ILogger<JobExecutionService>> _loggerMock;
+
+    private readonly Mock<IJobExecutor> _jobExecutorMock;
+    private readonly Mock<IJobExecutionScope> _scopeMock;
+
+    private const string JobName = "JobName";
+    private static readonly RetryPolicy UsingRetryPolicy = RetryPolicy.NoRetry;
 
     private readonly IJobExecutionService _executionService;
 
-    private TestJobCommand? _jobCommand;
-    private TestNoAsyncJobCommand? _jobCommandNotAsync;
-    private JobExecutionModel? _job;
-    private readonly TestJobCommandHandler _handler;
-    private readonly TestNoAsyncJobCommandHandler _handlerNotAsync;
-    private const string SerializedCommand = "serialized";
-    private const string SerializedCommandNotAsync = "serializedNotAsync";
-    private static readonly RetryPolicy UsingRetryPolicy = RetryPolicy.NoRetry;
-
     public JobExecutionServiceTests()
     {
-        var scopeFactoryMock = new Mock<IJobExecutionScopeFactory>();
-        var jobsRegistryMock = new Mock<IJobsRegistry>();
-        var retryPolicyServiceMock = new Mock<IRetryPolicyService>();
-        var serializerMock = new Mock<IJobParamSerializer>();
-        var loggerMock = new Mock<ILogger<JobExecutionService>>();
-        _postProcessingServiceMock = new Mock<IJobPostProcessingService>();
+        _scopeFactoryMock = new Mock<IJobExecutionScopeFactory>();
+        _scopeMock = new Mock<IJobExecutionScope>();
+        _scopeFactoryMock.Setup(x => x.CreateJobExecutionScope()).Returns(_scopeMock.Object);
 
-        serializerMock
-            .Setup(x => x.DeserializeJobParam(SerializedCommand, typeof(TestJobCommand)))
-            .Returns(() => _jobCommand);
-        serializerMock
-            .Setup(x => x.DeserializeJobParam(SerializedCommandNotAsync, typeof(TestNoAsyncJobCommand)))
-            .Returns(() => _jobCommandNotAsync);
+        _jobsRegistryMock = new Mock<IJobsRegistry>();
+        _jobExecutorMock = new Mock<IJobExecutor>();
+        _jobsRegistryMock.Setup(x => x.GetJobExecutor(JobName)).Returns(_jobExecutorMock.Object);
 
-        var jobExecutorFactory = new JobExecutorFactory<TestJobCommand, TestJobCommandHandler>();
+        _retryPolicyServiceMock = new Mock<IRetryPolicyService>();
+
+        _serializerMock = new Mock<IJobParamSerializer>();
         
-        jobsRegistryMock
-            .Setup(x => x.GetJobExecutorFactory(TestJobCommand.GetJobName()))
-            .Returns(jobExecutorFactory);
+        _postProcessingServiceMock = new Mock<IJobPostProcessingService>();
+        
+        _loggerMock = new Mock<ILogger<JobExecutionService>>();
 
-        var jobExecutorFactoryNotAsync = new JobExecutorFactory<TestNoAsyncJobCommand, TestNoAsyncJobCommandHandler>();
-        jobsRegistryMock
-            .Setup(x => x.GetJobExecutorFactory(TestNoAsyncJobCommand.GetJobName()))
-            .Returns(jobExecutorFactoryNotAsync);
-
-        retryPolicyServiceMock.Setup(x => x.GetRetryPolicy(It.Is<JobExecutionModel>(x => x == _job))).Returns(UsingRetryPolicy);
-
-        _handler = new TestJobCommandHandler();
-        _handlerNotAsync = new TestNoAsyncJobCommandHandler();
-
-        var scopeMock = new Mock<IJobExecutionScope>();
-        scopeMock.Setup(x => x.GetService(jobExecutorFactory.GetJobTypesMetadata().HandlerType)).Returns(_handler);
-        scopeMock.Setup(x => x.GetService(jobExecutorFactoryNotAsync.GetJobTypesMetadata().HandlerType)).Returns(_handlerNotAsync);
-
-        scopeFactoryMock
-            .Setup(x => x.CreateJobExecutionScope())
-            .Returns(scopeMock.Object);
-
-        _executionService = new JobExecutionService(scopeFactoryMock.Object,
-            jobsRegistryMock.Object,
-            retryPolicyServiceMock.Object,
-            serializerMock.Object,
+        _executionService = new JobExecutionService(_scopeFactoryMock.Object,
+            _jobsRegistryMock.Object,
+            _retryPolicyServiceMock.Object,
+            _serializerMock.Object,
             _postProcessingServiceMock.Object,
-            loggerMock.Object);
+            _loggerMock.Object);
     }
 
     [Fact]
     public async Task ExecuteJob_NotRecurrent_Ok_ExecutesAndHandlesCompleted()
     {
-        _job = new JobExecutionModel
+        var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            JobName = TestJobCommand.GetJobName(),
+            JobName = JobName,
             StartedCount = 1,
-            JobParam = SerializedCommand
+            JobParam = "jobParam"
         };
-        _jobCommand = new TestJobCommand();
+        var cancelationToken = new CancellationTokenSource().Token;
+        var retryPolicy = new RetryPolicy 
+        {
+            MaxCount = 10,
+            IntervalsSeconds = [10]
+        };
+        SetupRetryPolicyMock(job, retryPolicy);
+        
+        await _executionService.ExecuteJob(job, cancelationToken);
 
-        await _executionService.ExecuteJob(_job, CancellationToken.None);
-
-        Assert.Equal(_jobCommand, _handler.LatestCommand);
-        _postProcessingServiceMock.Verify(x => x.HandleCompleted(_job), Times.Once);
+        var expectedCtx = new JobExecutionContext
+        {
+            CancellationToken = cancelationToken,
+            IsLastAttempt = false,
+            JobName = job.JobName,
+            IsRecurrent = job.IsRecurrent,
+            StartedCount = job.StartedCount,
+        };
+        _jobExecutorMock
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+        _postProcessingServiceMock.Verify(x => x.HandleCompleted(job), Times.Once);
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
 
     [Fact]
     public async Task ExecuteJob_NotRecurrent_Error_ExecutesAndHandlesFailed()
     {
-        _job = new JobExecutionModel
+        var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            JobName = TestJobCommand.GetJobName(),
+            JobName = JobName,
             StartedCount = 1,
-            JobParam = SerializedCommand
+            JobParam = "jobParam"
         };
-        _jobCommand = new TestJobCommand
+        var cancelationToken = new CancellationTokenSource().Token;
+        var retryPolicy = RetryPolicy.NoRetry;
+        SetupRetryPolicyMock(job, retryPolicy);
+
+        var expectedCtx = new JobExecutionContext
         {
-            ExceptionToThrow = new Exception("test error")
+            CancellationToken = cancelationToken,
+            IsLastAttempt = true,
+            JobName = job.JobName,
+            IsRecurrent = job.IsRecurrent,
+            StartedCount = job.StartedCount,
         };
+        var ex = new Exception("error");
+        _jobExecutorMock
+            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object))
+            .ThrowsAsync(ex);
 
-        await _executionService.ExecuteJob(_job, CancellationToken.None);
+        await _executionService.ExecuteJob(job, cancelationToken);
 
-        Assert.Equal(_jobCommand, _handler.LatestCommand);
-        _postProcessingServiceMock.Verify(x => x.HandleFailed(_job, UsingRetryPolicy, _jobCommand.ExceptionToThrow.ToString()));
-        _postProcessingServiceMock.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task ExecuteJob_NotRecurrent_NotAsync_Error_ExecutesAndHandlesFailed()
-    {
-        _job = new JobExecutionModel
-        {
-            Id = Guid.NewGuid(),
-            JobName = TestNoAsyncJobCommand.GetJobName(),
-            StartedCount = 1,
-            JobParam = SerializedCommandNotAsync
-        };
-        _jobCommandNotAsync = new TestNoAsyncJobCommand
-        {
-            ExceptionToThrow = new Exception("test error")
-        };
-
-        await _executionService.ExecuteJob(_job, CancellationToken.None);
-
-        Assert.Equal(_jobCommandNotAsync, _handlerNotAsync.LatestCommand);
-        _postProcessingServiceMock.Verify(x => x.HandleFailed(_job, UsingRetryPolicy, _jobCommandNotAsync.ExceptionToThrow.ToString()));
+        _jobExecutorMock
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+        _postProcessingServiceMock.Verify(x => x.HandleFailed(job, retryPolicy, ex.ToString()));
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
 
     [Fact]
     public async Task ExecuteJob_Recurrent_Ok_ExecutesAndReschedules()
     {
-        _job = new JobExecutionModel
+        var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            JobName = TestJobCommand.GetJobName(),
-            JobParam = SerializedCommand,
+            JobName = JobName,
+            JobParam = "jobParam",
             Cron = "*/5 * * * *"
         };
-        _jobCommand = new TestJobCommand();
+        var cancelationToken = new CancellationTokenSource().Token;
+        var retryPolicy = RetryPolicy.NoRetry;
+        SetupRetryPolicyMock(job, retryPolicy);
 
-        await _executionService.ExecuteJob(_job, CancellationToken.None);
+        await _executionService.ExecuteJob(job, cancelationToken);
 
-        Assert.Equal(_jobCommand, _handler.LatestCommand);
-        _postProcessingServiceMock.Verify(x => x.RescheduleRecurrent(_job, null));
+        var expectedCtx = new JobExecutionContext
+        {
+            CancellationToken = cancelationToken,
+            IsLastAttempt = false,
+            JobName = job.JobName,
+            IsRecurrent = job.IsRecurrent,
+            StartedCount = job.StartedCount,
+        };
+        _jobExecutorMock
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+        _postProcessingServiceMock.Verify(x => x.RescheduleRecurrent(job, null));
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
 
     [Fact]
     public async Task ExecuteJob_Recurrent_Error_ExecutesAndReschedules()
     {
-        _job = new JobExecutionModel
+        var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            JobName = TestJobCommand.GetJobName(),
-            JobParam = SerializedCommand,
+            JobName = JobName,
+            JobParam = "jobParam",
             Cron = "*/5 * * * *"
         };
-        _jobCommand = new TestJobCommand
+        var cancelationToken = new CancellationTokenSource().Token;
+        var retryPolicy = RetryPolicy.NoRetry;
+        SetupRetryPolicyMock(job, retryPolicy);
+
+        var expectedCtx = new JobExecutionContext
         {
-            ExceptionToThrow = new Exception("test error")
+            CancellationToken = cancelationToken,
+            IsLastAttempt = false,
+            JobName = job.JobName,
+            IsRecurrent = job.IsRecurrent,
+            StartedCount = job.StartedCount,
         };
+        var ex = new Exception("error");
+        _jobExecutorMock
+            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object))
+            .ThrowsAsync(ex);
 
-        await _executionService.ExecuteJob(_job, CancellationToken.None);
+        await _executionService.ExecuteJob(job, cancelationToken);
 
-        Assert.Equal(_jobCommand, _handler.LatestCommand);
-        _postProcessingServiceMock.Verify(x => x.RescheduleRecurrent(_job, _jobCommand.ExceptionToThrow.ToString()));
+        _jobExecutorMock
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+        _postProcessingServiceMock.Verify(x => x.RescheduleRecurrent(job, ex.ToString()));
         _postProcessingServiceMock.VerifyNoOtherCalls();
+    }
+
+    private void SetupRetryPolicyMock(JobExecutionModel job, RetryPolicy retryPolicy)
+    {
+        _retryPolicyServiceMock.Setup(x => x.GetRetryPolicy(job)).Returns(retryPolicy);
     }
 }
