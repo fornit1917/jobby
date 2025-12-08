@@ -327,9 +327,11 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
             pipeline.Use(new SomeMiddleware());
 
             // Так можно подключать singleton middleware с не scoped-зависимостями
+            // В этом случае тип SomeMiddleware должен быть зарегистрирован в DI-контейнере!
             pipeline.Use(serviceProvider.GetRequiredService<SomeMiddleware>());
 
             // Так можно подключать scoped middleware или middleware со scoped зависимостями
+            // В этом случае тип SomeMiddleware должен быть зарегистрирован в DI-контейнере!
             pipeline.Use<SomeMiddleware>();
         });
     }); 

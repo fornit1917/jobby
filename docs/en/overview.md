@@ -315,9 +315,11 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
             pipeline.Use(new SomeMiddleware());
 
             // This is how a singleton middleware with non-scoped dependencies can be added
+            // In this case, the SomeMiddleware type must be registered in the DI container!
             pipeline.Use(serviceProvider.GetRequiredService<SomeMiddleware>());
 
             // This is how a scoped middleware or middleware with scoped dependencies can be added
+            // In this case, the SomeMiddleware type must be registered in the DI container!
             pipeline.Use<SomeMiddleware>();
         });
     }); 
