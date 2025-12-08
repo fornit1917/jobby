@@ -323,3 +323,5 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
     }); 
 });
 ```
+
+More examples: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
