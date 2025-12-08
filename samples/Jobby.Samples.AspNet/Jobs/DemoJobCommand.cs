@@ -4,7 +4,8 @@ namespace Jobby.Samples.AspNet.Jobs
 {
     public class DemoJobCommand : IJobCommand
     {
-        public bool ShouldBeFailed { get; init; }
+        public bool ShouldBeFailed { get; init; } = false;
+        public bool ShouldThrowIgnoredException { get; init; } = false;
         public DateTime? StartAfter { get; init; }
         public int DelayMs { get; init; }
 

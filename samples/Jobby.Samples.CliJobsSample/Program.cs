@@ -4,6 +4,7 @@ using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.Samples.CliJobsSample.HandlerFactory;
 using Jobby.Samples.CliJobsSample.Jobs;
+using Jobby.Samples.CliJobsSample.Middlewares;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Text.Json;
@@ -51,8 +52,11 @@ internal class Program
             .UseSystemTextJson(jsonOptions)
             .UseExecutionScopeFactory(scopeFactory)
             .UseDefaultRetryPolicy(defaultRetryPolicy)
-            .UseLoggerFactory(loggerFactory);
-            
+            .UseLoggerFactory(loggerFactory)
+            .ConfigurePipeline(pipeline =>
+            {
+                pipeline.Use(new DemoCliMiddleware());
+            });
 
         var jobbyServer = builder.CreateJobbyServer();
         var jobbyClient = builder.CreateJobbyClient();

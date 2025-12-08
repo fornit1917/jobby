@@ -5,6 +5,7 @@ using Jobby.Core.Models;
 using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
+using Jobby.Samples.AspNet.JobsMiddlewares;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -34,6 +35,7 @@ public class Program
             opts.UseSnakeCaseNamingConvention();
         });
 
+        builder.Services.AddScoped<JobLoggingMiddleware>();
         builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
         {
             jobbyBuilder.AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
@@ -51,6 +53,11 @@ public class Program
                     {
                         MaxCount = 3,
                         IntervalsSeconds = [1, 2]
+                    })
+                    .ConfigurePipeline(pipeline =>
+                    {
+                        pipeline.Use<JobLoggingMiddleware>(); // will be created by DI Scope
+                        pipeline.Use(new IgnoreSomeErrorsMiddleware()); // will be used this instance always
                     });
             });
         });
