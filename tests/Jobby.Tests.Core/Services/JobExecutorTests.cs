@@ -1,4 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.HandlerPipeline;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Jobby.TestsUtils.Jobs;
@@ -26,6 +27,11 @@ public class JobExecutorTests
         var scopeMock = new Mock<IJobExecutionScope>();
         scopeMock.Setup(x => x.GetService(handlerType)).Returns(handler);
 
+        var pipelineBuilderMock = new Mock<IPipelineBuilder>();
+        pipelineBuilderMock
+            .Setup(x => x.Build(handler, scopeMock.Object))
+            .Returns(handler);
+
         IJobExecutor jobExecutor = new JobExecutor<TestJobCommand, TestJobCommandHandler>();
 
         var job = new JobExecutionModel
@@ -48,7 +54,8 @@ public class JobExecutorTests
         await jobExecutor.Execute(job,
             ctx, 
             scopeMock.Object,
-            serializerMock.Object);
+            serializerMock.Object,
+            pipelineBuilderMock.Object);
 
         Assert.Equal(command, handler.LatestCommand);
         Assert.Equal(ctx, handler.LatestExecutionContext);

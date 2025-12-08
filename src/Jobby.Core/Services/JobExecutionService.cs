@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.HandlerPipeline;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -11,6 +12,7 @@ internal class JobExecutionService : IJobExecutionService
     private readonly IJobsRegistry _jobsRegistry;
     private readonly IRetryPolicyService _retryPolicyService;
     private readonly IJobParamSerializer _serializer;
+    private readonly IPipelineBuilder _pipelineBuilder;
     private readonly IJobPostProcessingService _postProcessingService;
     private readonly ILogger<JobExecutionService> _logger;
 
@@ -18,6 +20,7 @@ internal class JobExecutionService : IJobExecutionService
         IJobsRegistry jobsRegistry,
         IRetryPolicyService retryPolicyService,
         IJobParamSerializer serializer,
+        IPipelineBuilder pipelineBuilder,
         IJobPostProcessingService postProcessingService,
         ILogger<JobExecutionService> logger)
     {
@@ -25,6 +28,7 @@ internal class JobExecutionService : IJobExecutionService
         _jobsRegistry = jobsRegistry;
         _retryPolicyService = retryPolicyService;
         _serializer = serializer;
+        _pipelineBuilder = pipelineBuilder;
         _postProcessingService = postProcessingService;
         _logger = logger;
     }
@@ -51,7 +55,7 @@ internal class JobExecutionService : IJobExecutionService
                 StartedCount = job.StartedCount,
             };
 
-            await jobExecutor.Execute(job, ctx, scope, _serializer);
+            await jobExecutor.Execute(job, ctx, scope, _serializer, _pipelineBuilder);
         }
         catch (Exception e)
         {

@@ -3,6 +3,7 @@ using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Configuration;
 using Jobby.Core.Models;
+using Jobby.Core.Services.HandlerPipeline;
 using Microsoft.Extensions.Logging;
 using System.Collections.Frozen;
 using System.Reflection;
@@ -17,6 +18,8 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private ILoggerFactory? _loggerFactory;
     private IJobParamSerializer? _serializer;
     private IJobsFactory? _jobsFactory;
+    
+    private readonly PipelineBuilder _pipelineBuilder = new PipelineBuilder();
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
     private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
@@ -78,6 +81,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _jobsRegistry,
             _retryPolicyService,
             _serializer,
+            _pipelineBuilder,
             postProcessingService,
             _loggerFactory.CreateLogger<JobExecutionService>());
 
@@ -234,6 +238,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _jobExecutorsByJobName.Add(jobName, jobExecutor);
         }
 
+        return this;
+    }
+
+    public IJobbyComponentsConfigurable ConfigurePipeline(Action<IPipelineConfigurable> configure)
+    {
+        configure(_pipelineBuilder);
         return this;
     }
 }

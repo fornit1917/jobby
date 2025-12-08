@@ -8,7 +8,8 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Queue-based task execution  
 - Transactional creation of multiple tasks  
 - Configurable execution order for multiple tasks  
-- Retry policies for failed tasks  
+- Retry policies for failed tasks
+- Configurable middlewares pipeline for executing background tasks code  
 - Proper operation in distributed applications  
 - Fault tolerance and component failure resilience  
 - High performance  
@@ -275,3 +276,52 @@ jobbyBuilder
     // Custom policy for SendEmailCommand  
     .UseRetryPolicyForJob<SendEmailCommand>(specialRetryPolicy);  
 ```
+
+### Using Middlewares
+
+It is possible to wrap background task handler calls with your own middlewares.
+
+To create a middleware, you need to implement the `IJobbyMiddleware` interface:
+
+```csharp
+public class SomeMiddleware : IJobbyMiddleware
+{
+    public async Task ExecuteAsync<TCommand>(TCommand command, JobExecutionContext ctx, IJobCommandHandler<TCommand> handler)
+        where TCommand : IJobCommand
+    {
+        // Logic to be executed before the background task call can be placed here
+        // ....
+
+        await handler.ExecuteAsync(command, ctx);
+
+        // Logic to be executed after the background task call can be placed here
+        // .... 
+    }
+}
+```
+
+Middleware supports dependency injection through the constructor.
+
+Configuration:
+
+```csharp
+builder.Services.AddJobbyServerAndClient(jobbyBuilder =>  
+{
+    jobbyBuilder.ConfigureJobby((serviceProvider, jobby) => {
+        // ...
+        jobby.ConfigurePipeline(pipeline => {
+
+            // This is how a singleton middleware without dependencies is added
+            pipeline.Use(new SomeMiddleware());
+
+            // This is how a singleton middleware with non-scoped dependencies can be added
+            pipeline.Use(serviceProvider.GetRequiredService<SomeMiddleware>());
+
+            // This is how a scoped middleware or middleware with scoped dependencies can be added
+            pipeline.Use<SomeMiddleware>();
+        });
+    }); 
+});
+```
+
+More examples: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).

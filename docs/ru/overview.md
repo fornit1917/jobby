@@ -9,6 +9,7 @@
 - Транзакционное создание нескольких задач
 - Настройка порядка выполнения при создании нескольких задач
 - Повтор упавших задач согласно настроенным политикам повторов
+- Настраиваемый middlewares pipeline для исполнения кода фоновых задач
 - Корректная работа в распределённых приложениях
 - Устойчивость к сбоям и отказу компонентов
 - Высокая производительность
@@ -288,3 +289,51 @@ jobbyBuilder
     .UseRetryPolicyForJob<SendEmailCommand>(specialRetryPolicy);
 ```
 
+### Использование Middlewares
+
+Вызов обработчиков фоновых задач возможно оборачивать в свои Middlewares.
+
+Для создания Middleware необходимо реализовать интерфейс IJobbyMiddleware:
+
+```csharp
+public class SomeMiddleware : IJobbyMiddleware
+{
+    public async Task ExecuteAsync<TCommand>(TCommand command, JobExecutionContext ctx, IJobCommandHandler<TCommand> handler)
+        where TCommand : IJobCommand
+    {
+        // Здесь можно разместить логику которая выполнится до вызова фоновой задачи
+        // ....
+
+        await handler.ExecuteAsync(command, ctx);
+
+        // Здесь можно разместить логику которая выполнится после вызова фоновой задачи
+        // .... 
+    }
+}
+```
+
+Для Middleware поддерживается инъекция зависимостей через конструктор.
+
+Подключение:
+
+```csharp
+builder.Services.AddJobbyServerAndClient(jobbyBuilder =>  
+{
+    jobbyBuilder.ConfigureJobby((serviceProvider, jobby) => {
+        // ...
+        jobby.ConfigurePipeline(pipeline => {
+
+            // Так подключается singleton middleware без зависимостей
+            pipeline.Use(new SomeMiddleware());
+
+            // Так можно подключать singleton middleware с не scoped-зависимостями
+            pipeline.Use(serviceProvider.GetRequiredService<SomeMiddleware>());
+
+            // Так можно подключать scoped middleware или middleware со scoped зависимостями
+            pipeline.Use<SomeMiddleware>();
+        });
+    }); 
+});
+```
+
+Больше примеров здесь: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
