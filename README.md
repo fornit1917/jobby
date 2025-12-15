@@ -18,7 +18,8 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Configurable execution order for multiple tasks  
 - Retry policies for failed tasks
 - Configurable middlewares pipeline for executing background tasks code
-- Proper operation in distributed applications  
+- OpenTelemetry-compatible metrics and tracing
+- Proper operation in distributed applications
 - Fault tolerance and component failure resilience  
 - High performance  
 - Low resource consumption on both .NET application and database sides  
@@ -335,3 +336,40 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
 ```
 
 More examples: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
+
+### Metrics
+
+Jobby collects several metrics about background job execution on a given instance:
+
+- `jobby.inst.jobs.started` - number of started jobs
+- `jobby.inst.jobs.completed` - number of successfully completed jobs
+- `jobby.inst.jobs.retried` - number of job retries scheduled after a failure
+- `jobby.inst.jobs.failed` - number of jobs that failed after the last retry attempt plus the number of failed launches of recurrent jobs
+- `jobby.inst.jobs.duration` - execution time histogram of background jobs
+
+To enable metric collection, you must call the `UseMetrics` method during configuration:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseMetrics() // Enable metric collection
+            // ...
+    });
+});
+```
+
+In OpenTelemetry, Jobby metrics are added as follows:
+
+```csharp
+builder.Services
+    .AddOpenTelemetry()
+    .WithMetrics(builder => {
+        // Add all metrics from Jobby to OpenTelemetry
+        builder.AddMeter(JobbyMeterNames.GetAll());
+    });
+```
+
+In the [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) example, metric collection is enabled with export to Prometheus format via the `/metrics` endpoint.

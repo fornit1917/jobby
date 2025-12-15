@@ -2,7 +2,7 @@
 
 namespace Jobby.Core.Services.HandlerPipeline;
 
-internal class MiddlewareDefinition
+internal record struct MiddlewareDefinition
 {
     public IJobbyMiddleware? MiddlewareInstance { get; init; }
     public Type? MiddlewareType { get; init; }

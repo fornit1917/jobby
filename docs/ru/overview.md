@@ -10,6 +10,7 @@
 - Настройка порядка выполнения при создании нескольких задач
 - Повтор упавших задач согласно настроенным политикам повторов
 - Настраиваемый middlewares pipeline для исполнения кода фоновых задач
+- Совместимые с OpenTelemetry метрики и трейсинг
 - Корректная работа в распределённых приложениях
 - Устойчивость к сбоям и отказу компонентов
 - Высокая производительность
@@ -339,3 +340,40 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
 ```
 
 Больше примеров здесь: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
+
+### Метрики
+
+Jobby собирает несколько метрик о выполнении фоновых задач на данном инстансе:
+
+- jobby.inst.jobs.started - количество запущенных задач
+- jobby.inst.jobs.completed - количество успешно выполненных задач
+- jobby.inst.jobs.retried - количество запланированных повторов задач после ошибки
+- jobby.inst.jobs.failed - количество упавших после последней попытки задач плюс количество неудачных запусков рекуррентных задач
+- jobby.inst.jobs.duration - гистограмма времени выполнения задач
+
+Для включения сбора метрик необходимо при конфигурации вызвать метод `UseMetrics`:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseMetrics() // Включить сбор метрик
+            // ...
+    });
+});
+```
+
+В OpenTelemetry метрики Jobby добавляются следующим образом:
+
+```csharp
+builder.Services
+    .AddOpenTelemetry()
+    .WithMetrics(builder => {
+        // Добавить в OpenTelemetry все метрики от Jobby
+        builder.AddMeter(JobbyMeterNames.GetAll());
+    });
+```
+
+В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) включен сбор метрик с экспортом в формате Prometheus через эндпоинт `/metrics`.
