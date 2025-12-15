@@ -9,7 +9,8 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Transactional creation of multiple tasks  
 - Configurable execution order for multiple tasks  
 - Retry policies for failed tasks
-- Configurable middlewares pipeline for executing background tasks code  
+- Configurable middlewares pipeline for executing background tasks code
+- OpenTelemetry-compatible metrics and tracing
 - Proper operation in distributed applications  
 - Fault tolerance and component failure resilience  
 - High performance  
