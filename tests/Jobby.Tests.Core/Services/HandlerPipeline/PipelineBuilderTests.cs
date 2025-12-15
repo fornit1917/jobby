@@ -36,11 +36,81 @@ public class PipelineBuilderTests
     }
 
     [Fact]
-    public async Task TwoMiddlewares_BuildsCorrectPipeline()
+    public async Task OneUserMiddleware_BuildsCorrectPipeline()
+    {
+        _pipelineBuilder
+            .Use(new FirstMiddleware());
+
+        var pipeline = _pipelineBuilder.Build(_handler, _scopeMock.Object);
+
+        var ctx = new JobExecutionContext
+        {
+            CancellationToken = CancellationToken.None,
+            IsLastAttempt = false,
+            IsRecurrent = false,
+            JobName = MwTestCommand.GetJobName(),
+            StartedCount = 123,
+        };
+        await pipeline.ExecuteAsync(_command, ctx);
+
+        Assert.Equal(_command, _handler.PassedCommand);
+        Assert.Equal(ctx, _handler.PassedContext);
+        Assert.Equal(["before 1", "inner", "after 1"], _command.Traces);
+    }
+
+    [Fact]
+    public async Task OneSystemOuterMiddleware_BuildsCorrectPipeline()
+    {
+        _pipelineBuilder
+            .UseAsOuter(new FirstMiddleware());
+
+        var pipeline = _pipelineBuilder.Build(_handler, _scopeMock.Object);
+
+        var ctx = new JobExecutionContext
+        {
+            CancellationToken = CancellationToken.None,
+            IsLastAttempt = false,
+            IsRecurrent = false,
+            JobName = MwTestCommand.GetJobName(),
+            StartedCount = 123,
+        };
+        await pipeline.ExecuteAsync(_command, ctx);
+
+        Assert.Equal(_command, _handler.PassedCommand);
+        Assert.Equal(ctx, _handler.PassedContext);
+        Assert.Equal(["before 1", "inner", "after 1"], _command.Traces);
+    }
+
+    [Fact]
+    public async Task TwoUserMiddlewares_BuildsCorrectPipeline()
     {
         _pipelineBuilder
             .Use(new FirstMiddleware())
             .Use<SecondMiddleware>();
+
+        var pipeline = _pipelineBuilder.Build(_handler, _scopeMock.Object);
+
+        var ctx = new JobExecutionContext
+        {
+            CancellationToken = CancellationToken.None,
+            IsLastAttempt = false,
+            IsRecurrent = false,
+            JobName = MwTestCommand.GetJobName(),
+            StartedCount = 123,
+        };
+        await pipeline.ExecuteAsync(_command, ctx);
+
+        Assert.Equal(_command, _handler.PassedCommand);
+        Assert.Equal(ctx, _handler.PassedContext);
+        Assert.Equal(["before 1", "before 2", "inner", "after 2", "after 1"], _command.Traces);
+    }
+
+    [Fact]
+    public async Task UserAndOuterSystemMiddlewares_BuildsCorrectPipeline()
+    {
+        _pipelineBuilder.Use<SecondMiddleware>();
+        _pipelineBuilder.UseAsOuter(new FirstMiddleware());
+            
 
         var pipeline = _pipelineBuilder.Build(_handler, _scopeMock.Object);
 

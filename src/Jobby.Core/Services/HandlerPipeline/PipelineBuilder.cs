@@ -7,30 +7,54 @@ namespace Jobby.Core.Services.HandlerPipeline;
 
 internal class PipelineBuilder : IPipelineConfigurable, IPipelineBuilder
 {
-    private readonly List<MiddlewareDefinition> _middlewareDefinitions = new(); 
+    /// <summary>
+    /// Middlewares added by user
+    /// </summary>
+    private readonly List<MiddlewareDefinition> _userMiddlewares = new();
+
+    /// <summary>
+    /// System middlewares (metrics, tracing)
+    /// </summary>
+    private readonly List<MiddlewareDefinition> _systemOuterMiddlewares = new();
 
     public IPipelineConfigurable Use(IJobbyMiddleware middleware)
     {
-        _middlewareDefinitions.Add(new MiddlewareDefinition { MiddlewareInstance = middleware });
+        _userMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = middleware });
         return this;
     }
 
     public IPipelineConfigurable Use<TMiddleware>() where TMiddleware : IJobbyMiddleware
     {
-        _middlewareDefinitions.Add(new MiddlewareDefinition { MiddlewareType = typeof(TMiddleware) });
+        _userMiddlewares.Add(new MiddlewareDefinition { MiddlewareType = typeof(TMiddleware) });
         return this;
+    }
+
+    /// <summary>
+    /// Internal method for add middlewares which should wrap middlewares added by user
+    /// </summary>
+    /// <param name="middleware"></param>
+    internal void UseAsOuter(IJobbyMiddleware middleware)
+    {
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = middleware });
     }
 
     public IJobCommandHandler<TCommand> Build<TCommand>(IJobCommandHandler<TCommand> innerHandler, IJobExecutionScope scope) 
         where TCommand : IJobCommand
     {
-        if (_middlewareDefinitions.Count == 0)
+        if (_userMiddlewares.Count + _systemOuterMiddlewares.Count == 0)
             return innerHandler;
 
-        WrappedHandler<TCommand> wrappedHandler = Wrap(innerHandler, scope, _middlewareDefinitions[^1]);
-        for (int i = _middlewareDefinitions.Count - 2; i >= 0; i--)
+        var firstMw = _userMiddlewares.Count > 0 ? _userMiddlewares[^1] : _systemOuterMiddlewares[0];
+        
+        WrappedHandler<TCommand> wrappedHandler = Wrap(innerHandler, scope, firstMw);
+        
+        for (int i = _userMiddlewares.Count - 2; i >= 0; i--)
         {
-            wrappedHandler = Wrap(wrappedHandler, scope, _middlewareDefinitions[i]);
+            wrappedHandler = Wrap(wrappedHandler, scope, _userMiddlewares[i]);
+        }
+        for (int i = _userMiddlewares.Count > 0 ? 0 : 1; i < _systemOuterMiddlewares.Count; i++)
+        {
+            wrappedHandler = Wrap(wrappedHandler, scope, _systemOuterMiddlewares[i]);
         }
 
         return wrappedHandler;

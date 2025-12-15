@@ -15,7 +15,7 @@ public class IgnoreSomeErrorsMiddleware : IJobbyMiddleware
         {
             await handler.ExecuteAsync(command, ctx);
         }
-        catch(ExceptionShouldBeIgnored ex)
+        catch(ExceptionShouldBeIgnored)
         {
         }
     }
