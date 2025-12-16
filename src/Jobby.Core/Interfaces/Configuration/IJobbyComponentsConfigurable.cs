@@ -23,4 +23,5 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable ConfigurePipeline(Action<IPipelineConfigurable> configure);
 
     IJobbyComponentsConfigurable UseMetrics();
+    IJobbyComponentsConfigurable UseTracing();
 }

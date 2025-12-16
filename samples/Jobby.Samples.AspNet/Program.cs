@@ -9,6 +9,8 @@ using Jobby.Samples.AspNet.JobsMiddlewares;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Jobby.Samples.AspNet;
 
@@ -56,6 +58,7 @@ public class Program
                         IntervalsSeconds = [1, 2]
                     })
                     .UseMetrics() // Enable collecting metrics
+                    .UseTracing() // Enable tracing context for each job run
                     .ConfigurePipeline(pipeline =>
                     {   
                         // Some custom middlewares
@@ -67,11 +70,19 @@ public class Program
 
         builder.Services
             .AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName: "Jobby.Samples.AspNet"))
             .WithMetrics(builder => {
                 builder.AddPrometheusExporter();
 
                 // Add metrics from Jobby to OpenTelemetry
                 builder.AddMeter(JobbyMeterNames.GetAll());
+            })
+            .WithTracing(builder =>
+            {
+                builder.AddConsoleExporter();
+
+                // Add traces from Jobby jobs execution to OpenTelemetry
+                builder.AddSource(JobbyActivitySourceNames.JobsExecution);
             });
 
         var app = builder.Build();

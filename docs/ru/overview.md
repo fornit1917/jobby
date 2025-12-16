@@ -377,3 +377,36 @@ builder.Services
 ```
 
 В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) включен сбор метрик с экспортом в формате Prometheus через эндпоинт `/metrics`.
+
+### Трейсинг
+
+Для включения трейсинга необходимо при конфигурации вызвать метод `UseTracing`:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseTracing() // Запускать джобы внутри Activity
+            // ...
+    });
+});
+```
+
+Включить экспорт трейсов по джобам Jobby через OpenTelemetry можно следующим образом:
+
+```csharp
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName: "Jobby.Samples.AspNet"))
+    .WithTracing(builder =>
+    {
+        builder.AddConsoleExporter();
+
+        // Добавить в OpenTelemetry трейсы выполнения джобов Jobby 
+        builder.AddSource(JobbyActivitySourceNames.JobsExecution);
+    });
+```
+
+В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) включен сбор метрик с экспортом в stdout.
