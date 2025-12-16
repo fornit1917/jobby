@@ -1,12 +1,16 @@
-
 using Jobby.AspNetCore;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using Jobby.Core.Services.Observability;
 using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
+using Jobby.Samples.AspNet.JobsMiddlewares;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Jobby.Samples.AspNet;
 
@@ -34,6 +38,7 @@ public class Program
             opts.UseSnakeCaseNamingConvention();
         });
 
+        builder.Services.AddScoped<JobLoggingMiddleware>();
         builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
         {
             jobbyBuilder.AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
@@ -51,9 +56,34 @@ public class Program
                     {
                         MaxCount = 3,
                         IntervalsSeconds = [1, 2]
+                    })
+                    .UseMetrics() // Enable collecting metrics
+                    .UseTracing() // Enable tracing context for each job run
+                    .ConfigurePipeline(pipeline =>
+                    {   
+                        // Some custom middlewares
+                        pipeline.Use<JobLoggingMiddleware>(); // will be created by DI Scope
+                        pipeline.Use(new IgnoreSomeErrorsMiddleware()); // will be used this instance always
                     });
             });
         });
+
+        builder.Services
+            .AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService(serviceName: "Jobby.Samples.AspNet"))
+            .WithMetrics(builder => {
+                builder.AddPrometheusExporter();
+
+                // Add metrics from Jobby to OpenTelemetry
+                builder.AddMeter(JobbyMeterNames.GetAll());
+            })
+            .WithTracing(builder =>
+            {
+                builder.AddConsoleExporter();
+
+                // Add traces from Jobby jobs execution to OpenTelemetry
+                builder.AddSource(JobbyActivitySourceNames.JobsExecution);
+            });
 
         var app = builder.Build();
 
@@ -64,6 +94,7 @@ public class Program
             app.UseSwaggerUI();
         }
 
+        app.UseOpenTelemetryPrometheusScrapingEndpoint("/metrics");
         app.UseAuthorization();
         app.MapControllers();
 

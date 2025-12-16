@@ -9,6 +9,8 @@
 - Транзакционное создание нескольких задач
 - Настройка порядка выполнения при создании нескольких задач
 - Повтор упавших задач согласно настроенным политикам повторов
+- Настраиваемый middlewares pipeline для исполнения кода фоновых задач
+- Совместимые с OpenTelemetry метрики и трейсинг
 - Корректная работа в распределённых приложениях
 - Устойчивость к сбоям и отказу компонентов
 - Высокая производительность
@@ -288,3 +290,123 @@ jobbyBuilder
     .UseRetryPolicyForJob<SendEmailCommand>(specialRetryPolicy);
 ```
 
+### Использование Middlewares
+
+Вызов обработчиков фоновых задач возможно оборачивать в свои Middlewares.
+
+Для создания Middleware необходимо реализовать интерфейс IJobbyMiddleware:
+
+```csharp
+public class SomeMiddleware : IJobbyMiddleware
+{
+    public async Task ExecuteAsync<TCommand>(TCommand command, JobExecutionContext ctx, IJobCommandHandler<TCommand> handler)
+        where TCommand : IJobCommand
+    {
+        // Здесь можно разместить логику которая выполнится до вызова фоновой задачи
+        // ....
+
+        await handler.ExecuteAsync(command, ctx);
+
+        // Здесь можно разместить логику которая выполнится после вызова фоновой задачи
+        // .... 
+    }
+}
+```
+
+Для Middleware поддерживается инъекция зависимостей через конструктор.
+
+Подключение:
+
+```csharp
+builder.Services.AddJobbyServerAndClient(jobbyBuilder =>  
+{
+    jobbyBuilder.ConfigureJobby((serviceProvider, jobby) => {
+        // ...
+        jobby.ConfigurePipeline(pipeline => {
+
+            // Так подключается singleton middleware без зависимостей
+            pipeline.Use(new SomeMiddleware());
+
+            // Так можно подключать singleton middleware с не scoped-зависимостями
+            // В этом случае тип SomeMiddleware должен быть зарегистрирован в DI-контейнере!
+            pipeline.Use(serviceProvider.GetRequiredService<SomeMiddleware>());
+
+            // Так можно подключать scoped middleware или middleware со scoped зависимостями
+            // В этом случае тип SomeMiddleware должен быть зарегистрирован в DI-контейнере!
+            pipeline.Use<SomeMiddleware>();
+        });
+    }); 
+});
+```
+
+Больше примеров здесь: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
+
+### Метрики
+
+Jobby собирает несколько метрик о выполнении фоновых задач на данном инстансе:
+
+- jobby.inst.jobs.started - количество запущенных задач
+- jobby.inst.jobs.completed - количество успешно выполненных задач
+- jobby.inst.jobs.retried - количество запланированных повторов задач после ошибки
+- jobby.inst.jobs.failed - количество упавших после последней попытки задач плюс количество неудачных запусков рекуррентных задач
+- jobby.inst.jobs.duration - гистограмма времени выполнения задач
+
+Для включения сбора метрик необходимо при конфигурации вызвать метод `UseMetrics`:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseMetrics() // Включить сбор метрик
+            // ...
+    });
+});
+```
+
+В OpenTelemetry метрики Jobby добавляются следующим образом:
+
+```csharp
+builder.Services
+    .AddOpenTelemetry()
+    .WithMetrics(builder => {
+        // Добавить в OpenTelemetry все метрики от Jobby
+        builder.AddMeter(JobbyMeterNames.GetAll());
+    });
+```
+
+В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) включен сбор метрик с экспортом в формате Prometheus через эндпоинт `/metrics`.
+
+### Трейсинг
+
+Для включения трейсинга необходимо при конфигурации вызвать метод `UseTracing`:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseTracing() // Запускать джобы внутри Activity
+            // ...
+    });
+});
+```
+
+Включить экспорт трейсов по джобам Jobby через OpenTelemetry можно следующим образом:
+
+```csharp
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName: "Jobby.Samples.AspNet"))
+    .WithTracing(builder =>
+    {
+        builder.AddConsoleExporter();
+
+        // Добавить в OpenTelemetry трейсы выполнения джобов Jobby 
+        builder.AddSource(JobbyActivitySourceNames.JobsExecution);
+    });
+```
+
+В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) включен сбор метрик с экспортом в stdout.

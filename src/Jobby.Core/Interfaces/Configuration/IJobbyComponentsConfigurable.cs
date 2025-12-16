@@ -19,4 +19,9 @@ public interface IJobbyComponentsConfigurable
 
     IJobbyComponentsConfigurable UseDefaultRetryPolicy(RetryPolicy retryPolicy);
     IJobbyComponentsConfigurable UseRetryPolicyForJob<TCommand>(RetryPolicy retryPolicy) where TCommand : IJobCommand;
+
+    IJobbyComponentsConfigurable ConfigurePipeline(Action<IPipelineConfigurable> configure);
+
+    IJobbyComponentsConfigurable UseMetrics();
+    IJobbyComponentsConfigurable UseTracing();
 }

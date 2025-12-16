@@ -1,7 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.HandlerPipeline;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
-using Jobby.TestsUtils.Jobs;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -13,6 +13,7 @@ public class JobExecutionServiceTests
     private readonly Mock<IJobsRegistry> _jobsRegistryMock;
     private readonly Mock<IRetryPolicyService> _retryPolicyServiceMock;
     private readonly Mock<IJobParamSerializer> _serializerMock;
+    private readonly Mock<IPipelineBuilder> _pipelineBuilderMock;
     private readonly Mock<IJobPostProcessingService> _postProcessingServiceMock;
     private readonly Mock<ILogger<JobExecutionService>> _loggerMock;
 
@@ -37,6 +38,8 @@ public class JobExecutionServiceTests
         _retryPolicyServiceMock = new Mock<IRetryPolicyService>();
 
         _serializerMock = new Mock<IJobParamSerializer>();
+
+        _pipelineBuilderMock = new Mock<IPipelineBuilder>();
         
         _postProcessingServiceMock = new Mock<IJobPostProcessingService>();
         
@@ -46,6 +49,7 @@ public class JobExecutionServiceTests
             _jobsRegistryMock.Object,
             _retryPolicyServiceMock.Object,
             _serializerMock.Object,
+            _pipelineBuilderMock.Object,
             _postProcessingServiceMock.Object,
             _loggerMock.Object);
     }
@@ -79,7 +83,7 @@ public class JobExecutionServiceTests
             StartedCount = job.StartedCount,
         };
         _jobExecutorMock
-            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object), Times.Once);
         _postProcessingServiceMock.Verify(x => x.HandleCompleted(job), Times.Once);
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
@@ -108,13 +112,13 @@ public class JobExecutionServiceTests
         };
         var ex = new Exception("error");
         _jobExecutorMock
-            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object))
+            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object))
             .ThrowsAsync(ex);
 
         await _executionService.ExecuteJob(job, cancelationToken);
 
         _jobExecutorMock
-            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object), Times.Once);
         _postProcessingServiceMock.Verify(x => x.HandleFailed(job, retryPolicy, ex.ToString()));
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
@@ -144,7 +148,7 @@ public class JobExecutionServiceTests
             StartedCount = job.StartedCount,
         };
         _jobExecutorMock
-            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object), Times.Once);
         _postProcessingServiceMock.Verify(x => x.RescheduleRecurrent(job, null));
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
@@ -173,13 +177,13 @@ public class JobExecutionServiceTests
         };
         var ex = new Exception("error");
         _jobExecutorMock
-            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object))
+            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object))
             .ThrowsAsync(ex);
 
         await _executionService.ExecuteJob(job, cancelationToken);
 
         _jobExecutorMock
-            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object), Times.Once);
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object), Times.Once);
         _postProcessingServiceMock.Verify(x => x.RescheduleRecurrent(job, ex.ToString()));
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
