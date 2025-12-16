@@ -2,9 +2,10 @@
 
 ## v0.5.0 (2025-12-16)
 
-- Middlewares
-- Metrics
-- Tracing
+- Configurable middlewares pipeline for jobs execution
+- Jobs execution metrics (like numbers of started / completed / failed jobs and job execution time histogram)
+- Jobs execution tracing
+- Ability to export metrics and traces via OpenTelemetry
 
 ## v0.4.0 (2025-11-03)
 
