@@ -1,5 +1,11 @@
 # Versions
 
+## v0.5.0 (2025-12-16)
+
+- Middlewares
+- Metrics
+- Tracing
+
 ## v0.4.0 (2025-11-03)
 
 - Random additional delay in retry policies (Jitter)
