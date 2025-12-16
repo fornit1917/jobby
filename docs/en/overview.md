@@ -365,3 +365,36 @@ builder.Services
 ```
 
 In the [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) example, metric collection is enabled with export to Prometheus format via the `/metrics` endpoint.
+
+### Tracing
+
+To enable tracing, you should call the `UseTracing` method during configuration:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseTracing() // Execute jobs within an Activity
+            // ...
+    });
+});
+```
+
+You can enable the export of Jobby job traces via OpenTelemetry as follows:
+
+```csharp
+builder.Services
+    .AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName: "Jobby.Samples.AspNet"))
+    .WithTracing(builder =>
+    {
+        builder.AddConsoleExporter();
+
+        // Add Jobby job execution traces to OpenTelemetry
+        builder.AddSource(JobbyActivitySourceNames.JobsExecution);
+    });
+```
+
+In the [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) example, metric collection with export to stdout is enabled.

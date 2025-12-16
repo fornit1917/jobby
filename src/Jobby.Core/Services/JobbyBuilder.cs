@@ -21,6 +21,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private IJobsFactory? _jobsFactory;
 
     private MetricsMiddleware? _metricsMiddleware;
+    private TracingMiddleware? _tracingMiddleware;
     private readonly PipelineBuilder _pipelineBuilder = new PipelineBuilder();
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
@@ -66,6 +67,15 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         if (_jobsRegistry == null)
         {
             _jobsRegistry = new JobsRegistry(_jobExecutorsByJobName.ToFrozenDictionary());
+        }
+
+        if (_metricsMiddleware != null)
+        {
+            _pipelineBuilder.UseAsOuter(_metricsMiddleware);
+        }
+        if (_tracingMiddleware != null)
+        {
+            _pipelineBuilder.UseAsOuter(_tracingMiddleware);
         }
 
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
@@ -251,11 +261,13 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     public IJobbyComponentsConfigurable UseMetrics()
     {
-        if (_metricsMiddleware == null)
-        {
-            _metricsMiddleware = new MetricsMiddleware(MetricsService.Instance);
-            _pipelineBuilder.UseAsOuter(_metricsMiddleware);
-        }
+        _metricsMiddleware ??= new MetricsMiddleware(MetricsService.Instance);
+        return this;
+    }
+
+    public IJobbyComponentsConfigurable UseTracing()
+    {
+        _tracingMiddleware ??= new TracingMiddleware();
         return this;
     }
 }
