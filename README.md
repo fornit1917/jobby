@@ -41,10 +41,6 @@ For ASP.NET Core integration, also install the Jobby.AspNetCore package:
 dotnet package add Jobby.AspNetCore  
 ```
 
-#### Database Table Creation  
-
-Execute the [SQL script](https://github.com/fornit1917/jobby/blob/master/src/Jobby.Postgres/jobby.sql) to create required database tables.  
-
 ### Defining Background Tasks  
 
 To define a background task, implement the `IJobCommand` interface for the task parameters and `IJobCommandHandler` for the task logic:  
@@ -143,7 +139,27 @@ jobbyServer.StartBackgroundService(); // Start background service
 jobbyServer.SendStopSignal(); // Stop service  
 ```
 
-Full console application example: [Jobby.Samples.CliJobsSample](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.CliJobsSample).  
+Full console application example: [Jobby.Samples.CliJobsSample](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.CliJobsSample).
+
+#### Creating Database Tables
+
+The library provides the `IJobbyStorageMigrator` service to create the required tables in the database and automatically update their structure when transitioning to a new version.
+
+When using Jobby.AspNetCore, the service is available through the DI container and can be called at service startup:
+
+```csharp
+//...
+
+app.MapControllers();
+
+// Create or update jobby storage schema
+var jobbyStorageMigrator = app.Services.GetRequiredService<IJobbyStorageMigrator>();
+jobbyStorageMigrator.Migrate();
+```
+
+Without using Jobby.AspNetCore, the `IJobbyStorageMigrator` service can be obtained from the `JobbyBuilder.GetStorageMigrator` method.
+
+For full examples, refer to the links: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) and [Jobby.Samples.CliJobsSample](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.CliJobsSample).
 
 ### Enqueueing Tasks  
 

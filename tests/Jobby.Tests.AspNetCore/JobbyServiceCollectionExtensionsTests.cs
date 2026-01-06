@@ -32,8 +32,9 @@ public class JobbyServiceCollectionExtensionsTests
 
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobsFactory) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyClient) && x.Lifetime == ServiceLifetime.Singleton);
+        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyStorageMigrator) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(JobbyBuilder) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Equal(3, _addedServices.Count);
+        Assert.Equal(4, _addedServices.Count);
     }
 
     [Fact]
@@ -46,8 +47,9 @@ public class JobbyServiceCollectionExtensionsTests
 
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobsFactory) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyClient) && x.Lifetime == ServiceLifetime.Singleton);
+        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyStorageMigrator) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(JobbyBuilder) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Equal(3, _addedServices.Count);
+        Assert.Equal(4, _addedServices.Count);
     }
 
     [Fact]
@@ -67,6 +69,7 @@ public class JobbyServiceCollectionExtensionsTests
                                              && x.ImplementationType == typeof(TestJobCommandHandler)
                                              && x.Lifetime == ServiceLifetime.Scoped);
 
+        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyStorageMigrator) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobsFactory) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyClient) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyServer) && x.Lifetime == ServiceLifetime.Singleton);
@@ -92,6 +95,7 @@ public class JobbyServiceCollectionExtensionsTests
                                              && x.ImplementationType == typeof(TestJobCommandHandler)
                                              && x.Lifetime == ServiceLifetime.Scoped);
 
+        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyStorageMigrator) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobsFactory) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyClient) && x.Lifetime == ServiceLifetime.Singleton);
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyServer) && x.Lifetime == ServiceLifetime.Singleton);

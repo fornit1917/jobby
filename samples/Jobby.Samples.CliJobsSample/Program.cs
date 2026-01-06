@@ -11,7 +11,7 @@ using System.Text.Json;
 
 namespace Jobby.Samples.CliJobsSample;
 
-internal class Program
+internal static class Program
 {
     static void Main(string[] args)
     {
@@ -57,7 +57,8 @@ internal class Program
             {
                 pipeline.Use(new DemoCliMiddleware());
             });
-
+        
+        builder.CreateStorageMigrator().Migrate();
         var jobbyServer = builder.CreateJobbyServer();
         var jobbyClient = builder.CreateJobbyClient();
 

@@ -1,25 +1,30 @@
 ﻿using Jobby.Core.Models;
+using Jobby.Core.Services;
 using Jobby.IntegrationTests.Postgres.Helpers;
+using Jobby.Postgres.ConfigurationExtensions;
+using Jobby.TestsUtils;
 using Jobby.TestsUtils.Jobs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jobby.IntegrationTests.Postgres;
 
-[Collection("Jobby.Postgres.IntegrationTests")]
+[Collection(PostgresqlTestsCollection.Name)]
 public class JobbyServerIntegrationTests
 {
+    private readonly ExecutedCommandsList _executedCommands = new();
+    
     [Fact]
     public async Task CompleteWithBatchingOn_DeleteCompletedOn_ExecutesAndRemovesCommands()
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
-        var executedCommands = FactoryHelper.ExecutedCommands;
-        var client = FactoryHelper.CreateJobbyClient();
-        var server = FactoryHelper.CreateJobbyServer(new JobbyServerSettings
+        var jobbyBuilder = ConfigureBuilder(new JobbyServerSettings
         {
             CompleteWithBatching = true,
             DeleteCompleted = true,
             PollingIntervalMs = 100
         });
+        var client = jobbyBuilder.CreateJobbyClient();
+        var server = jobbyBuilder.CreateJobbyServer();
 
         server.StartBackgroundService();
         var command1 = new TestJobCommand();
@@ -37,8 +42,8 @@ public class JobbyServerIntegrationTests
             }
         }
         Assert.False(jobsNotCompletedInDb);
-        Assert.True(executedCommands.HasCommandWithId(command1.UniqueId));
-        Assert.True(executedCommands.HasCommandWithId(command2.UniqueId));
+        Assert.True(_executedCommands.HasCommandWithId(command1.UniqueId));
+        Assert.True(_executedCommands.HasCommandWithId(command2.UniqueId));
         server.SendStopSignal();
     }
 
@@ -46,25 +51,24 @@ public class JobbyServerIntegrationTests
     public async Task CompleteWithBatchingOn_DeleteCompletedOff_ExecutesAndRemovesCommands()
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
-        var executedCommands = FactoryHelper.ExecutedCommands;
-        var client = FactoryHelper.CreateJobbyClient();
-        var server = FactoryHelper.CreateJobbyServer(new JobbyServerSettings
+        var jobbyBuilder = ConfigureBuilder(new JobbyServerSettings
         {
             CompleteWithBatching = true,
             DeleteCompleted = false,
             PollingIntervalMs = 100
         });
+        var client = jobbyBuilder.CreateJobbyClient();
+        var server = jobbyBuilder.CreateJobbyServer();
 
         server.StartBackgroundService();
         var command1 = new TestJobCommand();
         var command2 = new TestJobCommand();
         var jobId1 = await client.EnqueueCommandAsync(command1);
-        var jobId2 = await client.EnqueueCommandAsync(command2); ;
+        var jobId2 = await client.EnqueueCommandAsync(command2);
 
-        var jobNotCompletedInDb = true;
         for (int i = 0; i < 50; i++)
         {
-            jobNotCompletedInDb = await dbContext.Jobs
+            var jobNotCompletedInDb = await dbContext.Jobs
                 .AnyAsync(x => (x.Id == jobId1 || x.Id == jobId2) && x.Status != JobStatus.Completed);
             if (jobNotCompletedInDb)
             {
@@ -77,8 +81,8 @@ public class JobbyServerIntegrationTests
         var actualJob2 = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId2);
         Assert.NotNull(actualJob2);
         Assert.Equal(JobStatus.Completed, actualJob1.Status);
-        Assert.True(executedCommands.HasCommandWithId(command1.UniqueId));
-        Assert.True(executedCommands.HasCommandWithId(command2.UniqueId));
+        Assert.True(_executedCommands.HasCommandWithId(command1.UniqueId));
+        Assert.True(_executedCommands.HasCommandWithId(command2.UniqueId));
         server.SendStopSignal();
     }
 
@@ -86,14 +90,14 @@ public class JobbyServerIntegrationTests
     public async Task CompleteWithBatchingOff_DeleteCompletedOn_ExecutesAndRemovesCommand()
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
-        var executedCommands = FactoryHelper.ExecutedCommands;
-        var client = FactoryHelper.CreateJobbyClient();
-        var server = FactoryHelper.CreateJobbyServer(new JobbyServerSettings
+        var jobbyBuilder = ConfigureBuilder(new JobbyServerSettings
         {
             CompleteWithBatching = false,
             DeleteCompleted = true,
             PollingIntervalMs = 100
         });
+        var client = jobbyBuilder.CreateJobbyClient();
+        var server = jobbyBuilder.CreateJobbyServer();
 
         server.StartBackgroundService();
         var command = new TestJobCommand();
@@ -109,7 +113,7 @@ public class JobbyServerIntegrationTests
             }
         }
         Assert.False(jobNotCompletedInDb);
-        Assert.True(executedCommands.HasCommandWithId(command.UniqueId));
+        Assert.True(_executedCommands.HasCommandWithId(command.UniqueId));
         server.SendStopSignal();
     }
 
@@ -117,23 +121,22 @@ public class JobbyServerIntegrationTests
     public async Task CompleteWithBatchingOff_DeleteCompletedOff_ExecutesAndRemovesCommand()
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
-        var executedCommands = FactoryHelper.ExecutedCommands;
-        var client = FactoryHelper.CreateJobbyClient();
-        var server = FactoryHelper.CreateJobbyServer(new JobbyServerSettings
+        var jobbyBuilder = ConfigureBuilder(new JobbyServerSettings
         {
             CompleteWithBatching = false,
             DeleteCompleted = false,
             PollingIntervalMs = 100
         });
-
+        var client = jobbyBuilder.CreateJobbyClient();
+        var server = jobbyBuilder.CreateJobbyServer();
+        
         server.StartBackgroundService();
         var command = new TestJobCommand();
         var jobId = await client.EnqueueCommandAsync(command);
 
-        var jobNotCompletedInDb = true;
         for (int i = 0; i < 50; i++)
         {
-            jobNotCompletedInDb = await dbContext.Jobs.AnyAsync(x => x.Id == jobId && x.Status != JobStatus.Completed);
+            var jobNotCompletedInDb = await dbContext.Jobs.AnyAsync(x => x.Id == jobId && x.Status != JobStatus.Completed);
             if (jobNotCompletedInDb)
             {
                 await Task.Delay(50);
@@ -142,7 +145,17 @@ public class JobbyServerIntegrationTests
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
         Assert.NotNull(actualJob);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
-        Assert.True(executedCommands.HasCommandWithId(command.UniqueId));
+        Assert.True(_executedCommands.HasCommandWithId(command.UniqueId));
         server.SendStopSignal();
+    }
+
+    private JobbyBuilder ConfigureBuilder(JobbyServerSettings serverSettings)
+    {
+        var jobbyBuilder = new JobbyBuilder();
+        jobbyBuilder.UsePostgresql(DbHelper.DataSource);
+        jobbyBuilder.UseExecutionScopeFactory(new TestJobbyExecutionScopeFactory(_executedCommands));
+        jobbyBuilder.UseServerSettings(serverSettings);
+        jobbyBuilder.AddOrReplaceJob<TestJobCommand, TestJobCommandHandler>();
+        return jobbyBuilder;
     }
 }
