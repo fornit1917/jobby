@@ -1,18 +1,21 @@
-﻿using Jobby.Core.Models;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
+using Jobby.Core.Services;
 using Jobby.IntegrationTests.Postgres.Helpers;
+using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.TestsUtils.Jobs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jobby.IntegrationTests.Postgres;
 
-[Collection("Jobby.Postgres.IntegrationTests")]
+[Collection(PostgresqlTestsCollection.Name)]
 public class JobbyClientIntegrationTests
 {
     [Fact]
     public async Task EnqueuesAndCancelsCommandByAsyncMethods()
     {
         var dbContext = DbHelper.CreateContext();
-        var client = FactoryHelper.CreateJobbyClient();
+        var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
         var jobId = await client.EnqueueCommandAsync(command, DateTime.UtcNow.AddDays(1));
@@ -30,7 +33,7 @@ public class JobbyClientIntegrationTests
     public void EnqueuesAndCancelsCommandBySyncMethods()
     {
         var dbContext = DbHelper.CreateContext();
-        var client = FactoryHelper.CreateJobbyClient();
+        var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
         var jobId = client.EnqueueCommand(command, DateTime.UtcNow.AddDays(1));
@@ -48,8 +51,8 @@ public class JobbyClientIntegrationTests
     public async Task EnqueuesAndCancelsBatchByAsyncMethods()
     {
         var dbContext = DbHelper.CreateContext();
-        var client = FactoryHelper.CreateJobbyClient();
-        var jobsFactory = FactoryHelper.CreateJobsFactory();
+        var client = CreateJobbyClient();
+        var jobsFactory = CreateJobsFactory();
 
         var jobs = new List<JobCreationModel>
         {
@@ -72,8 +75,8 @@ public class JobbyClientIntegrationTests
     public void EnqueuesAndCancelsBatchBySyncMethods()
     {
         var dbContext = DbHelper.CreateContext();
-        var client = FactoryHelper.CreateJobbyClient();
-        var jobsFactory = FactoryHelper.CreateJobsFactory();
+        var client = CreateJobbyClient();
+        var jobsFactory = CreateJobsFactory();
 
         var jobs = new List<JobCreationModel>
         {
@@ -96,7 +99,7 @@ public class JobbyClientIntegrationTests
     public async Task SchedulesRecurrentAndCancelsByAsyncMethods()
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
-        var client = FactoryHelper.CreateJobbyClient();
+        var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
         var cron = "0 3 1 1 *";
@@ -119,22 +122,35 @@ public class JobbyClientIntegrationTests
     public void SchedulesRecurrentAndCancelsBySyncMethods()
     {
         var dbContext = DbHelper.CreateContextAndClearDb();
-        var client = FactoryHelper.CreateJobbyClient();
+        var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
         var cron = "0 3 1 1 *";
         client.ScheduleRecurrent(command, cron);
 
-        var actualJobFromDb = dbContext.Jobs.AsNoTracking()
-                                        .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
-                                        .FirstOrDefault();
+        var actualJobFromDb = dbContext.Jobs
+            .AsNoTracking()
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron);
         Assert.NotNull(actualJobFromDb);
 
         client.CancelRecurrent<TestJobCommand>();
 
-        actualJobFromDb = dbContext.Jobs.AsNoTracking()
-                                    .Where(x => x.JobName == TestJobCommand.GetJobName())
-                                    .FirstOrDefault();
+        actualJobFromDb = dbContext.Jobs
+            .AsNoTracking()
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName());
         Assert.Null(actualJobFromDb);
+    }
+
+    private IJobbyClient CreateJobbyClient()
+    {
+        var jobbyBuilder = new JobbyBuilder();
+        jobbyBuilder.UsePostgresql(DbHelper.DataSource);
+        return jobbyBuilder.CreateJobbyClient();
+    }
+
+    private IJobsFactory CreateJobsFactory()
+    {
+        var jobbyBuilder = new JobbyBuilder();
+        return jobbyBuilder.CreateJobsFactory();
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
-[Collection("Jobby.Postgres.IntegrationTests")]
+[Collection(PostgresqlTestsCollection.Name)]
 public class UpdateMethodsTests
 {
     [Fact]

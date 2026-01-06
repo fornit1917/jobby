@@ -34,10 +34,6 @@ dotnet package add Jobby.Postgres
 dotnet package add Jobby.AspNetCore
 ```
 
-#### Создание таблиц в базе данных
-
-Для создания необходимых таблиц в базе данных необходимо выполнить [скрипт](https://github.com/fornit1917/jobby/blob/master/src/Jobby.Postgres/jobby.sql).
-
 ### Описание фоновой задачи
 
 Для описания фоновой задачи в вашем куда нужно реализовать интерфейс `IJobCommand` для объекта-параметра задачи 
@@ -142,6 +138,27 @@ jobbyServer.SendStopSignal(); // Остановка
 ```
 
 Полный пример использования Jobby в простом консольном приложении без AspNetCore и пример реализации собственной фабрики доступны здесь: [Jobby.Samples.CliJobsSample](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.CliJobsSample).
+
+#### Создание таблиц в базе данных
+
+Библиотека предоставляет сервис `IJobbyStorageMigrator` для создания необходимых таблиц в БД и автоматического обновления
+их структуры при переходе на новую версию.
+
+При использовании Jobby.AspNetCore сервис доступен через DI контейнер и может быть вызвать при старте сервиса:
+
+```csharp
+//...
+
+app.MapControllers();
+
+// Create or update jobby storage schema
+var jobbyStorageMigrator = app.Services.GetRequiredService<IJobbyStorageMigrator>();
+jobbyStorageMigrator.Migrate();
+```
+
+Без использования Jobby.AspNetCore сервис `IJobbyStorageMigrator` может быть получен из метода `JobbyBuilder.GetStorageMigrator`.
+
+Полные примеры см. по ссылкам [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) и [Jobby.Samples.CliJobsSample](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.CliJobsSample).
 
 ### Добавление задачи в очередь на запуск
 

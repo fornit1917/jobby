@@ -14,7 +14,7 @@ using OpenTelemetry.Trace;
 
 namespace Jobby.Samples.AspNet;
 
-public class Program
+public static class Program
 {
     public static void Main(string[] args)
     {
@@ -71,18 +71,18 @@ public class Program
         builder.Services
             .AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(serviceName: "Jobby.Samples.AspNet"))
-            .WithMetrics(builder => {
-                builder.AddPrometheusExporter();
+            .WithMetrics(metricsBuilder => {
+                metricsBuilder.AddPrometheusExporter();
 
                 // Add metrics from Jobby to OpenTelemetry
-                builder.AddMeter(JobbyMeterNames.GetAll());
+                metricsBuilder.AddMeter(JobbyMeterNames.GetAll());
             })
-            .WithTracing(builder =>
+            .WithTracing(tracingBuilder =>
             {
-                builder.AddConsoleExporter();
+                tracingBuilder.AddConsoleExporter();
 
                 // Add traces from Jobby jobs execution to OpenTelemetry
-                builder.AddSource(JobbyActivitySourceNames.JobsExecution);
+                tracingBuilder.AddSource(JobbyActivitySourceNames.JobsExecution);
             });
 
         var app = builder.Build();
@@ -97,8 +97,12 @@ public class Program
         app.UseOpenTelemetryPrometheusScrapingEndpoint("/metrics");
         app.UseAuthorization();
         app.MapControllers();
+        
+        // Create or update jobby storage schema
+        var jobbyStorageMigrator = app.Services.GetRequiredService<IJobbyStorageMigrator>();
+        jobbyStorageMigrator.Migrate();
 
-        // Add reccurent jobs
+        // Add recurrent jobs
         var jobbyClient = app.Services.GetRequiredService<IJobbyClient>();
         jobbyClient.ScheduleRecurrent(new EmptyRecurrentJobCommand(), "*/5 * * * * *");
 
