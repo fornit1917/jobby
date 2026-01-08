@@ -1,4 +1,6 @@
 ﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Interfaces.Configuration;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Jobby.Postgres.ConfigurationExtensions;
@@ -34,12 +36,23 @@ internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
         return this;
     }
 
-    public PostgresqlJobbyStorage Build()
+    internal PostgresqlJobbyStorage BuildStorage()
     {
         if (_dataSource == null) 
         {
             throw new InvalidBuilderConfigException("DataSource is not configured for PostgresStorage. UseDataSource method should be called");
         }
         return new PostgresqlJobbyStorage(_dataSource, _settings);
+    }
+
+    internal PostgresqlJobbyStorageMigrator BuildMigrator(ICommonInfrastructure commonInfra)
+    {
+        if (_dataSource == null) 
+        {
+            throw new InvalidBuilderConfigException("DataSource is not configured for PostgresStorage. UseDataSource method should be called");
+        }
+        
+        return new PostgresqlJobbyStorageMigrator(_dataSource, _settings,
+            commonInfra.LoggerFactory.CreateLogger<PostgresqlJobbyStorageMigrator>());
     }
 }

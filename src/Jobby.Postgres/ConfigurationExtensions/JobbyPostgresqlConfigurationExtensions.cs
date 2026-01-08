@@ -10,8 +10,8 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         configure(builder);
-        var storage = builder.Build();
-        opts.UseStorage(storage);
+        opts.UseStorage(builder.BuildStorage());
+        opts.UseStorageMigrator(commonInfra => builder.BuildMigrator(commonInfra));
         return opts;
     }
 
@@ -19,8 +19,8 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         builder.UseDataSource(dataSource);
-        var storage = builder.Build();
-        opts.UseStorage(storage);
+        opts.UseStorage(builder.BuildStorage());
+        opts.UseStorageMigrator(commonInfra => builder.BuildMigrator(commonInfra));
         return opts;
     }
 
@@ -29,8 +29,7 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         configure(builder);
-        var storage = builder.Build();
-        opts.UseStorage(storage);
+        opts.UseStorage(builder.BuildStorage());
         return opts;
     }
 
@@ -39,8 +38,7 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         builder.UseDataSource(dataSource);
-        var storage = builder.Build();
-        opts.UseStorage(storage);
+        opts.UseStorage(builder.BuildStorage());
         return opts;
     }
 }

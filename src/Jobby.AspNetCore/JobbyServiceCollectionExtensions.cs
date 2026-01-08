@@ -21,14 +21,8 @@ public static class JobbyServiceCollectionExtensions
         services.AddSingleton<JobbyBuilder>(sp =>
         {
             wrappedBuilder.ApplyJobbyComponentsConfigureAction(sp);
-            return wrappedBuilder.JobbyBuilder;
-        });
 
-        services.AddSingleton<IJobsFactory>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobsFactory());
-        services.AddSingleton<IJobbyClient>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobbyClient());
-        services.AddSingleton<IJobbyServer>(sp =>
-        {
-            var jobbyBuilder = sp.GetRequiredService<JobbyBuilder>();
+            var jobbyBuilder = wrappedBuilder.JobbyBuilder;
             if (!jobbyBuilder.IsExecutionScopeFactorySpecified)
             {
                 var aspNetScopeExecutionFactory = new AspNetCoreJobExecutionScopeFactory(sp);
@@ -43,9 +37,15 @@ public static class JobbyServiceCollectionExtensions
                     jobbyBuilder.UseLoggerFactory(loggerFactoryFromDi);
                 }
             }
-
-            return jobbyBuilder.CreateJobbyServer();
+            
+            return jobbyBuilder;
         });
+
+        services.AddSingleton<IJobbyStorageMigrator>(sp =>
+            sp.GetRequiredService<JobbyBuilder>().CreateStorageMigrator());
+        services.AddSingleton<IJobsFactory>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobsFactory());
+        services.AddSingleton<IJobbyClient>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobbyClient());
+        services.AddSingleton<IJobbyServer>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobbyServer());
         services.AddHostedService<JobbyHostedService>();
         return services;
     }
@@ -64,6 +64,7 @@ public static class JobbyServiceCollectionExtensions
 
         services.AddSingleton<IJobsFactory>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobsFactory());
         services.AddSingleton<IJobbyClient>(sp => sp.GetRequiredService<JobbyBuilder>().CreateJobbyClient());
+        services.AddSingleton<IJobbyStorageMigrator>(sp => sp.GetRequiredService<JobbyBuilder>().CreateStorageMigrator());
         return services;
     }
 
