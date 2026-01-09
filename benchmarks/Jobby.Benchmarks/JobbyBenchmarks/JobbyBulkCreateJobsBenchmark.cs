@@ -24,11 +24,18 @@ public class JobbyBulkCreateJobsBenchmark : IBenchmark
 public class JobbyBulkCreateJobsBenchmarkAction
 {
     private readonly IJobbyClient _jobbyClient;
+    
+    [Params(false, true)]
+    public bool UseUuidV7 { get; set; }
 
     public JobbyBulkCreateJobsBenchmarkAction()
     {
         var dataSource = DataSourceFactory.Create();
         var builder = new JobbyBuilder();
+        if (!UseUuidV7)
+        {
+            builder.UseGuidGenerator(new GuidV4Generator());
+        }
         builder.UsePostgresql(dataSource);
         _jobbyClient = builder.CreateJobbyClient();
     }

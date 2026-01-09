@@ -6,10 +6,12 @@ namespace Jobby.Core.Services;
 
 internal class JobsFactory : IJobsFactory
 {
+    private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
 
-    public JobsFactory(IJobParamSerializer serializer)
+    public JobsFactory(IGuidGenerator guidGenerator, IJobParamSerializer serializer)
     {
+        _guidGenerator = guidGenerator;
         _serializer = serializer;
     }
 
@@ -17,7 +19,7 @@ internal class JobsFactory : IJobsFactory
     {
         return new JobCreationModel
         {
-            Id = Guid.NewGuid(),
+            Id = _guidGenerator.NewGuid(),
             CreatedAt = DateTime.UtcNow,
             JobName = TCommand.GetJobName(),
             JobParam = _serializer.SerializeJobParam(command),
@@ -31,7 +33,7 @@ internal class JobsFactory : IJobsFactory
     {
         return new JobCreationModel
         {
-            Id = Guid.NewGuid(),
+            Id = _guidGenerator.NewGuid(),
             CreatedAt = DateTime.UtcNow,
             JobName = TCommand.GetJobName(),
             JobParam = _serializer.SerializeJobParam(command),
@@ -45,7 +47,7 @@ internal class JobsFactory : IJobsFactory
     {
         return new JobCreationModel
         {
-            Id = Guid.NewGuid(),
+            Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
             JobName = TCommand.GetJobName(),
             Cron = cron,

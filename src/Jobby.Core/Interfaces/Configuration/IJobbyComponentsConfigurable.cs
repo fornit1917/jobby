@@ -11,6 +11,8 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable UseStorageMigrator(Func<ICommonInfrastructure, IJobbyStorageMigrator> createMigrator);
 
     IJobbyComponentsConfigurable UseLoggerFactory(ILoggerFactory loggerFactory);
+    
+    IJobbyComponentsConfigurable UseGuidGenerator(IGuidGenerator guidGenerator);
 
     IJobbyComponentsConfigurable UseSerializer(IJobParamSerializer serializer);
     IJobbyComponentsConfigurable UseSystemTextJson(JsonSerializerOptions jsonOptions);
