@@ -79,14 +79,15 @@ public class JobbyExecuteJobsBenchmarkAction
 
     [Params(false, true)]
     public bool CompleteWithBatching { get; set; } = false;
+    
+    [Params(false, true)]
+    public bool UseUuidV7 { get; set; }    
 
     public int JobsCount { get; set; } = 1000;
 
     [IterationSetup]
     public void Setup()
     {
-        var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
-
         var serverSettings = new JobbyServerSettings
         {
             MaxDegreeOfParallelism = DegreeOfParallelism,
@@ -104,7 +105,10 @@ public class JobbyExecuteJobsBenchmarkAction
             .UsePostgresql(_dataSource)
             .UseServerSettings(serverSettings)
             .UseExecutionScopeFactory(scopeFactory);
-            
+        if (!UseUuidV7)
+        {
+            builder.UseGuidGenerator(new GuidV4Generator());
+        }            
 
         _jobbyServer = builder.CreateJobbyServer();
         _jobbyClient = builder.CreateJobbyClient();

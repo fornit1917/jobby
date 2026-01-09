@@ -17,6 +17,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private static readonly ILoggerFactory DefaultLoggerFactory = new EmptyLoggerFactory();
     private static readonly IJobParamSerializer DefaultSerializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
     private static readonly IJobbyStorageMigrator DefaultStorageMigrator = new EmptyStorageMigrator();
+    private static readonly IGuidGenerator DefaultGuidGenerator = new GuidV7Generator();
     
     private IJobbyStorage? _storage;
     private Func<ICommonInfrastructure, IJobbyStorage>? _storageFactory;
@@ -27,6 +28,8 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private IJobExecutionScopeFactory? _scopeFactory;
     private ILoggerFactory? _loggerFactory;
     private IJobParamSerializer? _serializer;
+
+    private IGuidGenerator? _guidGenerator;
     
     private IJobsFactory? _jobsFactory;
 
@@ -51,6 +54,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     
     public ILoggerFactory LoggerFactory => _loggerFactory ?? DefaultLoggerFactory;
     public IJobParamSerializer Serializer => _serializer ?? DefaultSerializer;
+    public IGuidGenerator GuidGenerator => _guidGenerator ?? DefaultGuidGenerator;
 
     public IJobbyServer CreateJobbyServer()
     {
@@ -106,7 +110,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     public IJobsFactory CreateJobsFactory()
     {
-        _jobsFactory ??= new JobsFactory(Serializer);
+        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer);
         return _jobsFactory;
     }
 
@@ -128,6 +132,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     public IJobbyComponentsConfigurable UseLoggerFactory(ILoggerFactory loggerFactory)
     {
         _loggerFactory = loggerFactory;
+        return this;
+    }
+
+    public IJobbyComponentsConfigurable UseGuidGenerator(IGuidGenerator guidGenerator)
+    {
+        _guidGenerator = guidGenerator;
         return this;
     }
 
@@ -164,7 +174,6 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     public IJobbyComponentsConfigurable UseSerializer(IJobParamSerializer serializer)
     {
         _serializer = serializer;
-        _jobsFactory = new JobsFactory(_serializer);
         return this;
     }
 

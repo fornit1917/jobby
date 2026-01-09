@@ -28,6 +28,10 @@ internal static class BenchmarksHelper
         Console.Write("Complete with batching (y/n, default n): ");
         input = Console.ReadLine()?.Trim();
         result.CompleteWithBatching = input == "y" || input == "Y";
+        
+        Console.Write("Use UuidV7 (y/n, default y): ");
+        input = Console.ReadLine()?.Trim();
+        result.UseUuidV7 = input == "y" || input == "Y";
 
         return result;
     }
