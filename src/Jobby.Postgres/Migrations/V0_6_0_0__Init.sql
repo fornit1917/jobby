@@ -12,11 +12,14 @@ CREATE TABLE IF NOT EXISTS ${jobs_table_fullname} (
 	started_count int NOT NULL DEFAULT 0,
 	next_job_id UUID DEFAULT NULL,
 	server_id TEXT DEFAULT NULL,
-	can_be_restarted boolean NOT NULL DEFAULT FALSE
+	can_be_restarted boolean NOT NULL DEFAULT FALSE,
+	sequence_id TEXT DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS ${tables_prefix}jobs_status_scheduled_start_at_idx ON ${jobs_table_fullname}(status, scheduled_start_at);
 CREATE UNIQUE INDEX IF NOT EXISTS ${tables_prefix}jobs_recurrent_name_idx ON ${jobs_table_fullname}(job_name) WHERE cron IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS ${tables_prefix}jobs_uniq_sequence_id_idx ON ${jobs_table_fullname}(sequence_id) WHERE status = 1 OR status = 2;
+CREATE INDEX IF NOT EXISTS ${tables_prefix}jobs_sequence_id_idx ON ${jobs_table_fullname}(sequence_id) WHERE sequence_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS ${servers_table_fullname} (
 	id TEXT NOT NULL PRIMARY KEY,

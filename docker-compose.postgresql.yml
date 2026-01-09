@@ -5,8 +5,8 @@ services:
     image: postgres:17
     container_name: jobby_pg
     environment:
-      POSTGRES_USER: test_user
-      POSTGRES_PASSWORD: 12345
-      POSTGRES_DB: test_db
+      POSTGRES_USER: jobby
+      POSTGRES_PASSWORD: jobby
+      POSTGRES_DB: jobby_tests_db
     ports:
       - "5432:5432"
