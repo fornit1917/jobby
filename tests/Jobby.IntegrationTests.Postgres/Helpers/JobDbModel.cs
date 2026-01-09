@@ -48,6 +48,9 @@ internal class JobDbModel
     [Column("can_be_restarted")]
     public bool CanBeRestarted { get; set; }
 
+    [Column("sequence_id")]
+    public string? SequenceId { get; set; }
+
     public ProcessingJob ToProcessingJob()
     {
         if (ServerId == null)

@@ -57,9 +57,9 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(serverId, DateTime.UtcNow, maxBatchSize, result);
     }
 
-    public Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null)
+    public Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null, string? sequenceId = null)
     {
-        return UpdateFromProcessingStatus(job, JobStatus.Completed, error: null, nextJobId);
+        return UpdateFromProcessingStatus(job, JobStatus.Completed, error: null, nextJobId, sequenceId);
     }
 
     public Task UpdateProcessingJobToFailedAsync(ProcessingJob job, string error)
@@ -72,14 +72,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         return _rescheduleProcessingJobCommand.ExecuteAsync(job, sheduledStartTime, error);
     }
 
-    private Task UpdateFromProcessingStatus(ProcessingJob job, JobStatus newStatus, string? error = null, Guid? nextJobId = null)
+    private Task UpdateFromProcessingStatus(ProcessingJob job, JobStatus newStatus, string? error = null, Guid? nextJobId = null, string? sequenceId = null)
     {
-        return _updateFromProcessingStatusCommand.ExecuteAsync(job, newStatus, error, nextJobId);
+        return _updateFromProcessingStatusCommand.ExecuteAsync(job, newStatus, error, nextJobId, sequenceId);
     }
 
-    public Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null)
+    public Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null, string? sequenceId = null)
     {
-        return _deleteProcessingJobCommand.ExecuteAsync(job, nextJobId);
+        return _deleteProcessingJobCommand.ExecuteAsync(job, nextJobId, sequenceId);
     }
 
     public Task BulkInsertJobsAsync(IReadOnlyList<JobCreationModel> jobs)
@@ -92,14 +92,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _bulkInsertJobsCommand.Execute(jobs);
     }
 
-    public Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null)
+    public Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null, IReadOnlyList<string>? sequenceIds = null)
     {
-        return _bulkDeleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds);
+        return _bulkDeleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds, sequenceIds);
     }
 
-    public Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds)
+    public Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds, IReadOnlyList<string> sequenceIds)
     {
-        return _bulkCompleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds);
+        return _bulkCompleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds, sequenceIds);
     }
 
     public Task SendHeartbeatAsync(string serverId)

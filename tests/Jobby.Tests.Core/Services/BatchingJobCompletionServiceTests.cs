@@ -27,18 +27,18 @@ public class BatchingJobCompletionServiceTests
         _storageMock = new Mock<IJobbyStorage>();
 
         _storageMock
-            .Setup(x => x.BulkDeleteProcessingJobsAsync(It.IsAny<ProcessingJobsList>(), It.IsAny<IReadOnlyList<Guid>>()))
-            .Callback<ProcessingJobsList, IReadOnlyList<Guid>>((jobs, nextJobIds) =>
+            .Setup(x => x.BulkDeleteProcessingJobsAsync(It.IsAny<ProcessingJobsList>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<IReadOnlyList<string>?>()))
+            .Callback<ProcessingJobsList, IReadOnlyList<Guid>?, IReadOnlyList<string>?>((jobs, nextJobIds, sequenceIds) =>
             {
                 _completedJobIds.AddRange(jobs.JobIds);
                 _passedServerIds.Add(jobs.ServerId);
-                _unlockedNextJobIds.AddRange(nextJobIds);
+                if (nextJobIds != null) _unlockedNextJobIds.AddRange(nextJobIds);
                 _bulkDeleteCalled = true;
             });
 
         _storageMock
-            .Setup(x => x.BulkUpdateProcessingJobsToCompletedAsync(It.IsAny<ProcessingJobsList>(), It.IsAny<IReadOnlyList<Guid>>()))
-            .Callback<ProcessingJobsList, IReadOnlyList<Guid>>((jobs, nextJobIds) =>
+            .Setup(x => x.BulkUpdateProcessingJobsToCompletedAsync(It.IsAny<ProcessingJobsList>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<IReadOnlyList<string>>()))
+            .Callback<ProcessingJobsList, IReadOnlyList<Guid>, IReadOnlyList<string>>((jobs, nextJobIds, sequenceIds) =>
             {
                 _completedJobIds.AddRange(jobs.JobIds);
                 _passedServerIds.Add(jobs.ServerId);
@@ -54,8 +54,9 @@ public class BatchingJobCompletionServiceTests
         using var service = new BatchingJobCompletionService(_storageMock.Object, settings, ServerId);
         var jobId = Guid.NewGuid();
         var nextJobId = Guid.NewGuid();
+        string? sequenceId = null;
 
-        await service.CompleteJob(jobId, nextJobId);
+        await service.CompleteJob(jobId, nextJobId, sequenceId);
 
         Assert.Contains(jobId, _completedJobIds);
         Assert.Contains(ServerId, _passedServerIds);
@@ -65,14 +66,15 @@ public class BatchingJobCompletionServiceTests
     }
 
     [Fact]
-    public async Task CompleteJob_DeleteCompletedTrue_MarksCompleted()
+    public async Task CompleteJob_DeleteCompletedFalse_MarksCompleted()
     {
         var settings = new JobbyServerSettings { DeleteCompleted = false };
         using var service = new BatchingJobCompletionService(_storageMock.Object, settings, ServerId);
         var jobId = Guid.NewGuid();
         var nextJobId = Guid.NewGuid();
+        string? sequenceId = null;
 
-        await service.CompleteJob(jobId, nextJobId);
+        await service.CompleteJob(jobId, nextJobId, sequenceId);
 
         Assert.Contains(jobId, _completedJobIds);
         Assert.Contains(ServerId, _passedServerIds);

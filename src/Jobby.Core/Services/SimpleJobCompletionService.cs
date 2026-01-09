@@ -16,10 +16,10 @@ internal class SimpleJobCompletionService : IJobCompletionService
         _serverId = serverId;
     }
 
-    public Task CompleteJob(Guid jobId, Guid? nextJobId)
+    public Task CompleteJob(Guid jobId, Guid? nextJobId, string? sequenceId)
     {
         return _deleteCompleted
-            ? _storage.DeleteProcessingJobAsync(new ProcessingJob(jobId, _serverId), nextJobId)
-            : _storage.UpdateProcessingJobToCompletedAsync(new ProcessingJob(jobId, _serverId), nextJobId);
+            ? _storage.DeleteProcessingJobAsync(new ProcessingJob(jobId, _serverId), nextJobId, sequenceId)
+            : _storage.UpdateProcessingJobToCompletedAsync(new ProcessingJob(jobId, _serverId), nextJobId, sequenceId);
     }
 }

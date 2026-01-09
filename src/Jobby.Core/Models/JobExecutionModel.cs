@@ -8,6 +8,7 @@ public class JobExecutionModel
     public string? JobParam { get; init; }
     public int StartedCount { get; init; }
     public Guid? NextJobId { get; init; }
+    public string? SequenceId { get; init; }
 
     public bool IsRecurrent => Cron != null;
 }

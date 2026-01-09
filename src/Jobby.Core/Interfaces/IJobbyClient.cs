@@ -7,8 +7,10 @@ public interface IJobbyClient
     public IJobsFactory Factory { get; }
 
     Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand;
+    Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, string sequenceId) where TCommand : IJobCommand;
     Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
     Guid EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand;
+    Guid EnqueueCommand<TCommand>(TCommand command, string sequenceId) where TCommand : IJobCommand;
     Guid EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
 
     Task CancelJobsByIdsAsync(params Guid[] ids);

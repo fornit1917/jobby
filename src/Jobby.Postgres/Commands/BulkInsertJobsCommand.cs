@@ -8,6 +8,7 @@ internal class BulkInsertJobsCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
+    private readonly string _commandWithSequenceIdText;
 
     public BulkInsertJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -37,6 +38,22 @@ internal class BulkInsertJobsCommand
                 $9
             )
         ";
+
+        _commandWithSequenceIdText = @$"
+            WITH try_ins AS (
+                INSERT INTO {TableName.Jobs(settings)} (
+                    id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (sequence_id) WHERE (status = {(int)JobStatus.Scheduled}) DO NOTHING
+                RETURNING 1 AS inserted
+            )
+            INSERT INTO {TableName.Jobs(settings)} (
+                id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
+            )
+            SELECT $1, $2, $3, {(int)JobStatus.WaitingPrev}, $5, $6, $7, $8
+            WHERE NOT EXISTS (SELECT 1 FROM try_ins)
+        ";
     }
 
     public async Task ExecuteAsync(IReadOnlyList<JobCreationModel> jobs)
@@ -65,22 +82,43 @@ internal class BulkInsertJobsCommand
     {
         foreach (var job in jobs)
         {
-            var cmd = new NpgsqlBatchCommand(_commandText)
+            if (job.SequenceId != null)
             {
-                Parameters =
+                var cmd = new NpgsqlBatchCommand(_commandWithSequenceIdText)
                 {
-                    new() { Value = job.Id },
-                    new() { Value = job.JobName },
-                    new() { Value = (object?)job.JobParam ?? DBNull.Value },
-                    new() { Value = (int)job.Status },
-                    new() { Value = job.CreatedAt },
-                    new() { Value = job.ScheduledStartAt },
-                    new() { Value = (object?)job.NextJobId ?? DBNull.Value },
-                    new() { Value = job.CanBeRestarted },
-                    new() { Value = (object?)job.Cron ?? DBNull.Value },
-                }
-            };
-            batch.BatchCommands.Add(cmd);
+                    Parameters =
+                    {
+                        new() { Value = job.Id },                                   // $1
+                        new() { Value = job.JobName },                              // $2
+                        new() { Value = (object?)job.JobParam ?? DBNull.Value },    // $3
+                        new() { Value = (int)JobStatus.Scheduled },                 // $4
+                        new() { Value = job.CreatedAt },                            // $5
+                        new() { Value = job.ScheduledStartAt },                     // $6
+                        new() { Value = job.CanBeRestarted },                       // $7
+                        new() { Value = job.SequenceId }                            // $8
+                    }
+                };
+                batch.BatchCommands.Add(cmd);
+            }
+            else
+            {
+                var cmd = new NpgsqlBatchCommand(_commandText)
+                {
+                    Parameters =
+                    {
+                        new() { Value = job.Id },
+                        new() { Value = job.JobName },
+                        new() { Value = (object?)job.JobParam ?? DBNull.Value },
+                        new() { Value = (int)job.Status },
+                        new() { Value = job.CreatedAt },
+                        new() { Value = job.ScheduledStartAt },
+                        new() { Value = (object?)job.NextJobId ?? DBNull.Value },
+                        new() { Value = job.CanBeRestarted },
+                        new() { Value = (object?)job.Cron ?? DBNull.Value },
+                    }
+                };
+                batch.BatchCommands.Add(cmd);
+            }
         }
     }
 }

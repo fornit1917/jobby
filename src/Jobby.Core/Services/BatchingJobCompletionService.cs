@@ -10,8 +10,8 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
     private readonly JobbyServerSettings _settings;
     private readonly string _serverId;
 
-    private readonly record struct QueueItem(TaskCompletionSource Tcs, Guid JobId, Guid? NextJobId);
-    private Channel<QueueItem> _chan;
+    private readonly record struct QueueItem(TaskCompletionSource Tcs, Guid JobId, Guid? NextJobId, string? SequenceId);
+    private readonly Channel<QueueItem> _chan;
 
     public BatchingJobCompletionService(IJobbyStorage storage, JobbyServerSettings settings, string serverId)
     {
@@ -31,15 +31,16 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
         _serverId = serverId;
     }
 
-    public Task CompleteJob(Guid jobId, Guid? nextJobId)
+    public Task CompleteJob(Guid jobId, Guid? nextJobId, string? sequenceId)
     {
         var queueItem = new QueueItem
         {
             JobId = jobId,
             NextJobId = nextJobId,
-            Tcs = new TaskCompletionSource()
+            Tcs = new TaskCompletionSource(),
+            SequenceId = sequenceId
         };
-        
+
         while (true)
         {
             var added = _chan.Writer.TryWrite(queueItem);
@@ -54,9 +55,12 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
 
     private async Task Process()
     {
-        var taskCompletionSources = new List<TaskCompletionSource>(capacity: _settings.MaxDegreeOfParallelism);
-        var jobIds = new List<Guid>(capacity: _settings.MaxDegreeOfParallelism);
+        // Separate buffers for sequence vs non-sequence jobs
+        var sequenceJobIds = new List<Guid>(capacity: _settings.MaxDegreeOfParallelism);
+        var sequenceIds = new List<string>(capacity: _settings.MaxDegreeOfParallelism);
+        var nonSequenceJobIds = new List<Guid>(capacity: _settings.MaxDegreeOfParallelism);
         var nextJobIds = new List<Guid>(capacity: _settings.MaxDegreeOfParallelism);
+        var taskCompletionSources = new List<TaskCompletionSource>(capacity: _settings.MaxDegreeOfParallelism);
 
         while (true)
         {
@@ -68,7 +72,8 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
             }
 
             // Get batch of items
-            while (jobIds.Count < jobIds.Capacity && hasItems)
+            var totalCount = sequenceJobIds.Count + nonSequenceJobIds.Count;
+            while (totalCount < _settings.MaxDegreeOfParallelism && hasItems)
             {
                 hasItems = _chan.Reader.TryRead(out var queueItem);
                 if (!hasItems)
@@ -76,32 +81,72 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
                     break;
                 }
 
-                taskCompletionSources.Add(queueItem.Tcs);
-                jobIds.Add(queueItem.JobId);
-                if (queueItem.NextJobId.HasValue)
+                // Validate mutual exclusivity (mirrors single-job validation in storage layer)
+                if (queueItem is { SequenceId: not null, NextJobId: not null })
                 {
-                    nextJobIds.Add(queueItem.NextJobId.Value);
+                    queueItem.Tcs.SetException(new InvalidOperationException(
+                        $"Job {queueItem.JobId} cannot have both sequenceId and nextJobId set. " +
+                        "These are mutually exclusive sequencing mechanisms."));
+                    continue;
                 }
+
+                if (queueItem.SequenceId != null)
+                {
+                    sequenceJobIds.Add(queueItem.JobId);
+                    sequenceIds.Add(queueItem.SequenceId);
+                }
+                else
+                {
+                    nonSequenceJobIds.Add(queueItem.JobId);
+                    if (queueItem.NextJobId.HasValue)
+                    {
+                        nextJobIds.Add(queueItem.NextJobId.Value);
+                    }
+                }
+                taskCompletionSources.Add(queueItem.Tcs);
+                totalCount = sequenceJobIds.Count + nonSequenceJobIds.Count;
             }
 
-            if (jobIds.Count == 0)
+            if (totalCount == 0)
             {
                 continue;
             }
 
-            // If batch is not empty - send bulk command to DB
+            // Make separate storage calls for each batch type
+            // NOTE: If one call fails after the other succeeds, all tasks get the error.
+            // This is acceptable because:
+            // - Storage updates are idempotent (re-completing an already-completed job is a no-op)
+            // - The retry queue will re-attempt failed tasks, and no-op updates won't cause issues
+            // - Splitting error handling per-group would add complexity without much benefit
             try
             {
-                var processingJobsList = new ProcessingJobsList(jobIds, _serverId);
                 if (_settings.DeleteCompleted)
                 {
-                    await _storage.BulkDeleteProcessingJobsAsync(processingJobsList, nextJobIds);
+                    if (nonSequenceJobIds.Count > 0)
+                    {
+                        var nonSeqJobs = new ProcessingJobsList(nonSequenceJobIds, _serverId);
+                        await _storage.BulkDeleteProcessingJobsAsync(nonSeqJobs, nextJobIds, sequenceIds: null);
+                    }
+                    if (sequenceJobIds.Count > 0)
+                    {
+                        var seqJobs = new ProcessingJobsList(sequenceJobIds, _serverId);
+                        await _storage.BulkDeleteProcessingJobsAsync(seqJobs, nextJobIds: null, sequenceIds);
+                    }
                 }
                 else
                 {
-                    await _storage.BulkUpdateProcessingJobsToCompletedAsync(processingJobsList, nextJobIds);
+                    if (nonSequenceJobIds.Count > 0)
+                    {
+                        var nonSeqJobs = new ProcessingJobsList(nonSequenceJobIds, _serverId);
+                        await _storage.BulkUpdateProcessingJobsToCompletedAsync(nonSeqJobs, nextJobIds, sequenceIds: new List<string>());
+                    }
+                    if (sequenceJobIds.Count > 0)
+                    {
+                        var seqJobs = new ProcessingJobsList(sequenceJobIds, _serverId);
+                        await _storage.BulkUpdateProcessingJobsToCompletedAsync(seqJobs, new List<Guid>(), sequenceIds);
+                    }
                 }
-                
+
                 SetCompletedForTasks(taskCompletionSources);
             }
             catch (Exception ex)
@@ -109,8 +154,10 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
                 SetErrorForTasks(taskCompletionSources, ex);
             }
 
-            // Clear buffers
-            jobIds.Clear();
+            // Clear all buffers
+            sequenceJobIds.Clear();
+            sequenceIds.Clear();
+            nonSequenceJobIds.Clear();
             nextJobIds.Clear();
             taskCompletionSources.Clear();
         }
