@@ -1,5 +1,11 @@
 # Versions
 
+## v0.6.0 (2025-01-09)
+
+- Service `IJobyStorageMigrator` for creating and updating database schema
+- Using PostgreSQL friendly UUIDv7 for jobs primary keys
+- Minor refactoring of integration tests
+
 ## v0.5.0 (2025-12-16)
 
 - Configurable middlewares pipeline for jobs execution

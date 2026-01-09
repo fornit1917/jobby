@@ -41,6 +41,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docs\ru\overview.md = docs\ru\overview.md
 		README.md = README.md
 		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
+		versions.md = versions.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jobby.Tests.AspNetCore", "tests\Jobby.Tests.AspNetCore\Jobby.Tests.AspNetCore.csproj", "{862D2279-DCA4-4CCC-A665-BF46C769E817}"
