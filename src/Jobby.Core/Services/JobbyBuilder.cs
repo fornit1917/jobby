@@ -12,62 +12,59 @@ using System.Text.Json;
 
 namespace Jobby.Core.Services;
 
-public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
+public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable, ICommonInfrastructure
 {
+    private static readonly ILoggerFactory DefaultLoggerFactory = new EmptyLoggerFactory();
+    private static readonly IJobParamSerializer DefaultSerializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
+    private static readonly IJobbyStorageMigrator DefaultStorageMigrator = new EmptyStorageMigrator();
+    private static readonly IGuidGenerator DefaultGuidGenerator = new GuidV7Generator();
+    
     private IJobbyStorage? _storage;
+    private Func<ICommonInfrastructure, IJobbyStorage>? _storageFactory;
+    
+    private IJobbyStorageMigrator? _storageMigrator;
+    private Func<ICommonInfrastructure, IJobbyStorageMigrator>? _storageMigratorFactory;
+    
     private IJobExecutionScopeFactory? _scopeFactory;
     private ILoggerFactory? _loggerFactory;
     private IJobParamSerializer? _serializer;
+
+    private IGuidGenerator? _guidGenerator;
+    
     private IJobsFactory? _jobsFactory;
 
     private MetricsMiddleware? _metricsMiddleware;
     private TracingMiddleware? _tracingMiddleware;
-    private readonly PipelineBuilder _pipelineBuilder = new PipelineBuilder();
+    private readonly PipelineBuilder _pipelineBuilder = new();
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
-    private Dictionary<string, RetryPolicy> _retryPolicyByJobName = new Dictionary<string, RetryPolicy>();
+    private readonly Dictionary<string, RetryPolicy> _retryPolicyByJobName = new();
     private IRetryPolicyService? _retryPolicyService;
 
     private readonly Dictionary<string, IJobExecutor> _jobExecutorsByJobName = new();
     private IJobsRegistry? _jobsRegistry;
 
+    private JobbyServerSettings _serverSettings = new();
+    
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
-    public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorsByJobName.Values.Select(x => x.GetJobTypesMetadata());
-
-    private JobbyServerSettings _serverSettings = new JobbyServerSettings();
+    public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorsByJobName
+        .Values
+        .Select(x => x.GetJobTypesMetadata());
+    
+    public ILoggerFactory LoggerFactory => _loggerFactory ?? DefaultLoggerFactory;
+    public IJobParamSerializer Serializer => _serializer ?? DefaultSerializer;
+    public IGuidGenerator GuidGenerator => _guidGenerator ?? DefaultGuidGenerator;
 
     public IJobbyServer CreateJobbyServer()
     {
-        if (_storage == null)
-        {
-            throw new InvalidBuilderConfigException("Storage is not specified");
-        }
-
         if (_scopeFactory == null)
         {
             throw new InvalidBuilderConfigException("ExecutionScopeFactory is not specified");
         }
-
-        if (_serializer == null)
-        {
-            _serializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
-        }
-
-        if (_loggerFactory == null)
-        {
-            _loggerFactory = new EmptyLoggerFactory();
-        }
-
-        if (_retryPolicyService == null)
-        {
-            _retryPolicyService = new RetryPolicyService(_defaultRetryPolicy, _retryPolicyByJobName);
-        }
-
-        if (_jobsRegistry == null)
-        {
-            _jobsRegistry = new JobsRegistry(_jobExecutorsByJobName.ToFrozenDictionary());
-        }
+        
+        _retryPolicyService ??= new RetryPolicyService(_defaultRetryPolicy, _retryPolicyByJobName);
+        _jobsRegistry ??= new JobsRegistry(_jobExecutorsByJobName.ToFrozenDictionary());
 
         if (_metricsMiddleware != null)
         {
@@ -78,54 +75,52 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _pipelineBuilder.UseAsOuter(_tracingMiddleware);
         }
 
+        var storage = GetStorage();
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
 
         IJobCompletionService completionService = _serverSettings.CompleteWithBatching
-            ? new BatchingJobCompletionService(_storage, _serverSettings, serverId)
-            : new SimpleJobCompletionService(_storage, _serverSettings.DeleteCompleted, serverId);
+            ? new BatchingJobCompletionService(storage, _serverSettings, serverId)
+            : new SimpleJobCompletionService(storage, _serverSettings.DeleteCompleted, serverId);
 
-        IJobPostProcessingService postProcessingService = new JobPostProcessingService(_storage,
+        IJobPostProcessingService postProcessingService = new JobPostProcessingService(storage,
             completionService,
-            _loggerFactory.CreateLogger<JobPostProcessingService>(),
+            LoggerFactory.CreateLogger<JobPostProcessingService>(),
             serverId);
 
         IJobExecutionService executionService = new JobExecutionService(_scopeFactory,
             _jobsRegistry,
             _retryPolicyService,
-            _serializer,
+            Serializer,
             _pipelineBuilder,
             postProcessingService,
-            _loggerFactory.CreateLogger<JobExecutionService>());
+            LoggerFactory.CreateLogger<JobExecutionService>());
 
-        return new JobbyServer(_storage,
+        return new JobbyServer(storage,
             executionService,
             postProcessingService,
-            _loggerFactory.CreateLogger<JobbyServer>(),
+            LoggerFactory.CreateLogger<JobbyServer>(),
             _serverSettings,
             serverId);
     }
 
     public IJobbyClient CreateJobbyClient()
     {
-        if (_storage == null)
-        {
-            throw new InvalidBuilderConfigException("Jobs storage is not specified");
-        }
-
-        return new JobbyClient(CreateJobsFactory(), _storage);
+        return new JobbyClient(CreateJobsFactory(), GetStorage());
     }
 
     public IJobsFactory CreateJobsFactory()
     {
-        if (_jobsFactory == null)
-        {
-            if (_serializer == null)
-            {
-                _serializer = new SystemTextJsonJobParamSerializer(new JsonSerializerOptions());
-            }
-            _jobsFactory = new JobsFactory(_serializer);
-        }
+        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer);
         return _jobsFactory;
+    }
+
+    public IJobbyStorageMigrator CreateStorageMigrator()
+    {
+        if (_storageMigrator == null && _storageMigratorFactory != null)
+        {
+            _storageMigrator = _storageMigratorFactory.Invoke(this);
+        }
+        return _storageMigrator ?? DefaultStorageMigrator;
     }
 
     public IJobbyComponentsConfigurable UseExecutionScopeFactory(IJobExecutionScopeFactory scopeFactory)
@@ -140,6 +135,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         return this;
     }
 
+    public IJobbyComponentsConfigurable UseGuidGenerator(IGuidGenerator guidGenerator)
+    {
+        _guidGenerator = guidGenerator;
+        return this;
+    }
+
     public IJobbyComponentsConfigurable UseServerSettings(JobbyServerSettings serverSettings)
     {
         _serverSettings = serverSettings;
@@ -151,6 +152,18 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         _storage = storage;
         return this;
     }
+    
+    public IJobbyComponentsConfigurable UseStorage(Func<ICommonInfrastructure, IJobbyStorage> createStorage)
+    {
+        _storageFactory = createStorage;
+        return this;
+    }
+    
+    public IJobbyComponentsConfigurable UseStorageMigrator(Func<ICommonInfrastructure, IJobbyStorageMigrator> createMigrator)
+    {
+        _storageMigratorFactory = createMigrator;
+        return this;
+    }    
 
     public IJobbyComponentsConfigurable UseSystemTextJson(JsonSerializerOptions jsonOptions)
     {
@@ -161,7 +174,6 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     public IJobbyComponentsConfigurable UseSerializer(IJobParamSerializer serializer)
     {
         _serializer = serializer;
-        _jobsFactory = new JobsFactory(_serializer);
         return this;
     }
 
@@ -269,5 +281,15 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     {
         _tracingMiddleware ??= new TracingMiddleware();
         return this;
+    }
+
+    private IJobbyStorage GetStorage()
+    {
+        if (_storage == null && _storageFactory != null)
+        {
+            _storage = _storageFactory.Invoke(this);
+        }
+        
+        return _storage ?? throw new InvalidBuilderConfigException("Storage is not specified");
     }
 }

@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
-[Collection("Jobby.Postgres.IntegrationTests")]
-public class InsertMethodsTests
+[Collection(PostgresqlTestsCollection.Name)]
+public class InsertTests
 {
     [Fact]
     public async Task InsertAsync_Inserts()
@@ -47,8 +47,8 @@ public class InsertMethodsTests
 
         Assert.NotNull(firstActualJob);
         Assert.NotNull(secondActualJob);
-        AssertCreatedJob(firstJob, firstActualJob);
-        AssertCreatedJob(secondJob, secondActualJob);
+        AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
+        AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
     }
 
     [Fact]
@@ -92,12 +92,12 @@ public class InsertMethodsTests
 
         Assert.NotNull(firstActualJob);
         Assert.NotNull(secondActualJob);
-        AssertCreatedJob(firstJob, firstActualJob);
-        AssertCreatedJob(secondJob, secondActualJob);
+        AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
+        AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
     }
 
     [Fact]
-    public async Task InsertsAsync_RecurrentExisting_UpdatesRecurrent()
+    public async Task InsertAsync_RecurrentExisting_UpdatesRecurrent()
     {
         await using var dbContext = DbHelper.CreateContext();
         var jobName = Guid.NewGuid().ToString();
@@ -132,11 +132,11 @@ public class InsertMethodsTests
         Assert.Null(actualJobWithOldId);
         var actualJobWithNewId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == newJob.Id);
         Assert.NotNull(actualJobWithNewId);
-        AssertCreatedJob(newJob, actualJobWithNewId);
+        AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
     }
 
     [Fact]
-    public void Inserts_RecurrentExisting_UpdatesRecurrent()
+    public void Insert_RecurrentExisting_UpdatesRecurrent()
     {
         using var dbContext = DbHelper.CreateContext();
         var jobName = Guid.NewGuid().ToString();
@@ -171,111 +171,6 @@ public class InsertMethodsTests
         Assert.Null(actualJobWithOldId);
         var actualJobWithNewId = dbContext.Jobs.FirstOrDefault(x => x.Id == newJob.Id);
         Assert.NotNull(actualJobWithNewId);
-        AssertCreatedJob(newJob, actualJobWithNewId);
-    }
-
-    [Fact]
-    public async Task BulkInsertAsync_Inserts()
-    {
-        await using var dbContext = DbHelper.CreateContext();
-
-        var firstJob = new JobCreationModel
-        {
-            Id = Guid.NewGuid(),
-            Cron = "*/10 * * * *",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = true,
-            NextJobId = Guid.NewGuid(),
-            ScheduledStartAt = DateTime.UtcNow.AddDays(100),
-            Status = JobStatus.Scheduled,
-            JobParam = "param1"
-        };
-
-        var secondJob = new JobCreationModel
-        {
-            Id = Guid.NewGuid(),
-            Cron = null,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-20),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = false,
-            NextJobId = null,
-            ScheduledStartAt = DateTime.UtcNow.AddDays(200),
-            Status = JobStatus.Failed,
-            JobParam = "param2"
-        };
-
-        var storage = DbHelper.CreateJobbyStorage();
-
-        await storage.BulkInsertJobsAsync([firstJob, secondJob]);
-
-        var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == firstJob.Id);
-        var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == secondJob.Id);
-
-        Assert.NotNull(firstActualJob);
-        Assert.NotNull(secondActualJob);
-        AssertCreatedJob(firstJob, firstActualJob);
-        AssertCreatedJob(secondJob, secondActualJob);
-    }
-
-    [Fact]
-    public void BulkInsert_Inserts()
-    {
-        using var dbContext = DbHelper.CreateContext();
-
-        var firstJob = new JobCreationModel
-        {
-            Id = Guid.NewGuid(),
-            Cron = "*/10 * * * *",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = true,
-            NextJobId = Guid.NewGuid(),
-            ScheduledStartAt = DateTime.UtcNow.AddDays(100),
-            Status = JobStatus.Scheduled,
-            JobParam = "param1"
-        };
-
-        var secondJob = new JobCreationModel
-        {
-            Id = Guid.NewGuid(),
-            Cron = null,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-20),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = false,
-            NextJobId = null,
-            ScheduledStartAt = DateTime.UtcNow.AddDays(200),
-            Status = JobStatus.Failed,
-            JobParam = "param2"
-        };
-
-        var storage = DbHelper.CreateJobbyStorage();
-        storage.BulkInsertJobs([firstJob, secondJob]);
-
-        var firstActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == firstJob.Id);
-        var secondActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == secondJob.Id);
-
-        Assert.NotNull(firstActualJob);
-        Assert.NotNull(secondActualJob);
-        AssertCreatedJob(firstJob, firstActualJob);
-        AssertCreatedJob(secondJob, secondActualJob);
-    }
-
-    private void AssertCreatedJob(JobCreationModel expected, JobDbModel actual)
-    {
-        Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Cron, actual.Cron);
-        Assert.Equal(expected.CreatedAt, actual.CreatedAt, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.JobName, actual.JobName);
-        Assert.Equal(expected.CanBeRestarted, actual.CanBeRestarted);
-        Assert.Equal(expected.NextJobId, actual.NextJobId);
-        Assert.Equal(expected.ScheduledStartAt, actual.ScheduledStartAt, TimeSpan.FromSeconds(1));
-        Assert.Equal(expected.Status, actual.Status);
-        Assert.Equal(expected.JobParam, actual.JobParam);
-        Assert.Null(actual.Error);
-        Assert.Null(actual.LastStartedAt);
-        Assert.Null(actual.LastFinishedAt);
-        Assert.Equal(0, actual.StartedCount);
-        Assert.Null(actual.ServerId);
-    }
+        AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
+    }    
 }

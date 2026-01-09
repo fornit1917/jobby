@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Evolve" Version="3.2.0" />
     <PackageReference Include="Npgsql" Version="9.0.2" />
   </ItemGroup>
 
@@ -17,8 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\"/>
+    <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\" />
     <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\" />
-  </ItemGroup>	
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\**\*.sql" />
+  </ItemGroup>
 	
 </Project>

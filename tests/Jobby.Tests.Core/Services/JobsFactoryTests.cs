@@ -10,6 +10,7 @@ namespace Jobby.Tests.Core.Services;
 public class JobsFactoryTests
 {
     private const string SerializedCommand = "serializedParam";
+    private static readonly Guid JobId = Guid.NewGuid();
 
     private readonly Mock<IJobParamSerializer> _serializerMock;
 
@@ -18,8 +19,10 @@ public class JobsFactoryTests
     public JobsFactoryTests()
     {
         _serializerMock = new Mock<IJobParamSerializer>();
+        var guidGeneratorMock = new Mock<IGuidGenerator>();
+        guidGeneratorMock.Setup(x => x.NewGuid()).Returns(JobId);
 
-        _factory = new JobsFactory(_serializerMock.Object);
+        _factory = new JobsFactory(guidGeneratorMock.Object, _serializerMock.Object);
     }
 
     [Theory]
@@ -32,6 +35,7 @@ public class JobsFactoryTests
 
         var job = _factory.Create(command);
 
+        Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
@@ -55,6 +59,7 @@ public class JobsFactoryTests
 
         var job = _factory.Create(command, startTime);
 
+        Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
@@ -77,6 +82,7 @@ public class JobsFactoryTests
 
         var job = _factory.CreateRecurrent(command, cron);
 
+        Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
