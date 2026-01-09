@@ -1,6 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using Jobby.Core;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Services;
 using Jobby.Postgres.ConfigurationExtensions;
@@ -25,10 +24,17 @@ public class JobbyCreateJobsBenchmarkAction
 {
     private readonly IJobbyClient _jobbyClient;
 
+    [Params(false, true)]
+    public bool UseUuidV7 { get; set; }
+
     public JobbyCreateJobsBenchmarkAction()
     {
         var dataSource = DataSourceFactory.Create();
         var builder = new JobbyBuilder();
+        if (!UseUuidV7)
+        {
+            builder.UseGuidGenerator(new GuidV4Generator());
+        }
         builder.UsePostgresql(dataSource);
         _jobbyClient = builder.CreateJobbyClient();
     }
