@@ -68,6 +68,13 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
 
+    public Guid EnqueueCommand<TCommand>(TCommand command, JobCreationOptions options) where TCommand : IJobCommand
+    {
+        var job = _jobFactory.Create(command, options);
+        _storage.InsertJob(job);
+        return job.Id;
+    }
+
     public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command);
@@ -87,6 +94,13 @@ internal class JobbyClient : IJobbyClient
     public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
         var job = _jobFactory.Create(command, startTime);
+        await _storage.InsertJobAsync(job);
+        return job.Id;
+    }
+
+    public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, JobCreationOptions options) where TCommand : IJobCommand
+    {
+        var job = _jobFactory.Create(command, options);
         await _storage.InsertJobAsync(job);
         return job.Id;
     }

@@ -60,6 +60,21 @@ internal class JobsFactory : IJobsFactory
         };
     }
 
+    public JobCreationModel Create<TCommand>(TCommand command, JobCreationOptions options) where TCommand : IJobCommand
+    {
+        return new JobCreationModel
+        {
+            Id = _guidGenerator.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            JobName = TCommand.GetJobName(),
+            JobParam = _serializer.SerializeJobParam(command),
+            ScheduledStartAt = options.StartTime ?? DateTime.UtcNow,
+            Status = JobStatus.Scheduled,
+            CanBeRestarted = command.CanBeRestarted(),
+            SequenceId = options.SequenceId
+        };
+    }
+
     public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
     {
         return new JobCreationModel
