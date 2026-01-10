@@ -13,10 +13,10 @@ public interface IJobbyStorage
     
     Task UpdateProcessingJobToFailedAsync(ProcessingJob job, string error);
     Task RescheduleProcessingJobAsync(ProcessingJob job, DateTime sheduledStartTime, string? error = null);
-    Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null);
-    Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds);
-    Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null);
-    Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null);
+    Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null, string? sequenceId = null);
+    Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds, IReadOnlyList<string> sequenceIds);
+    Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null, string? sequenceId = null);
+    Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null, IReadOnlyList<string>? sequenceIds = null);
 
     Task BulkDeleteNotStartedJobsAsync(IReadOnlyList<Guid> jobIds);
     void BulkDeleteNotStartedJobs(IReadOnlyList<Guid> jobIds);

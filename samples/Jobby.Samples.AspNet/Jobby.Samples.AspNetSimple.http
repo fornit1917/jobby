@@ -4,3 +4,33 @@ GET {{Jobby.Samples.AspNetSimple_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# Enqueue a single job
+POST {{Jobby.Samples.AspNetSimple_HostAddress}}/jobs/enqueue-job
+Content-Type: application/json
+
+{
+  "shouldBeFailed": false,
+  "delayMs": 500
+}
+
+###
+
+# Enqueue a job as part of a sequence
+# Jobs with the same sequenceId will execute one after another
+POST {{Jobby.Samples.AspNetSimple_HostAddress}}/jobs/enqueue-job-in-sequence/my-order-123
+Content-Type: application/json
+
+{
+  "shouldBeFailed": false,
+  "delayMs": 1000
+}
+
+###
+
+# Enqueue a workflow (multiple jobs in a sequence)
+# Creates 3 jobs that will execute sequentially
+POST {{Jobby.Samples.AspNetSimple_HostAddress}}/jobs/enqueue-workflow?delayMs=500
+Content-Type: application/json
+
+###

@@ -2,5 +2,5 @@
 
 internal interface IJobCompletionService
 {
-    Task CompleteJob(Guid jobId, Guid? nextJobId);
+    Task CompleteJob(Guid jobId, Guid? nextJobId, string? sequenceId);
 }

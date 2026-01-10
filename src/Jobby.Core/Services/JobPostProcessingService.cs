@@ -97,7 +97,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     private Task HandleCompletedInternal(JobExecutionModel job)
     {
-        return _jobCompletingService.CompleteJob(job.Id, job.NextJobId);
+        return _jobCompletingService.CompleteJob(job.Id, job.NextJobId, job.SequenceId);
     }
 
     private Task HandleFailedInternal(JobExecutionModel job, RetryPolicy retryPolicy, string error)

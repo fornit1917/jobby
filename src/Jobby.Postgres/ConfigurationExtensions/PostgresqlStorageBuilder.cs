@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces.Configuration;
+using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -18,10 +19,10 @@ internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
 
     public IPostgresqlStorageConfigurable UseSchemaName(string schemaName)
     {
-        _settings = new PostgresqlStorageSettings 
-        { 
-            SchemaName = schemaName, 
-            TablesPrefix = _settings.TablesPrefix 
+        _settings = new PostgresqlStorageSettings
+        {
+            SchemaName = schemaName,
+            TablesPrefix = _settings.TablesPrefix
         };
         return this;
     }
@@ -36,13 +37,13 @@ internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
         return this;
     }
 
-    internal PostgresqlJobbyStorage BuildStorage()
+    internal PostgresqlJobbyStorage BuildStorage(JobbyServerSettings serverSettings)
     {
-        if (_dataSource == null) 
+        if (_dataSource == null)
         {
             throw new InvalidBuilderConfigException("DataSource is not configured for PostgresStorage. UseDataSource method should be called");
         }
-        return new PostgresqlJobbyStorage(_dataSource, _settings);
+        return new PostgresqlJobbyStorage(_dataSource, _settings, serverSettings);
     }
 
     internal PostgresqlJobbyStorageMigrator BuildMigrator(ICommonInfrastructure commonInfra)

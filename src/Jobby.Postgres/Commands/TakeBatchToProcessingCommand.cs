@@ -32,9 +32,9 @@ internal class TakeBatchToProcessingCommand
 	                    started_count = started_count + 1,
                         server_id = $3
                     WHERE id IN (SELECT id FROM ready_jobs)
-                    RETURNING id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at
+                    RETURNING id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at, sequence_id
                 )
-            SELECT id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at
+            SELECT id, job_name, job_param, started_count, cron, next_job_id, sequence_id, scheduled_start_at
             FROM updated
             ORDER BY scheduled_start_at
         ";
@@ -46,15 +46,10 @@ internal class TakeBatchToProcessingCommand
 
         await using var conn = await _dataSource.OpenConnectionAsync();
 
-        await using var cmd = new NpgsqlCommand(_commandText, conn)
-        {
-            Parameters =
-            {
-                new() { Value = now },              // 1
-                new() { Value = maxBatchSize },     // 2
-                new() { Value = serverId }          // 3
-            }
-        };
+        await using var cmd = new NpgsqlCommand(_commandText, conn);
+        cmd.Parameters.Add(new NpgsqlParameter { Value = now });          // 1
+        cmd.Parameters.Add(new NpgsqlParameter { Value = maxBatchSize }); // 2
+        cmd.Parameters.Add(new NpgsqlParameter { Value = serverId });     // 3
 
         await using var reader = await cmd.ExecuteReaderAsync();
         

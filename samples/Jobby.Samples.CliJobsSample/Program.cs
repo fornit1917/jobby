@@ -64,9 +64,10 @@ internal static class Program
 
         Console.WriteLine("1. Enqueue success jobs");
         Console.WriteLine("2. Enqueue failed job");
-        Console.WriteLine("3. Enqueue jobs sequence");
+        Console.WriteLine("3. Enqueue jobs sequence (using NextJobId)");
         Console.WriteLine("4. Schedule recurrent job");
         Console.WriteLine("5. Cancel recurrent job");
+        Console.WriteLine("6. Enqueue jobs with sequence-id");
 
         string? action = Console.ReadLine();
 
@@ -86,6 +87,9 @@ internal static class Program
                 break;
             case "5":
                 CancelRecurrent(jobbyClient);
+                break;
+            case "6":
+                CreateSequenceWithSequenceId(jobbyClient, 5);
                 break;
         }
 
@@ -138,6 +142,37 @@ internal static class Program
             sequenceBuilder.Add(new TestCliJobCommand { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false });
         }
         jobbyClient.EnqueueBatch(sequenceBuilder.GetJobs());
+    }
+
+    /// <summary>
+    /// Demonstrates the new sequence-id feature.
+    /// Jobs with the same sequenceId will be executed one after another in the order they were enqueued.
+    /// Unlike NextJobId chaining, this approach allows adding jobs to a sequence dynamically.
+    /// </summary>
+    private static void CreateSequenceWithSequenceId(IJobbyClient jobbyClient, int jobsCount)
+    {
+        // Generate a unique sequence identifier
+        // In real scenarios, this could be an order ID, user ID, or any business identifier
+        var sequenceId = $"order-{Guid.NewGuid():N}";
+
+        Console.WriteLine($"Creating sequence with ID: {sequenceId}");
+
+        for (int i = 1; i <= jobsCount; i++)
+        {
+            var command = new TestCliJobCommand
+            {
+                Id = i,
+                Name = $"SequenceId job {i}",
+                ShouldBeFailed = false
+            };
+
+            // Enqueue each job with the same sequenceId
+            // Jobs will execute in order - second job waits for first to complete, etc.
+            var jobId = jobbyClient.EnqueueCommand(command, sequenceId);
+            Console.WriteLine($"  Enqueued job {i} with ID: {jobId}");
+        }
+
+        Console.WriteLine($"All {jobsCount} jobs enqueued to sequence '{sequenceId}'");
     }
 
     private static void CancelRecurrent(IJobbyClient client)

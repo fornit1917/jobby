@@ -41,7 +41,7 @@ public class JobPostProcessingServiceTests
 
         await _postProcessingService.HandleCompleted(job);
 
-        _completionServiceMock.Verify(x => x.CompleteJob(job.Id, job.NextJobId), Times.Once);
+        _completionServiceMock.Verify(x => x.CompleteJob(job.Id, job.NextJobId, job.SequenceId), Times.Once);
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
     }
 
@@ -118,7 +118,7 @@ public class JobPostProcessingServiceTests
             NextJobId = Guid.NewGuid(),
         };
         _completionServiceMock
-            .SetupSequence(x => x.CompleteJob(job.Id, job.NextJobId))
+            .SetupSequence(x => x.CompleteJob(job.Id, job.NextJobId, job.SequenceId))
             .Throws(new Exception())
             .Returns(Task.CompletedTask);
 
@@ -129,7 +129,7 @@ public class JobPostProcessingServiceTests
         await _postProcessingService.DoRetriesFromQueue();
 
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
-        _completionServiceMock.Verify(x => x.CompleteJob(job.Id, job.NextJobId), Times.Exactly(2));
+        _completionServiceMock.Verify(x => x.CompleteJob(job.Id, job.NextJobId, job.SequenceId), Times.Exactly(2));
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class JobPostProcessingServiceTests
     {
         public bool Disposed { get; private set; } = false;
 
-        public Task CompleteJob(Guid jobId, Guid? nextJobId)
+        public Task CompleteJob(Guid jobId, Guid? nextJobId, string? sequenceId)
         {
             throw new NotImplementedException();
         }

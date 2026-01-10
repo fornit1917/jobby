@@ -43,7 +43,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, Array.Empty<Guid>());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, Array.Empty<Guid>(), Array.Empty<string>());
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Completed, firstActualJob.Status);
@@ -116,7 +116,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList(), Array.Empty<string>());
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Completed, firstActualJob.Status);
@@ -195,7 +195,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList(), Array.Empty<string>());
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Failed, firstActualJob.Status);
@@ -267,7 +267,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), "old_server");
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList(), Array.Empty<string>());
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Processing, firstActualJob.Status);
@@ -280,5 +280,170 @@ public class BulkUpdateProcessingJobsToCompletedTests
 
         var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
         Assert.Equal(JobStatus.WaitingPrev, secondActualNextJob.Status);
-    }    
+    }
+
+    [Fact]
+    public async Task BulkUpdateProcessingJobsToCompletedAsync_HaveSequences_CompletesCurrentAndSchedulesNextInEachSequence()
+    {
+        var serverId = Guid.NewGuid().ToString();
+        var sequence1Id = Guid.NewGuid().ToString();
+        var sequence2Id = Guid.NewGuid().ToString();
+
+        var nextJobsInSequence = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.WaitingPrev,
+                SequenceId = sequence1Id,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.WaitingPrev,
+                SequenceId = sequence2Id,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                SequenceId = sequence1Id,
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow,
+                ServerId = serverId,
+                Error = "prev error"
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                SequenceId = sequence2Id,
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow,
+                ServerId = serverId,
+                Error = "prev error"
+            },
+        };
+
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobsInSequence));
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, Array.Empty<Guid>(), new[] { sequence1Id, sequence2Id });
+
+        // Verify completed jobs
+        var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
+        Assert.Equal(JobStatus.Completed, firstActualJob.Status);
+        Assert.NotNull(firstActualJob.LastFinishedAt);
+        Assert.Null(firstActualJob.Error);
+
+        var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[1].Id);
+        Assert.Equal(JobStatus.Completed, secondActualJob.Status);
+        Assert.NotNull(secondActualJob.LastFinishedAt);
+        Assert.Null(secondActualJob.Error);
+
+        // Verify next jobs in sequences are unlocked
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobsInSequence[0].Id);
+        Assert.Equal(JobStatus.Scheduled, firstActualNextJob.Status);
+
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobsInSequence[1].Id);
+        Assert.Equal(JobStatus.Scheduled, secondActualNextJob.Status);
+    }
+
+    [Fact]
+    public async Task BulkUpdateProcessingJobsToCompletedAsync_SequenceWithWrongServerId_DoesNotUnlockNextJobs()
+    {
+        // This test verifies that the CTE-based bulk unlock only happens when the updates succeed
+        var sequence1Id = Guid.NewGuid().ToString();
+        var sequence2Id = Guid.NewGuid().ToString();
+
+        var nextJobsInSequence = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.WaitingPrev,
+                SequenceId = sequence1Id,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.WaitingPrev,
+                SequenceId = sequence2Id,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+        };
+
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                SequenceId = sequence1Id,
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow,
+                ServerId = "correct_server",
+                Error = "prev error"
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                StartedCount = 2,
+                SequenceId = sequence2Id,
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow,
+                ServerId = "correct_server",
+                Error = "prev error"
+            },
+        };
+
+        await using var dbContext = DbHelper.CreateContext();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobsInSequence));
+        await dbContext.SaveChangesAsync();
+
+        var storage = DbHelper.CreateJobbyStorage();
+        // Try to complete with wrong server_id - updates should fail, unlocks should not happen
+        var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), "wrong_server");
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, Array.Empty<Guid>(), new[] { sequence1Id, sequence2Id });
+
+        // Jobs should still be Processing (not updated because wrong server_id)
+        var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
+        Assert.Equal(JobStatus.Processing, firstActualJob.Status);
+
+        var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[1].Id);
+        Assert.Equal(JobStatus.Processing, secondActualJob.Status);
+
+        // Next jobs should still be WaitingPrev (not unlocked)
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobsInSequence[0].Id);
+        Assert.Equal(JobStatus.WaitingPrev, firstActualNextJob.Status);
+
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobsInSequence[1].Id);
+        Assert.Equal(JobStatus.WaitingPrev, secondActualNextJob.Status);
+    }
 }

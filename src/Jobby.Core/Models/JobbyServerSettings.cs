@@ -95,6 +95,8 @@ public class JobbyServerSettings
         }
     }
 
+    public SequenceFailureBehavior SequenceFailureBehavior { get; init; } = SequenceFailureBehavior.Block;
+
     private static void ThrowIfValueIsNotPositive(int value, string fieldName)
     {
         if (value <= 0)

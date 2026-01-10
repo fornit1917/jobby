@@ -11,4 +11,5 @@ public class JobCreationModel
     public DateTime ScheduledStartAt { get; set; }
     public Guid? NextJobId { get; set; }
     public bool CanBeRestarted { get; set; }
+    public string? SequenceId { get; set; }
 }

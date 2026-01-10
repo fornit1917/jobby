@@ -107,6 +107,16 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
 });  
 ```
 
+To control how sequences behave after a final failure, configure PostgreSQL storage (default is `SequenceFailureBehavior.Block`):  
+
+```csharp
+jobby.UsePostgresql(pg =>
+{
+    pg.UseDataSource(serviceProvider.GetRequiredService<NpgsqlDataSource>());
+    pg.UseSequenceFailureBehavior(SequenceFailureBehavior.Continue);
+});
+```
+
 Full ASP.NET Core example: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).  
 
 #### Non-ASP.NET Core Configuration  

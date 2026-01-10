@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Configuration;
+using Jobby.Core.Models;
 using Npgsql;
 
 namespace Jobby.Postgres.ConfigurationExtensions;
@@ -10,7 +11,7 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         configure(builder);
-        opts.UseStorage(builder.BuildStorage());
+        opts.UseStorage(commonInfra => builder.BuildStorage(commonInfra.ServerSettings));
         opts.UseStorageMigrator(commonInfra => builder.BuildMigrator(commonInfra));
         return opts;
     }
@@ -19,7 +20,7 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         builder.UseDataSource(dataSource);
-        opts.UseStorage(builder.BuildStorage());
+        opts.UseStorage(commonInfra => builder.BuildStorage(commonInfra.ServerSettings));
         opts.UseStorageMigrator(commonInfra => builder.BuildMigrator(commonInfra));
         return opts;
     }
@@ -29,7 +30,8 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         configure(builder);
-        opts.UseStorage(builder.BuildStorage());
+        // Note: IJobbyServicesConfigurable doesn't support factory pattern, using default settings
+        opts.UseStorage(builder.BuildStorage(new JobbyServerSettings()));
         return opts;
     }
 
@@ -38,7 +40,8 @@ public static class JobbyPostgresqlConfigurationExtensions
     {
         var builder = new PostgresqlStorageBuilder();
         builder.UseDataSource(dataSource);
-        opts.UseStorage(builder.BuildStorage());
+        // Note: IJobbyServicesConfigurable doesn't support factory pattern, using default settings
+        opts.UseStorage(builder.BuildStorage(new JobbyServerSettings()));
         return opts;
     }
 }

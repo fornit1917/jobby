@@ -25,7 +25,23 @@ internal class JobsFactory : IJobsFactory
             JobParam = _serializer.SerializeJobParam(command),
             ScheduledStartAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
-            CanBeRestarted = command.CanBeRestarted()
+            CanBeRestarted = command.CanBeRestarted(),
+            SequenceId = null
+        };
+    }
+
+    public JobCreationModel Create<TCommand>(TCommand command, string sequenceId) where TCommand : IJobCommand
+    {
+        return new JobCreationModel
+        {
+            Id = _guidGenerator.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            JobName = TCommand.GetJobName(),
+            JobParam = _serializer.SerializeJobParam(command),
+            ScheduledStartAt = DateTime.UtcNow,
+            Status = JobStatus.Scheduled,
+            CanBeRestarted = command.CanBeRestarted(),
+            SequenceId = sequenceId
         };
     }
 
@@ -39,7 +55,23 @@ internal class JobsFactory : IJobsFactory
             JobParam = _serializer.SerializeJobParam(command),
             ScheduledStartAt = startTime,
             Status = JobStatus.Scheduled,
-            CanBeRestarted = command.CanBeRestarted()
+            CanBeRestarted = command.CanBeRestarted(),
+            SequenceId = null
+        };
+    }
+
+    public JobCreationModel Create<TCommand>(TCommand command, JobCreationOptions options) where TCommand : IJobCommand
+    {
+        return new JobCreationModel
+        {
+            Id = _guidGenerator.NewGuid(),
+            CreatedAt = DateTime.UtcNow,
+            JobName = TCommand.GetJobName(),
+            JobParam = _serializer.SerializeJobParam(command),
+            ScheduledStartAt = options.StartTime ?? DateTime.UtcNow,
+            Status = JobStatus.Scheduled,
+            CanBeRestarted = command.CanBeRestarted(),
+            SequenceId = options.SequenceId
         };
     }
 
@@ -54,7 +86,8 @@ internal class JobsFactory : IJobsFactory
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = CronHelper.GetNext(cron, DateTime.UtcNow),
-            CanBeRestarted = command.CanBeRestarted()
+            CanBeRestarted = command.CanBeRestarted(),
+            SequenceId = null
         };
     }
 

@@ -1,4 +1,5 @@
-﻿using Jobby.Postgres;
+﻿using Jobby.Core.Models;
+using Jobby.Postgres;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -32,7 +33,7 @@ internal static class DbHelper
 
     public static PostgresqlJobbyStorage CreateJobbyStorage()
     {
-        return new PostgresqlJobbyStorage(DataSource, new PostgresqlStorageSettings());
+        return new PostgresqlJobbyStorage(DataSource, new PostgresqlStorageSettings(), new JobbyServerSettings());
     }
 
     public static async Task DropTablesAsync()

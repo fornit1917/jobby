@@ -66,4 +66,59 @@ public class JobsController
         var command = new DemoJobCommand();
         return _jobsFactory.Create(command, startTime.Value);
     }
+
+    /// <summary>
+    /// Enqueues a job as part of a sequence.
+    /// Jobs with the same sequenceId will be executed one after another.
+    /// </summary>
+    [HttpPost("enqueue-job-in-sequence/{sequenceId}")]
+    public async Task<string> EnqueueJobInSequence(string sequenceId, [FromBody] DemoJobCommand command)
+    {
+        var jobId = await _jobbyClient.EnqueueCommandAsync(command, sequenceId);
+        return jobId.ToString();
+    }
+
+    /// <summary>
+    /// Demonstrates a typical workflow: enqueues multiple jobs to a sequence.
+    /// Jobs will execute in order - each waits for the previous one to complete.
+    /// </summary>
+    [HttpPost("enqueue-workflow")]
+    public async Task<EnqueueWorkflowResponse> EnqueueWorkflow([FromQuery] int delayMs = 1000)
+    {
+        // Generate a unique sequence ID for this workflow
+        // In real scenarios this could be an order ID, transaction ID, etc.
+        var sequenceId = $"workflow-{Guid.NewGuid():N}";
+
+        var jobIds = new List<Guid>();
+
+        // Step 1: Validation job
+        var validationJobId = await _jobbyClient.EnqueueCommandAsync(
+            new DemoJobCommand { DelayMs = delayMs },
+            sequenceId);
+        jobIds.Add(validationJobId);
+
+        // Step 2: Processing job
+        var processingJobId = await _jobbyClient.EnqueueCommandAsync(
+            new DemoJobCommand { DelayMs = delayMs },
+            sequenceId);
+        jobIds.Add(processingJobId);
+
+        // Step 3: Notification job
+        var notificationJobId = await _jobbyClient.EnqueueCommandAsync(
+            new DemoJobCommand { DelayMs = delayMs },
+            sequenceId);
+        jobIds.Add(notificationJobId);
+
+        return new EnqueueWorkflowResponse
+        {
+            SequenceId = sequenceId,
+            JobIds = jobIds
+        };
+    }
+}
+
+public class EnqueueWorkflowResponse
+{
+    public string SequenceId { get; set; } = string.Empty;
+    public List<Guid> JobIds { get; set; } = new();
 }
