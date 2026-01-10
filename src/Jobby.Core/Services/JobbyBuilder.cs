@@ -55,6 +55,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     public ILoggerFactory LoggerFactory => _loggerFactory ?? DefaultLoggerFactory;
     public IJobParamSerializer Serializer => _serializer ?? DefaultSerializer;
     public IGuidGenerator GuidGenerator => _guidGenerator ?? DefaultGuidGenerator;
+    public JobbyServerSettings ServerSettings => _serverSettings;
 
     public IJobbyServer CreateJobbyServer()
     {

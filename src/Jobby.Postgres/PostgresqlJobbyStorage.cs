@@ -23,18 +23,18 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     private readonly DeleteRecurrentJobByNameCommand _deleteRecurrentJobByNameCommand;
     private readonly BulkDeleteNotStartedJobsCommand _bulkDeleteNotStartedJobsCommand;
 
-    public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings, JobbyServerSettings serverSettings)
     {
         _dataSource = dataSource;
 
         _bulkCompleteProcessingJobsCommand = new BulkCompleteProcessingJobsCommand(dataSource, settings);
         _bulkDeleteProcessingJobsCommand = new BulkDeleteProcessingJobsCommand(dataSource, settings);
-        _bulkInsertJobsCommand = new BulkInsertJobsCommand(dataSource, settings);
+        _bulkInsertJobsCommand = new BulkInsertJobsCommand(dataSource, settings, serverSettings);
         _deleteProcessingJobCommand = new DeleteProcessingJobCommand(dataSource, settings);
-        _insertJobCommand = new InsertJobCommand(dataSource, settings);
+        _insertJobCommand = new InsertJobCommand(dataSource, settings, serverSettings);
         _rescheduleProcessingJobCommand = new RescheduleProcessingJobCommand(dataSource, settings);
         _takeBatchToProcessingCommand = new TakeBatchToProcessingCommand(dataSource, settings);
-        _updateFromProcessingStatusCommand = new UpdateFromProcessingStatusCommand(dataSource, settings);
+        _updateFromProcessingStatusCommand = new UpdateFromProcessingStatusCommand(dataSource, settings, serverSettings);
         _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
         _findAndDeleteLostServersCommand = new FindAndDeleteLostServersCommands(settings);
         _findAndRestartStuckJobsCommand = new FindAndRestartStuckJobsCommand(settings);

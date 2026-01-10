@@ -10,11 +10,11 @@ internal class InsertJobCommand
     private readonly string _commandText;
     private readonly string _commandWithSequenceIdText;
 
-    public InsertJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public InsertJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings, JobbyServerSettings serverSettings)
     {
         _dataSource = dataSource;
 
-        var blockSequenceOnFailure = settings.SequenceFailureBehavior == SequenceFailureBehavior.Block;
+        var blockSequenceOnFailure = serverSettings.SequenceFailureBehavior == SequenceFailureBehavior.Block;
 
         _commandText = @$"
             INSERT INTO {TableName.Jobs(settings)} (

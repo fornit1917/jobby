@@ -1,4 +1,4 @@
-namespace Jobby.Postgres;
+namespace Jobby.Core.Models;
 
 public enum SequenceFailureBehavior
 {

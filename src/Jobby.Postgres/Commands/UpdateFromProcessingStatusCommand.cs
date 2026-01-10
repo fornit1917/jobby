@@ -13,10 +13,10 @@ internal class UpdateFromProcessingStatusCommand
     private readonly string _updateAndUnlockNextCommandText;
     private readonly string _updateAndUnlockSequenceCommandText;
 
-    public UpdateFromProcessingStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public UpdateFromProcessingStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings, JobbyServerSettings serverSettings)
     {
         _dataSource = dataSource;
-        _unlockSequenceOnFailure = settings.SequenceFailureBehavior == SequenceFailureBehavior.Continue;
+        _unlockSequenceOnFailure = serverSettings.SequenceFailureBehavior == SequenceFailureBehavior.Continue;
 
         _updateStatusCommandText = $@"
             UPDATE {TableName.Jobs(settings)}
