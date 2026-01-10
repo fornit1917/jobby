@@ -7,6 +7,7 @@ namespace Jobby.Postgres.Commands;
 internal class UpdateFromProcessingStatusCommand
 {
     private readonly NpgsqlDataSource _dataSource;
+    private readonly bool _unlockSequenceOnFailure;
 
     private readonly string _updateStatusCommandText;
     private readonly string _updateAndUnlockNextCommandText;
@@ -15,6 +16,7 @@ internal class UpdateFromProcessingStatusCommand
     public UpdateFromProcessingStatusCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
+        _unlockSequenceOnFailure = settings.SequenceFailureBehavior == SequenceFailureBehavior.Continue;
 
         _updateStatusCommandText = $@"
             UPDATE {TableName.Jobs(settings)}
@@ -88,7 +90,9 @@ internal class UpdateFromProcessingStatusCommand
         await using var conn = await _dataSource.OpenConnectionAsync();
         var finishedAt = DateTime.UtcNow;
 
-        if (sequenceId != null)
+        var shouldUnlockSequence = sequenceId != null || (newStatus == JobStatus.Failed && _unlockSequenceOnFailure);
+
+        if (shouldUnlockSequence)
         {
             await using var cmd = new NpgsqlCommand(_updateAndUnlockSequenceCommandText, conn);
             cmd.Parameters.Add(new  NpgsqlParameter { Value = (int)newStatus });                  // $1

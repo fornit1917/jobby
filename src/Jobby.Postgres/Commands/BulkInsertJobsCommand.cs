@@ -14,6 +14,8 @@ internal class BulkInsertJobsCommand
     {
         _dataSource = dataSource;
 
+        var blockSequenceOnFailure = settings.SequenceFailureBehavior == SequenceFailureBehavior.Block;
+
         _commandText = @$"
             INSERT INTO {TableName.Jobs(settings)} (
                 id,
@@ -39,21 +41,43 @@ internal class BulkInsertJobsCommand
             )
         ";
 
-        _commandWithSequenceIdText = @$"
-            WITH try_ins AS (
+        _commandWithSequenceIdText = blockSequenceOnFailure
+            ? @$"
+                WITH try_ins AS (
+                    INSERT INTO {TableName.Jobs(settings)} (
+                        id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
+                    )
+                    SELECT $1, $2, $3, $4, $5, $6, $7, $8
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM {TableName.Jobs(settings)}
+                        WHERE sequence_id = $8
+                          AND (status = {(int)JobStatus.WaitingPrev} OR status = {(int)JobStatus.Failed})
+                    )
+                    ON CONFLICT (sequence_id) WHERE (status = {(int)JobStatus.Scheduled}) DO NOTHING
+                    RETURNING 1 AS inserted
+                )
                 INSERT INTO {TableName.Jobs(settings)} (
                     id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                ON CONFLICT (sequence_id) WHERE (status = {(int)JobStatus.Scheduled}) DO NOTHING
-                RETURNING 1 AS inserted
-            )
-            INSERT INTO {TableName.Jobs(settings)} (
-                id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
-            )
-            SELECT $1, $2, $3, {(int)JobStatus.WaitingPrev}, $5, $6, $7, $8
-            WHERE NOT EXISTS (SELECT 1 FROM try_ins)
-        ";
+                SELECT $1, $2, $3, {(int)JobStatus.WaitingPrev}, $5, $6, $7, $8
+                WHERE NOT EXISTS (SELECT 1 FROM try_ins)
+            "
+            : @$"
+                WITH try_ins AS (
+                    INSERT INTO {TableName.Jobs(settings)} (
+                        id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    ON CONFLICT (sequence_id) WHERE (status = {(int)JobStatus.Scheduled}) DO NOTHING
+                    RETURNING 1 AS inserted
+                )
+                INSERT INTO {TableName.Jobs(settings)} (
+                    id, job_name, job_param, status, created_at, scheduled_start_at, can_be_restarted, sequence_id
+                )
+                SELECT $1, $2, $3, {(int)JobStatus.WaitingPrev}, $5, $6, $7, $8
+                WHERE NOT EXISTS (SELECT 1 FROM try_ins)
+            ";
     }
 
     public async Task ExecuteAsync(IReadOnlyList<JobCreationModel> jobs)

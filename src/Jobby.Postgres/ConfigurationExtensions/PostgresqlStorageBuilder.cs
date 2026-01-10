@@ -18,10 +18,11 @@ internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
 
     public IPostgresqlStorageConfigurable UseSchemaName(string schemaName)
     {
-        _settings = new PostgresqlStorageSettings 
-        { 
-            SchemaName = schemaName, 
-            TablesPrefix = _settings.TablesPrefix 
+        _settings = new PostgresqlStorageSettings
+        {
+            SchemaName = schemaName,
+            TablesPrefix = _settings.TablesPrefix,
+            SequenceFailureBehavior = _settings.SequenceFailureBehavior
         };
         return this;
     }
@@ -31,7 +32,19 @@ internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
         _settings = new PostgresqlStorageSettings
         {
             SchemaName = _settings.SchemaName,
-            TablesPrefix = tablesPrefix
+            TablesPrefix = tablesPrefix,
+            SequenceFailureBehavior = _settings.SequenceFailureBehavior
+        };
+        return this;
+    }
+
+    public IPostgresqlStorageConfigurable UseSequenceFailureBehavior(SequenceFailureBehavior behavior)
+    {
+        _settings = new PostgresqlStorageSettings
+        {
+            SchemaName = _settings.SchemaName,
+            TablesPrefix = _settings.TablesPrefix,
+            SequenceFailureBehavior = behavior
         };
         return this;
     }
