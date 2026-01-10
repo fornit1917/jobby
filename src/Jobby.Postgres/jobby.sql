@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 CREATE INDEX IF NOT EXISTS jobby_jobs_status_scheduled_start_at_idx ON jobby_jobs(status, scheduled_start_at);
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_recurrent_name_idx ON jobby_jobs(job_name) WHERE cron IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_uniq_sequence_id_idx ON jobby_jobs(sequence_id) WHERE status = 1 OR status = 2;
-CREATE INDEX IF NOT EXISTS jobby_jobs_sequence_id_idx ON jobby_jobs(sequence_id) WHERE sequence_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS jobby_jobs_sequence_id_scheduled_start_at_idx ON jobby_jobs(sequence_id, scheduled_start_at) WHERE sequence_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS jobby_servers (
 	id TEXT NOT NULL PRIMARY KEY,
