@@ -24,14 +24,14 @@ internal class BulkDeleteProcessingJobsCommand
 
         _deleteAndUnlockNextCommandText = $@"
             WITH complete_and_get_next_job_id AS (
-	            DELETE FROM jobby_jobs 
+	            DELETE FROM {TableName.Jobs(settings)} 
 	            WHERE 
 		            id = ANY($1)
 		            AND status = {(int)JobStatus.Processing}
 		            AND server_id = $2
 	            RETURNING next_job_id
             )
-            UPDATE jobby_jobs
+            UPDATE {TableName.Jobs(settings)}
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE

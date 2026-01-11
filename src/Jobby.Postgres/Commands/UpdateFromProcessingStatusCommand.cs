@@ -29,7 +29,7 @@ internal class UpdateFromProcessingStatusCommand
 
         _updateAndUnlockNextCommandText = @$"
             WITH complete_and_get_next_job_id AS (
-	            UPDATE jobby_jobs 
+	            UPDATE {TableName.Jobs(settings)} 
 	            SET
 		            status = $1,
 		            last_finished_at = $2,
@@ -40,7 +40,7 @@ internal class UpdateFromProcessingStatusCommand
 		            AND server_id = $5
 	            RETURNING next_job_id 
             )
-            UPDATE jobby_jobs 
+            UPDATE {TableName.Jobs(settings)} 
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE

@@ -1,5 +1,9 @@
 # Versions
 
+## v0.6.1 (2025-01-11)
+
+- Fixed a bug where the library would throw an error when using custom table names in the database
+
 ## v0.6.0 (2025-01-09)
 
 - Service `IJobyStorageMigrator` for creating and updating database schema
