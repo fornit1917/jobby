@@ -28,7 +28,7 @@ internal class BulkCompleteProcessingJobsCommand
 
         _completeAndUnlockNextCommandText = @$"
             WITH complete_and_get_next_job_id AS (
-	            UPDATE jobby_jobs 
+	            UPDATE {TableName.Jobs(settings)} 
 	            SET
 		            status = {(int)JobStatus.Completed},
 		            last_finished_at = $1,
@@ -39,7 +39,7 @@ internal class BulkCompleteProcessingJobsCommand
 		            AND server_id = $3
 	            RETURNING next_job_id 
             )
-            UPDATE jobby_jobs 
+            UPDATE {TableName.Jobs(settings)} 
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE
