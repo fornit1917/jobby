@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -8,6 +9,7 @@ namespace Jobby.Core.Services;
 internal class JobbyServer : IJobbyServer, IDisposable
 {
     private readonly IJobbyStorage _storage;
+    private readonly IQueueService _queueService;
     private readonly IJobExecutionService _executionService;
     private readonly IJobPostProcessingService _postProcessingService;
     private readonly ILogger<JobbyServer> _logger;
@@ -18,6 +20,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private CancellationTokenSource _cancellationTokenSource;
 
     public JobbyServer(IJobbyStorage storage,
+        IQueueService queueService,
         IJobExecutionService executionService,
         IJobPostProcessingService postProcessingService,
         ILogger<JobbyServer> logger,
@@ -25,6 +28,7 @@ internal class JobbyServer : IJobbyServer, IDisposable
         string serverId)
     {
         _storage = storage;
+        _queueService = queueService;
         _executionService = executionService;
         _postProcessingService = postProcessingService;
         _settings = settings;
@@ -109,16 +113,9 @@ internal class JobbyServer : IJobbyServer, IDisposable
     private async Task Poll()
     {
         var jobs = new List<JobExecutionModel>(capacity: _settings.TakeToProcessingBatchSize);
-        var pollingInterval = new GeometryProgression(
-            start: _settings.PollingIntervalStartMs, 
-            factor: _settings.PollingIntervalFactor, 
-            max: _settings.PollingIntervalMs
-        );
 
         while (!_cancellationTokenSource.IsCancellationRequested)
         {
-            await _semaphore.WaitAsync();
-
             try
             {
                 if (!_postProcessingService.IsRetryQueueEmpty)
@@ -134,15 +131,23 @@ internal class JobbyServer : IJobbyServer, IDisposable
                 continue;
             }
 
-            var maxBatchSize = _semaphore.CurrentCount + 1;
-            if (maxBatchSize > _settings.TakeToProcessingBatchSize)
+            await _queueService.WaitIfEmpty();
+            if (_cancellationTokenSource.IsCancellationRequested)
+                break;
+            
+            await _semaphore.WaitAsync();
+            if (_cancellationTokenSource.IsCancellationRequested)
+                break;
+
+            var batchSize = _semaphore.CurrentCount + 1;
+            if (batchSize > _settings.TakeToProcessingBatchSize)
             {
-                maxBatchSize = _settings.TakeToProcessingBatchSize;
+                batchSize = _settings.TakeToProcessingBatchSize;
             }
 
             try
             {
-                await _storage.TakeBatchToProcessingAsync(ServerId, maxBatchSize, jobs);
+                await _queueService.TakeBatchToProcessing(batchSize, jobs);
             }
             catch (Exception ex)
             {
@@ -155,21 +160,14 @@ internal class JobbyServer : IJobbyServer, IDisposable
             if (jobs.Count == 0)
             {
                 _semaphore.Release();
-                if (!_cancellationTokenSource.IsCancellationRequested)
-                {
-                    await Task.Delay(pollingInterval.GetNextValue());
-                }
             }
             else
             {
-                pollingInterval.Reset();
-                
                 var actualBatchSize = jobs.Count;
                 for (int i = 1; i < actualBatchSize; i++)
                 {
                     await _semaphore.WaitAsync();
                 }
-
                 Run(jobs);
             }
         }

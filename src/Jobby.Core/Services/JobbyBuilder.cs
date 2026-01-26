@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
+using Jobby.Core.Interfaces.Queues;
+using Jobby.Core.Services.Queues;
 
 namespace Jobby.Core.Services;
 
@@ -45,6 +47,9 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private IJobsRegistry? _jobsRegistry;
 
     private JobbyServerSettings _serverSettings = new();
+
+    private string? _queueForAllRecurrent;
+    private Dictionary<string, string> _queueByJobName = new();
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -78,6 +83,10 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         var storage = GetStorage();
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
 
+        IQueueService queueService = _serverSettings.Queues.Count == 1
+            ? new SingleQueueService(storage, TimerService.Instance, _serverSettings, serverId)
+            : new MultiQueueService(storage, TimerService.Instance, _serverSettings, serverId);
+
         IJobCompletionService completionService = _serverSettings.CompleteWithBatching
             ? new BatchingJobCompletionService(storage, _serverSettings, serverId)
             : new SimpleJobCompletionService(storage, _serverSettings.DeleteCompleted, serverId);
@@ -96,6 +105,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             LoggerFactory.CreateLogger<JobExecutionService>());
 
         return new JobbyServer(storage,
+            queueService,
             executionService,
             postProcessingService,
             LoggerFactory.CreateLogger<JobbyServer>(),
@@ -110,7 +120,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     public IJobsFactory CreateJobsFactory()
     {
-        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer);
+        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer, new QueueNameAssignor(_queueByJobName, _queueForAllRecurrent));
         return _jobsFactory;
     }
 
@@ -282,6 +292,18 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         _tracingMiddleware ??= new TracingMiddleware();
         return this;
     }
+    
+    public IJobbyJobsConfigurable UseQueueForJob<TCommand>(string queueName) where TCommand : IJobCommand
+    {
+        _queueByJobName[TCommand.GetJobName()] = queueName;
+        return this;
+    }
+
+    public IJobbyJobsConfigurable UseQueueForAllRecurrent(string queueName)
+    {
+        _queueForAllRecurrent = queueName;
+        return this;
+    }    
 
     private IJobbyStorage GetStorage()
     {

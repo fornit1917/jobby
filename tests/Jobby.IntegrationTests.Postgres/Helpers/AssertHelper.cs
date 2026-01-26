@@ -20,5 +20,6 @@ internal static class AssertHelper
         Assert.Null(actual.LastFinishedAt);
         Assert.Equal(0, actual.StartedCount);
         Assert.Null(actual.ServerId);
+        Assert.Equal(expected.QueueName, actual.QueueName);
     }    
 }

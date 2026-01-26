@@ -52,9 +52,10 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _insertJobCommand.Execute(job);
     }
 
-    public Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<JobExecutionModel> result)
+    public Task TakeBatchToProcessingAsync(string serverId, int batchSize, string queueName, List<JobExecutionModel> result)
     {
-        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(serverId, DateTime.UtcNow, maxBatchSize, result);
+        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(serverId, DateTime.UtcNow, batchSize, queueName,
+            result);
     }
 
     public Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null)

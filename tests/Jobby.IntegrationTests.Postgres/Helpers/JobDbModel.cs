@@ -47,6 +47,9 @@ internal class JobDbModel
 
     [Column("can_be_restarted")]
     public bool CanBeRestarted { get; set; }
+    
+    [Column("queue_name")]
+    public string? QueueName { get; set; } = QueueSettings.DefaultQueueName;
 
     public ProcessingJob ToProcessingJob()
     {

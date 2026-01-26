@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
@@ -8,53 +9,54 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
+    private readonly IQueueNameAssignor _queueNameAssignor;
 
-    public JobsFactory(IGuidGenerator guidGenerator, IJobParamSerializer serializer)
+    public JobsFactory(IGuidGenerator guidGenerator,
+        IJobParamSerializer serializer,
+        IQueueNameAssignor queueNameAssignor)
     {
         _guidGenerator = guidGenerator;
         _serializer = serializer;
+        _queueNameAssignor = queueNameAssignor;
     }
 
-    public JobCreationModel Create<TCommand>(TCommand command) where TCommand : IJobCommand
+    public JobCreationModel Create<TCommand>(TCommand command, JobCreationOptions opts = default)
+        where TCommand : IJobCommand
     {
+        var jobName = TCommand.GetJobName();
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),
             CreatedAt = DateTime.UtcNow,
-            JobName = TCommand.GetJobName(),
+            JobName = jobName,
             JobParam = _serializer.SerializeJobParam(command),
-            ScheduledStartAt = DateTime.UtcNow,
+            ScheduledStartAt = opts.StartTime ?? DateTime.UtcNow,
             Status = JobStatus.Scheduled,
-            CanBeRestarted = command.CanBeRestarted()
-        };
+            CanBeRestarted = command.CanBeRestarted(),
+            QueueName = _queueNameAssignor.GetQueueName(jobName, opts),
+        };    
     }
 
     public JobCreationModel Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
-        return new JobCreationModel
-        {
-            Id = _guidGenerator.NewGuid(),
-            CreatedAt = DateTime.UtcNow,
-            JobName = TCommand.GetJobName(),
-            JobParam = _serializer.SerializeJobParam(command),
-            ScheduledStartAt = startTime,
-            Status = JobStatus.Scheduled,
-            CanBeRestarted = command.CanBeRestarted()
-        };
+        return Create(command, new JobCreationOptions { StartTime = startTime });
     }
 
-    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron, JobCreationOptions opts = default)
+        where TCommand : IJobCommand
     {
+        var jobName = TCommand.GetJobName();
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
-            JobName = TCommand.GetJobName(),
+            JobName = jobName,
             Cron = cron,
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
-            ScheduledStartAt = CronHelper.GetNext(cron, DateTime.UtcNow),
-            CanBeRestarted = command.CanBeRestarted()
+            ScheduledStartAt = opts.StartTime ?? CronHelper.GetNext(cron, DateTime.UtcNow),
+            CanBeRestarted = command.CanBeRestarted(),
+            QueueName = _queueNameAssignor.GetQueueNameForRecurrent(jobName, opts),
         };
     }
 

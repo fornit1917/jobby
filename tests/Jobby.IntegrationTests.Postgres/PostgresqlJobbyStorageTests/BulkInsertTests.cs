@@ -22,7 +22,8 @@ public class BulkInsertTests
             NextJobId = Guid.NewGuid(),
             ScheduledStartAt = DateTime.UtcNow.AddDays(100),
             Status = JobStatus.Scheduled,
-            JobParam = "param1"
+            JobParam = "param1",
+            QueueName = "q1",
         };
 
         var secondJob = new JobCreationModel
@@ -35,7 +36,8 @@ public class BulkInsertTests
             NextJobId = null,
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Failed,
-            JobParam = "param2"
+            JobParam = "param2",
+            QueueName = "q2"
         };
 
         var storage = DbHelper.CreateJobbyStorage();
@@ -66,7 +68,8 @@ public class BulkInsertTests
             NextJobId = Guid.NewGuid(),
             ScheduledStartAt = DateTime.UtcNow.AddDays(100),
             Status = JobStatus.Scheduled,
-            JobParam = "param1"
+            JobParam = "param1",
+            QueueName = "q1",
         };
 
         var secondJob = new JobCreationModel
@@ -79,7 +82,8 @@ public class BulkInsertTests
             NextJobId = null,
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Failed,
-            JobParam = "param2"
+            JobParam = "param2",
+            QueueName = "q2"
         };
 
         var storage = DbHelper.CreateJobbyStorage();

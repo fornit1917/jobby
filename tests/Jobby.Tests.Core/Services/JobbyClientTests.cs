@@ -77,13 +77,27 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public void EnqueueCommand_TimeNotSpecified_CreatesAndInsertsJobAndReturnsId()
+    public void EnqueueCommand_OptionsNotSpecified_CreatesAndInsertsJobAndReturnsId()
     {
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.Create(command)).Returns(job);
+        _factoryMock.Setup(x => x.Create(command, default(JobCreationOptions))).Returns(job);
 
         var id = _client.EnqueueCommand(command);
+
+        _storageMock.Verify(x => x.InsertJob(job));
+        Assert.Equal(job.Id, id);
+    }
+    
+    [Fact]
+    public void EnqueueCommand_OptionsSpecified_CreatesAndInsertsJobAndReturnsId()
+    {
+        var command = new TestJobCommand();
+        var job = new JobCreationModel { Id = Guid.NewGuid() };
+        var opts = new JobCreationOptions { QueueName = "q" };
+        _factoryMock.Setup(x => x.Create(command, opts)).Returns(job);
+
+        var id = _client.EnqueueCommand(command, opts);
 
         _storageMock.Verify(x => x.InsertJob(job));
         Assert.Equal(job.Id, id);
@@ -104,13 +118,27 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public async Task EnqueueCommandAsync_TimeNotSpecified_CreatesAndInsertsJobAndReturnsId()
+    public async Task EnqueueCommandAsync_OptionsNotSpecified_CreatesAndInsertsJobAndReturnsId()
     {
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.Create(command)).Returns(job);
+        _factoryMock.Setup(x => x.Create(command, default(JobCreationOptions))).Returns(job);
 
         var id = await _client.EnqueueCommandAsync(command);
+
+        _storageMock.Verify(x => x.InsertJobAsync(job));
+        Assert.Equal(job.Id, id);
+    }
+    
+    [Fact]
+    public async Task EnqueueCommandAsync_OptionsSpecified_CreatesAndInsertsJobAndReturnsId()
+    {
+        var command = new TestJobCommand();
+        var job = new JobCreationModel { Id = Guid.NewGuid() };
+        var opts = new JobCreationOptions { QueueName = "q" };
+        _factoryMock.Setup(x => x.Create(command, opts)).Returns(job);
+
+        var id = await _client.EnqueueCommandAsync(command, opts);
 
         _storageMock.Verify(x => x.InsertJobAsync(job));
         Assert.Equal(job.Id, id);
@@ -131,12 +159,12 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public void ScheduleRecurrent_CreatesAndInsertsJobWithSpecifiedCron()
+    public void ScheduleRecurrent_OptionsNotSpecified_CreatesAndInsertsJobWithSpecifiedCron()
     {
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, cron)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, default)).Returns(job);
 
         _client.ScheduleRecurrent(command, cron);
 
@@ -144,15 +172,43 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public async Task ScheduleRecurrentAsync_CreatesAndInsertsJobWithSpecifiedCron()
+    public async Task ScheduleRecurrentAsync_OptionsNotSpecified_CreatesAndInsertsJobWithSpecifiedCron()
     {
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, cron)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, default)).Returns(job);
 
         await _client.ScheduleRecurrentAsync(command, cron);
 
         _storageMock.Verify(x => x.InsertJobAsync(job));
     }
+    
+    [Fact]
+    public void ScheduleRecurrent_OptionsSpecified_CreatesAndInsertsJobWithSpecifiedCronAndOptions()
+    {
+        var command = new TestJobCommand();
+        var cron = "*/3 * * * * *";
+        var opts = new JobCreationOptions { QueueName = "q" };
+        var job = new JobCreationModel { Id = Guid.NewGuid() };
+        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, opts)).Returns(job);
+
+        _client.ScheduleRecurrent(command, cron, opts);
+
+        _storageMock.Verify(x => x.InsertJob(job));
+    }
+
+    [Fact]
+    public async Task ScheduleRecurrentAsync_OptionsSpecified_CreatesAndInsertsJobWithSpecifiedCronAndOptions()
+    {
+        var command = new TestJobCommand();
+        var cron = "*/3 * * * * *";
+        var opts = new JobCreationOptions { QueueName = "q" };
+        var job = new JobCreationModel { Id = Guid.NewGuid() };
+        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, opts)).Returns(job);
+
+        await _client.ScheduleRecurrentAsync(command, cron, opts);
+
+        _storageMock.Verify(x => x.InsertJobAsync(job));
+    }    
 }

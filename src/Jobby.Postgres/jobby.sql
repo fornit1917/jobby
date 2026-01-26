@@ -12,10 +12,13 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 	started_count int NOT NULL DEFAULT 0,
 	next_job_id UUID DEFAULT NULL,
 	server_id TEXT DEFAULT NULL,
-	can_be_restarted boolean NOT NULL DEFAULT FALSE
+	can_be_restarted boolean NOT NULL DEFAULT FALSE,
+    queue_name TEXT DEFAULT NULL
 );
 
-CREATE INDEX IF NOT EXISTS jobby_jobs_status_scheduled_start_at_idx ON jobby_jobs(status, scheduled_start_at);
+CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
+    ON ${jobs_table_fullname}(queue_name, status, scheduled_start_at);
+
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_recurrent_name_idx ON jobby_jobs(job_name) WHERE cron IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS jobby_servers (
