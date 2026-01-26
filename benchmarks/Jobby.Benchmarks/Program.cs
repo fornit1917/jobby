@@ -14,11 +14,15 @@ namespace Jobby.Benchmarks
                 new JobbyBulkCreateJobsBenchmark(),
                 new JobbyExecuteJobsBenchmark(useBenchmarkLib: true),
                 new JobbyExecuteJobsBenchmark(useBenchmarkLib: false),
+                new JobbyMultiQueueExecuteJobsBenchmark(useBenchmarkLib: true),
+                new JobbyMultiQueueExecuteJobsBenchmark(useBenchmarkLib: false),
 
                 new HangfireCreateJobsBenchmark(),
                 new HangfireBulkCreateJobsBenchmark(),
                 new HangfireExecuteJobsBenchmark(useBenchmarkLib: true),
                 new HangfireExecuteJobsBenchmark(useBenchmarkLib: false),
+                new HangfireMultiQueueExecuteJobsBenchmark(useBenchmarkLib: true),
+                new HangfireMultiQueueExecuteJobsBenchmark(useBenchmarkLib: false),
 
                 new QuartzCreateJobsBenchmark(),
                 new QuartzBulkCreateJobsBenchmark(),
