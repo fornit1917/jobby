@@ -10,7 +10,7 @@ internal static class HangfireHelper
     {
         GlobalConfiguration.Configuration.UsePostgreSqlStorage(x =>
         {
-            x.UseConnectionFactory(new HangfireConnectionFactory(dataSource));  
+            x.UseConnectionFactory(new HangfireConnectionFactory(dataSource));
         }, new PostgreSqlStorageOptions
         {
             QueuePollInterval = TimeSpan.FromSeconds(1),
@@ -22,13 +22,5 @@ internal static class HangfireHelper
         using var conn = dataSource.OpenConnection();
         using var cmd = dataSource.CreateCommand($"DROP SCHEMA hangfire CASCADE;");
         cmd.ExecuteNonQuery();
-    }
-
-    public static bool HasNotCompletedJobs(NpgsqlDataSource dataSource)
-    {
-        using var conn = dataSource.OpenConnection();
-        using var cmd = dataSource.CreateCommand($"SELECT id FROM hangfire.job WHERE statename='Enqueued' LIMIT 1");
-        var res = cmd.ExecuteReader();
-        return res.HasRows;
     }
 }

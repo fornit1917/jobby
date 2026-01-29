@@ -10,7 +10,7 @@ public class TakeBatchToProcessingTests
     [Fact]
     public async Task TakeBatchToProcessingAsync_ReturnsReadyToRunAndUpdatesStatusAndCount()
     {
-        await using var dbContext = DbHelper.CreateContextAndClearDb();
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
 
         var firstExpected = new JobDbModel
         {
@@ -22,6 +22,7 @@ public class TakeBatchToProcessingTests
             NextJobId = Guid.NewGuid(),
             Status = JobStatus.Scheduled,
             ScheduledStartAt = DateTime.UtcNow.AddMinutes(-10),
+            QueueName = QueueSettings.DefaultQueueName,
         };
         var secondExpected = new JobDbModel
         {
@@ -33,11 +34,23 @@ public class TakeBatchToProcessingTests
             NextJobId = null,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = DateTime.UtcNow.AddMinutes(-5),
+            QueueName = QueueSettings.DefaultQueueName,
         };
         var jobs = new List<JobDbModel>
         {
             firstExpected,
             secondExpected,
+            
+            // should not be returned because the other queue name
+            new JobDbModel()
+            {
+                Id = Guid.NewGuid(),
+                JobName = "JobName",
+                JobParam = "param",
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-100),
+                QueueName = "other"
+            },
 
             // should not be returned because limit is 2
             new JobDbModel
@@ -75,7 +88,7 @@ public class TakeBatchToProcessingTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var result = new List<JobExecutionModel>();
-        await storage.TakeBatchToProcessingAsync("serverId", 2, result);
+        await storage.TakeBatchToProcessingAsync("serverId", 2, QueueSettings.DefaultQueueName, result);
 
         Assert.Equal(2, result.Count);
         AssertTakenToRunJob(firstExpected, result[0]);

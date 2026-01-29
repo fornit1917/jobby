@@ -6,7 +6,7 @@ internal class GeometryProgression
     private readonly int _factor;
     private readonly int _max;
 
-    private int _nextValue;
+    public int CurrentValue { get; private set; }
 
     public GeometryProgression(int start, int factor, int max)
     {
@@ -18,19 +18,19 @@ internal class GeometryProgression
 
     public void Reset()
     {
-        _nextValue = _start > _max ? _max : _start;
+        CurrentValue = _start > _max ? _max : _start;
     }
 
-    public int GetNextValue()
+    public int GetCurrentValueAndSetToNext()
     {
-        var result = _nextValue;
+        var result = CurrentValue;
         
-        if (_nextValue < _max)
+        if (CurrentValue < _max)
         {
-            _nextValue = _nextValue * _factor;
-            if (_nextValue > _max)
+            CurrentValue = CurrentValue * _factor;
+            if (CurrentValue > _max)
             {
-                _nextValue = _max;
+                CurrentValue = _max;
             }
         }
 

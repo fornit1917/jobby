@@ -46,9 +46,10 @@ internal class JobbyClient : IJobbyClient
         return _storage.BulkInsertJobsAsync(jobs);
     }
 
-    public Guid EnqueueCommand<TCommand>(TCommand command) where TCommand : IJobCommand
+    public Guid EnqueueCommand<TCommand>(TCommand command, JobOpts opts = default)
+        where TCommand : IJobCommand
     {
-        var job = _jobFactory.Create(command);
+        var job = _jobFactory.Create(command, opts);
         _storage.InsertJob(job);
         return job.Id;
     }
@@ -60,9 +61,10 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
 
-    public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command) where TCommand : IJobCommand
+    public async Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, JobOpts opts = default)
+        where TCommand : IJobCommand
     {
-        var job = _jobFactory.Create(command);
+        var job = _jobFactory.Create(command, opts);
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
@@ -74,15 +76,17 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
 
-    public void ScheduleRecurrent<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    public void ScheduleRecurrent<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
+        where TCommand : IJobCommand
     {
-        var job = _jobFactory.CreateRecurrent(command, cron);
+        var job = _jobFactory.CreateRecurrent(command, cron, opts);
         _storage.InsertJob(job);
     }
 
-    public Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron) where TCommand : IJobCommand
+    public Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
+        where TCommand : IJobCommand
     {
-        var job = _jobFactory.CreateRecurrent(command, cron);
+        var job = _jobFactory.CreateRecurrent(command, cron, opts);
         return _storage.InsertJobAsync(job);
     }
 }

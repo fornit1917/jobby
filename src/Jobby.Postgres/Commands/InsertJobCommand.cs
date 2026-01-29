@@ -23,7 +23,8 @@ internal class InsertJobCommand
                 scheduled_start_at,
                 cron,
                 next_job_id,
-                can_be_restarted
+                can_be_restarted,
+                queue_name
             )
             VALUES (
                 $1,
@@ -34,7 +35,8 @@ internal class InsertJobCommand
                 $6,
                 $7,
                 $8,
-                $9
+                $9,
+                $10                    
             )
             ON CONFLICT (job_name) WHERE cron IS NOT null DO 
             UPDATE SET
@@ -42,7 +44,8 @@ internal class InsertJobCommand
                 job_param = $3,
 	            cron = $7,
 	            scheduled_start_at = $6,
-                can_be_restarted = $9;
+                can_be_restarted = $9,
+                queue_name = $10
         ";
     }
 
@@ -61,6 +64,7 @@ internal class InsertJobCommand
                 new() { Value = (object?)job.Cron ?? DBNull.Value },                // 7
                 new() { Value = (object?)job.NextJobId ?? DBNull.Value },           // 8
                 new() { Value = job.CanBeRestarted },                               // 9
+                new() { Value = (object?)job.QueueName ?? DBNull.Value },           // 10
             }
         };
     }

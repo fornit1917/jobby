@@ -1,4 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -9,6 +10,7 @@ namespace Jobby.Tests.Core.Services;
 public class JobbyServerTests
 {
     private readonly Mock<IJobbyStorage> _storageMock;
+    private readonly Mock<IQueueService> _queueServiceMock;
     private readonly Mock<IJobExecutionService> _executionServiceMock;
     private readonly Mock<IJobPostProcessingService> _postProcessingServiceMock;
     private readonly Mock<ILogger<JobbyServer>> _loggerMock;
@@ -18,6 +20,12 @@ public class JobbyServerTests
     public JobbyServerTests()
     {
         _storageMock = new Mock<IJobbyStorage>();
+        
+        _queueServiceMock = new Mock<IQueueService>();
+        _queueServiceMock
+            .Setup(x => x.WaitIfEmpty())
+            .Returns(Task.CompletedTask);
+        
         _executionServiceMock = new Mock<IJobExecutionService>();
         _postProcessingServiceMock = new Mock<IJobPostProcessingService>();
         _loggerMock = new Mock<ILogger<JobbyServer>>();
@@ -34,9 +42,9 @@ public class JobbyServerTests
         using var server = CreateServer(settings);
         var job = new JobExecutionModel();
         var firstCall = true;
-        _storageMock
-            .Setup(x => x.TakeBatchToProcessingAsync(server.ServerId, settings.TakeToProcessingBatchSize, It.IsAny<List<JobExecutionModel>>()))
-            .Callback<string, int, List<JobExecutionModel>>((_, _, jobs) =>
+        _queueServiceMock
+            .Setup(x => x.TakeBatchToProcessing(settings.TakeToProcessingBatchSize, It.IsAny<List<JobExecutionModel>>()))
+            .Callback<int, List<JobExecutionModel>>((_, jobs) =>
             {
                 jobs.Clear();
                 if (firstCall)
@@ -45,14 +53,14 @@ public class JobbyServerTests
                     firstCall = false;
                 }
             });
+        
         var executed = false;
         _executionServiceMock
             .Setup(x => x.ExecuteJob(job, It.IsAny<CancellationToken>()))
             .Callback<JobExecutionModel, CancellationToken>((_, _) => executed = true);
 
         _postProcessingServiceMock.SetupGet(x => x.IsRetryQueueEmpty).Returns(true);
-
-
+        
         server.StartBackgroundService();
 
         for (var i = 0; i < 100; i++)
@@ -103,9 +111,9 @@ public class JobbyServerTests
         using var server = CreateServer(settings);
         var firstCall = true;
         var calledTwoTimes = false;
-        _storageMock
-            .Setup(x => x.TakeBatchToProcessingAsync(server.ServerId, settings.TakeToProcessingBatchSize, It.IsAny<List<JobExecutionModel>>()))
-            .Callback<string, int, List<JobExecutionModel>>((_, _, jobs) =>
+        _queueServiceMock
+            .Setup(x => x.TakeBatchToProcessing(settings.TakeToProcessingBatchSize, It.IsAny<List<JobExecutionModel>>()))
+            .Callback<int, List<JobExecutionModel>>((_, jobs) =>
             {
                 jobs.Clear();
                 if (firstCall)
@@ -113,10 +121,8 @@ public class JobbyServerTests
                     firstCall = false;
                     throw new Exception("test error");
                 }
-                else
-                {
-                    calledTwoTimes = true;
-                }
+
+                calledTwoTimes = true;
             });
 
         _postProcessingServiceMock.SetupGet(x => x.IsRetryQueueEmpty).Returns(true);
@@ -170,6 +176,7 @@ public class JobbyServerTests
     private JobbyServer CreateServer(JobbyServerSettings settings)
     {
         return new JobbyServer(_storageMock.Object,
+            _queueServiceMock.Object,
             _executionServiceMock.Object,
             _postProcessingServiceMock.Object,
             _loggerMock.Object,

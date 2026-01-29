@@ -12,7 +12,7 @@ namespace Jobby.IntegrationTests.Postgres;
 public class JobbyClientIntegrationTests
 {
     [Fact]
-    public async Task EnqueuesAndCancelsCommandByAsyncMethods()
+    public async Task DefaultOpts_EnqueuesAndCancelsCommandByAsyncMethods()
     {
         var dbContext = DbHelper.CreateContext();
         var client = CreateJobbyClient();
@@ -23,6 +23,7 @@ public class JobbyClientIntegrationTests
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
+        Assert.Equal(QueueSettings.DefaultQueueName, actualJob.QueueName);
 
         await client.CancelJobsByIdsAsync(jobId);
         actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
@@ -30,7 +31,7 @@ public class JobbyClientIntegrationTests
     }
 
     [Fact]
-    public void EnqueuesAndCancelsCommandBySyncMethods()
+    public void DefaultOpts_EnqueuesAndCancelsCommandBySyncMethods()
     {
         var dbContext = DbHelper.CreateContext();
         var client = CreateJobbyClient();
@@ -41,6 +42,57 @@ public class JobbyClientIntegrationTests
         var actualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == jobId);
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
+        Assert.Equal(QueueSettings.DefaultQueueName, actualJob.QueueName);
+
+        client.CancelJobsByIds(jobId);
+        actualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == jobId);
+        Assert.Null(actualJob);
+    }
+    
+    [Fact]
+    public async Task SpecifiedOptions_EnqueuesAndCancelsCommandByAsyncMethods()
+    {
+        var dbContext = DbHelper.CreateContext();
+        var client = CreateJobbyClient();
+
+        var command = new TestJobCommand();
+        var opts = new JobOpts
+        {
+            QueueName = "CustomQueue",
+            StartTime = DateTime.UtcNow.AddDays(1)
+        };
+        var jobId = await client.EnqueueCommandAsync(command, opts);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        Assert.NotNull(actualJob);
+        Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
+        Assert.Equal(opts.QueueName, actualJob.QueueName);
+        Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+
+        await client.CancelJobsByIdsAsync(jobId);
+        actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        Assert.Null(actualJob);
+    }
+
+    [Fact]
+    public void SpecifiedOptions_EnqueuesAndCancelsCommandBySyncMethods()
+    {
+        var dbContext = DbHelper.CreateContext();
+        var client = CreateJobbyClient();
+
+        var command = new TestJobCommand();
+        var opts = new JobOpts
+        {
+            QueueName = "CustomQueue",
+            StartTime = DateTime.UtcNow.AddDays(1)
+        };
+        var jobId = client.EnqueueCommand(command, opts);
+
+        var actualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == jobId);
+        Assert.NotNull(actualJob);
+        Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
+        Assert.Equal(opts.QueueName, actualJob.QueueName);
+        Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
 
         client.CancelJobsByIds(jobId);
         actualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == jobId);

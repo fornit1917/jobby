@@ -20,19 +20,20 @@ public class JobsSequenceBuilder
         _factory = factory;
     }
 
-    public JobsSequenceBuilder Add<TCommand>(TCommand command) where TCommand : IJobCommand
-    {
-        return Add(command, DateTime.UtcNow);
-    }
-
     public JobsSequenceBuilder Add<TCommand>(TCommand command, DateTime startTime) where TCommand: IJobCommand
     {
-        var job = _factory.Create(command, startTime);
+        Add(command, new JobOpts { StartTime = startTime });
+        return this;
+    }
+
+    public JobsSequenceBuilder Add<TCommand>(TCommand command, JobOpts opts = default) where TCommand : IJobCommand
+    {
+        var job = _factory.Create(command, opts);
         _jobs.Add(job);
         if (_jobs.Count > 1)
         {
             job.Status = JobStatus.WaitingPrev;
-            _jobs[_jobs.Count - 2].NextJobId = job.Id;
+            _jobs[^2].NextJobId = job.Id;
         }
         return this;
     }

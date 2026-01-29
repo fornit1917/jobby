@@ -9,6 +9,7 @@
 - Транзакционное создание нескольких задач
 - Настройка порядка выполнения при создании нескольких задач
 - Повтор упавших задач согласно настроенным политикам повторов
+- Мультиочереди
 - Настраиваемый middlewares pipeline для исполнения кода фоновых задач
 - Совместимые с OpenTelemetry метрики и трейсинг
 - Корректная работа в распределённых приложениях
@@ -305,6 +306,61 @@ jobbyBuilder
     .UseDefaultRetryPolicy(defaultPolicy)
     // но для задач SendEmailCommand будет применяться другая политика
     .UseRetryPolicyForJob<SendEmailCommand>(specialRetryPolicy);
+```
+
+### Мультиочереди
+
+Jobby позволяет распределять задачи по независимым очередям. Например, бывает полезно выделить в отдельную очередь
+задачи, которые важно запускать вовремя (например рекуррентные джобы) или задачи, которые очень тяжелые и для которых
+стоит уменьшить степень параллелизма.
+
+По умолчанию все задачи попадают в очередь `default`.
+
+При конфигурации библиотеки можно переопределить очередь для всех задач конкретного типа или для всех рекуррентных задач:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder
+        .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly)
+        // отдельная очередь для всех задач по расписания
+        .UseQueueForAllRecurrent("recurrent")
+        // отдельная очередь для задач конкретного типа
+        .UseQueueForJob<HeavyJobCommand>("heavy");
+```
+
+Или можно указывать название очереди при создании каждого экземпляра задачи:
+
+```csharp
+var command = new SomeJobCommand();
+jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue"});
+```
+
+JobbyServer по умолчанию выполняет задачи только из очереди `default`. Чтобы запускались задачи из других очередей, их необходимо
+указать при конфигурации в методе `UseServerSettings`:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    // ...
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseServerSettings(new JobbyServerSettings
+            {
+                // Здесь указываются очереди
+                // из которых нужно запускать задачи
+                Queues = [
+                    new QueueSettings { QueueName = "default" },
+                    new QueueSettings { QueueName = "recurrent" },
+                    new QueueSettings
+                    {
+                        QueueName = "heavy",
+                        // При необходимости для отдельной очереди можно уменьшить степень параллелизма
+                        MaxDegreeOfParallelism = 1,
+                    }
+                ]
+            })
 ```
 
 ### Использование Middlewares
