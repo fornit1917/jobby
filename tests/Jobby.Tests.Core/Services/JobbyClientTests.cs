@@ -81,7 +81,7 @@ public class JobbyClientTests
     {
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.Create(command, default(JobCreationOptions))).Returns(job);
+        _factoryMock.Setup(x => x.Create(command, default(JobOpts))).Returns(job);
 
         var id = _client.EnqueueCommand(command);
 
@@ -94,7 +94,7 @@ public class JobbyClientTests
     {
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        var opts = new JobCreationOptions { QueueName = "q" };
+        var opts = new JobOpts { QueueName = "q" };
         _factoryMock.Setup(x => x.Create(command, opts)).Returns(job);
 
         var id = _client.EnqueueCommand(command, opts);
@@ -122,7 +122,7 @@ public class JobbyClientTests
     {
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.Create(command, default(JobCreationOptions))).Returns(job);
+        _factoryMock.Setup(x => x.Create(command, default(JobOpts))).Returns(job);
 
         var id = await _client.EnqueueCommandAsync(command);
 
@@ -135,7 +135,7 @@ public class JobbyClientTests
     {
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        var opts = new JobCreationOptions { QueueName = "q" };
+        var opts = new JobOpts { QueueName = "q" };
         _factoryMock.Setup(x => x.Create(command, opts)).Returns(job);
 
         var id = await _client.EnqueueCommandAsync(command, opts);
@@ -189,7 +189,7 @@ public class JobbyClientTests
     {
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
-        var opts = new JobCreationOptions { QueueName = "q" };
+        var opts = new RecurrentJobOpts { QueueName = "q" };
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         _factoryMock.Setup(x => x.CreateRecurrent(command, cron, opts)).Returns(job);
 
@@ -203,7 +203,7 @@ public class JobbyClientTests
     {
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
-        var opts = new JobCreationOptions { QueueName = "q" };
+        var opts = new RecurrentJobOpts { QueueName = "q" };
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         _factoryMock.Setup(x => x.CreateRecurrent(command, cron, opts)).Returns(job);
 

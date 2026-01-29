@@ -20,7 +20,7 @@ public class QueueNameAssignorTests
 
         var queueNameAssignor = new QueueNameAssignor(queueNameByJobName, "recurrent");
         
-        var queue = queueNameAssignor.GetQueueName("MyJobName", new JobCreationOptions
+        var queue = queueNameAssignor.GetQueueName("MyJobName", new JobOpts
         {
             QueueName = instanceLevelQueueName
         });
@@ -47,7 +47,7 @@ public class QueueNameAssignorTests
         
         var queueNameAssignor = new QueueNameAssignor(queueNameByJobName, defaultForRecurrentQueueName);
         
-        var queue = queueNameAssignor.GetQueueNameForRecurrent("MyJobName", new JobCreationOptions
+        var queue = queueNameAssignor.GetQueueNameForRecurrent("MyJobName", new RecurrentJobOpts
         {
             QueueName = instanceLevelQueueName
         });

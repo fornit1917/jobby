@@ -6,13 +6,13 @@ public interface IJobbyClient
 {
     public IJobsFactory Factory { get; }
 
-    Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, JobCreationOptions opts = default) 
+    Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, JobOpts opts = default) 
         where TCommand : IJobCommand;
     
     Task<Guid> EnqueueCommandAsync<TCommand>(TCommand command, DateTime startTime)
         where TCommand : IJobCommand;
     
-    Guid EnqueueCommand<TCommand>(TCommand command, JobCreationOptions opts = default) where TCommand : IJobCommand;
+    Guid EnqueueCommand<TCommand>(TCommand command, JobOpts opts = default) where TCommand : IJobCommand;
     Guid EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
 
     Task CancelJobsByIdsAsync(params Guid[] ids);
@@ -21,10 +21,10 @@ public interface IJobbyClient
     Task EnqueueBatchAsync(IReadOnlyList<JobCreationModel> jobs);
     void EnqueueBatch(IReadOnlyList<JobCreationModel> jobs);
 
-    Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron, JobCreationOptions opts = default)
+    Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
         where TCommand : IJobCommand;
     
-    void ScheduleRecurrent<TCommand>(TCommand command, string cron, JobCreationOptions opts = default)
+    void ScheduleRecurrent<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
         where TCommand : IJobCommand;
 
     Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;

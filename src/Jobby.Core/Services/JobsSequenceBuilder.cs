@@ -22,11 +22,11 @@ public class JobsSequenceBuilder
 
     public JobsSequenceBuilder Add<TCommand>(TCommand command, DateTime startTime) where TCommand: IJobCommand
     {
-        Add(command, new JobCreationOptions { StartTime = startTime });
+        Add(command, new JobOpts { StartTime = startTime });
         return this;
     }
 
-    public JobsSequenceBuilder Add<TCommand>(TCommand command, JobCreationOptions opts = default) where TCommand : IJobCommand
+    public JobsSequenceBuilder Add<TCommand>(TCommand command, JobOpts opts = default) where TCommand : IJobCommand
     {
         var job = _factory.Create(command, opts);
         _jobs.Add(job);

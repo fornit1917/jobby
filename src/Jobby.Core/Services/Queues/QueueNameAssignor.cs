@@ -14,16 +14,16 @@ internal class QueueNameAssignor : IQueueNameAssignor
         _queueNameForRecurrent = queueNameForRecurrent;
     }
 
-    public string GetQueueName(string jobName, JobCreationOptions jobCreationOptions)
+    public string GetQueueName(string jobName, JobOpts opts)
     {
-        return jobCreationOptions.QueueName
+        return opts.QueueName
                ?? _queueNameByJobName.GetValueOrDefault(jobName)
                ?? QueueSettings.DefaultQueueName;
     }
 
-    public string GetQueueNameForRecurrent(string jobName, JobCreationOptions jobCreationOptions)
+    public string GetQueueNameForRecurrent(string jobName, RecurrentJobOpts opts)
     {
-        return jobCreationOptions.QueueName
+        return opts.QueueName
                ?? _queueNameByJobName.GetValueOrDefault(jobName)
                ?? _queueNameForRecurrent
                ?? QueueSettings.DefaultQueueName;

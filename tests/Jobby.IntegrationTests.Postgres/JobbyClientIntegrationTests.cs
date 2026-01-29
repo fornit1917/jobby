@@ -56,7 +56,7 @@ public class JobbyClientIntegrationTests
         var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
-        var opts = new JobCreationOptions
+        var opts = new JobOpts
         {
             QueueName = "CustomQueue",
             StartTime = DateTime.UtcNow.AddDays(1)
@@ -81,7 +81,7 @@ public class JobbyClientIntegrationTests
         var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
-        var opts = new JobCreationOptions
+        var opts = new JobOpts
         {
             QueueName = "CustomQueue",
             StartTime = DateTime.UtcNow.AddDays(1)

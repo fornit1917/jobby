@@ -20,7 +20,7 @@ internal class JobsFactory : IJobsFactory
         _queueNameAssignor = queueNameAssignor;
     }
 
-    public JobCreationModel Create<TCommand>(TCommand command, JobCreationOptions opts = default)
+    public JobCreationModel Create<TCommand>(TCommand command, JobOpts opts = default)
         where TCommand : IJobCommand
     {
         var jobName = TCommand.GetJobName();
@@ -39,10 +39,10 @@ internal class JobsFactory : IJobsFactory
 
     public JobCreationModel Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand
     {
-        return Create(command, new JobCreationOptions { StartTime = startTime });
+        return Create(command, new JobOpts { StartTime = startTime });
     }
 
-    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron, JobCreationOptions opts = default)
+    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
         where TCommand : IJobCommand
     {
         var jobName = TCommand.GetJobName();

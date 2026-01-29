@@ -67,7 +67,7 @@ public class JobsFactoryTests
         var expectedQueue = "q";
         _queueNameAssignorMock
             .Setup(x => x.GetQueueName(TestJobCommand.GetJobName(), 
-                It.Is<JobCreationOptions>(opts => opts.StartTime == startTime)))
+                It.Is<JobOpts>(opts => opts.StartTime == startTime)))
             .Returns(expectedQueue);
 
         var job = _factory.Create(command, startTime);
@@ -118,7 +118,7 @@ public class JobsFactoryTests
     public void Create_CreationOptionsSpecified_CreatesExpected()
     {
         var command = new TestJobCommand();
-        var creationOptions = new JobCreationOptions
+        var creationOptions = new JobOpts
         {
             QueueName = "custom_q",
             StartTime = DateTime.UtcNow.AddDays(1),
@@ -148,7 +148,7 @@ public class JobsFactoryTests
     {
         var command = new TestJobCommand();
         var cron = "0 3 1 12 *";
-        var creationOptions = new JobCreationOptions
+        var creationOptions = new RecurrentJobOpts
         {
             QueueName = "custom_q",
             StartTime = DateTime.UtcNow.AddDays(1),

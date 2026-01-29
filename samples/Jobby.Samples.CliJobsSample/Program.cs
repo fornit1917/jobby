@@ -123,7 +123,7 @@ internal static class Program
                 Name = "SomeValue"
             };
             var queueName = $"q{(i - 1) % queuesCount + 1}";
-            jobbtClient.EnqueueCommand(jobParam, new JobCreationOptions {  QueueName = queueName });
+            jobbtClient.EnqueueCommand(jobParam, new JobOpts {  QueueName = queueName });
         }
     }
 
@@ -135,12 +135,12 @@ internal static class Program
             ShouldBeFailed = true,
             Name = "SomeValue"
         };
-        jobbyClient.EnqueueCommand(jobParam, new JobCreationOptions { QueueName = "q1" });
+        jobbyClient.EnqueueCommand(jobParam, new JobOpts { QueueName = "q1" });
     }
 
     private static void CreateRecurrent(IJobbyClient jobbyClient)
     {
-        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand(), "*/3 * * * * *", new JobCreationOptions
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand(), "*/3 * * * * *", new RecurrentJobOpts
         {
             QueueName = "q1",
         });
@@ -153,7 +153,7 @@ internal static class Program
         {
             var queueName = $"q{(i - 1) % queuesCount + 1}";
             var command = new TestCliJobCommand { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false }; 
-            sequenceBuilder.Add(command, new JobCreationOptions { QueueName = queueName });
+            sequenceBuilder.Add(command, new JobOpts { QueueName = queueName });
         }
         jobbyClient.EnqueueBatch(sequenceBuilder.GetJobs());
     }

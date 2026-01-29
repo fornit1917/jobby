@@ -33,7 +33,7 @@ public class JobsSequenceBuilderTests
         {
             Status = JobStatus.Scheduled
         };
-        _factoryMock.Setup(x => x.Create(command, default(JobCreationOptions))).Returns(job);
+        _factoryMock.Setup(x => x.Create(command, default(JobOpts))).Returns(job);
 
         _builder.Add(command);
         var jobs = _builder.GetJobs();
@@ -59,8 +59,8 @@ public class JobsSequenceBuilderTests
             Id = Guid.NewGuid(),
             Status = JobStatus.Scheduled
         };
-        _factoryMock.Setup(x => x.Create(firstCommand, default(JobCreationOptions))).Returns(firstJob);
-        _factoryMock.Setup(x => x.Create(secondCommand, default(JobCreationOptions))).Returns(secondJob);
+        _factoryMock.Setup(x => x.Create(firstCommand, default(JobOpts))).Returns(firstJob);
+        _factoryMock.Setup(x => x.Create(secondCommand, default(JobOpts))).Returns(secondJob);
 
         _builder.Add(firstCommand);
         _builder.Add(secondCommand);
@@ -85,7 +85,7 @@ public class JobsSequenceBuilderTests
             Status = JobStatus.Scheduled
         };
         _factoryMock
-            .Setup(x => x.Create(command, It.Is<JobCreationOptions>(opts => opts.StartTime == startTime)))
+            .Setup(x => x.Create(command, It.Is<JobOpts>(opts => opts.StartTime == startTime)))
             .Returns(job);
 
         _builder.Add(command, startTime);
@@ -99,7 +99,7 @@ public class JobsSequenceBuilderTests
     public void Add_CreationOptionsSpecified_GetJobsReturnsExpectedJob()
     {
         var command = new TestJobCommand();
-        var creationOptions = new JobCreationOptions
+        var creationOptions = new JobOpts
         {
             StartTime = DateTime.UtcNow.AddDays(1),
             QueueName = "custom-queue"

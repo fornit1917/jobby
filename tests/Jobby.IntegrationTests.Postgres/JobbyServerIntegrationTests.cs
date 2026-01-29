@@ -69,8 +69,8 @@ public class JobbyServerIntegrationTests
         var command1 = new TestJobCommand();
         var command2 = new TestJobCommand();
         
-        var jobId1 = await client.EnqueueCommandAsync(command1, new JobCreationOptions { QueueName = "q1" });
-        var jobId2 = await client.EnqueueCommandAsync(command2, new JobCreationOptions { QueueName = "q2" });
+        var jobId1 = await client.EnqueueCommandAsync(command1, new JobOpts { QueueName = "q1" });
+        var jobId2 = await client.EnqueueCommandAsync(command2, new JobOpts { QueueName = "q2" });
 
         var jobsNotCompletedInDb = true;
         for (int i = 0; i < 50; i++)

@@ -123,7 +123,7 @@ public class JobbyMultiQueueExecuteJobsBenchmarkAction
                 Value = Guid.NewGuid().ToString(),
                 DelayMs = 0,
             };
-            var job = _jobbyClient.Factory.Create(jobCommand, new JobCreationOptions {  QueueName = queueName });
+            var job = _jobbyClient.Factory.Create(jobCommand, new JobOpts {  QueueName = queueName });
             jobs.Add(job);
             if (jobs.Count == 1000)
             {
