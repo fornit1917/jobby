@@ -17,6 +17,7 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Transactional creation of multiple tasks  
 - Configurable execution order for multiple tasks  
 - Retry policies for failed tasks
+- Multi-Queues
 - Configurable middlewares pipeline for executing background tasks code
 - OpenTelemetry-compatible metrics and tracing
 - Proper operation in distributed applications
@@ -300,6 +301,58 @@ jobbyBuilder
     .UseDefaultRetryPolicy(defaultPolicy)  
     // Custom policy for SendEmailCommand  
     .UseRetryPolicyForJob<SendEmailCommand>(specialRetryPolicy);  
+```
+
+### Multi-Queues  
+
+Jobby allows you to distribute tasks across independent queues. For example, it can be useful to send tasks that need to run on time (such as recurrent jobs) or tasks that are very heavy and require a reduced degree of parallelism to a separate queue.  
+
+By default, all tasks go to the `default` queue.  
+
+During library configuration, you can override the queue for all tasks of a specific type or for all recurrent tasks:  
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder
+        .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly)
+        // separate queue for all scheduled tasks
+        .UseQueueForAllRecurrent("recurrent")
+        // separate queue for tasks of a specific type
+        .UseQueueForJob<HeavyJobCommand>("heavy");
+```
+
+Alternatively, you can specify the queue name when creating each task instance:  
+
+```csharp
+var command = new SomeJobCommand();
+jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue" });
+```
+
+By default, JobbyServer only executes tasks from the `default` queue. To run tasks from other queues, you need to specify them during configuration in the `UseServerSettings` method:  
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    // ...
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseServerSettings(new JobbyServerSettings
+            {
+                // Here you specify the queues  
+                // from which tasks should be executed  
+                Queues = [
+                    new QueueSettings { QueueName = "default" },
+                    new QueueSettings { QueueName = "recurrent" },
+                    new QueueSettings
+                    {
+                        QueueName = "heavy",
+                        // If needed, you can reduce the degree of parallelism for a separate queue  
+                        MaxDegreeOfParallelism = 1,
+                    }
+                ]
+            })
 ```
 
 ### Using Middlewares
