@@ -103,40 +103,4 @@ public class JobbyServiceCollectionExtensionsTests
         Assert.Contains(_addedServices, x => x.ServiceType == typeof(IHostedService)
                                              && x.ImplementationType == typeof(JobbyHostedService));
     }
-
-    [Fact]
-    [Obsolete]
-    public void AddJobbyClientDeprecated_AddsJobbyClientAndFactoryAsSingletons()
-    {
-        _serviceCollectionMock.Object.AddJobbyClient(x =>
-        {
-            x.UseStorage(new Mock<IJobbyStorage>().Object);
-        });
-
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobsFactory) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyClient) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Equal(2, _addedServices.Count);
-    }
-
-    [Fact]
-    [Obsolete]
-    public void AddJobbyDeprecated_AddsJobHandlersAndJobbyServices()
-    {
-        _serviceCollectionMock.Object.AddJobby(x =>
-        {
-            x.UseStorage(new Mock<IJobbyStorage>().Object);
-            x.UseExecutionScopeFactory(new Mock<IJobExecutionScopeFactory>().Object);
-            x.AddJob<TestJobCommand, TestJobCommandHandler>();
-        });
-
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobCommandHandler<TestJobCommand>)
-                                             && x.ImplementationType == typeof(TestJobCommandHandler)
-                                             && x.Lifetime == ServiceLifetime.Scoped);
-
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobsFactory) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyClient) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IJobbyServer) && x.Lifetime == ServiceLifetime.Singleton);
-        Assert.Contains(_addedServices, x => x.ServiceType == typeof(IHostedService) 
-                                             && x.ImplementationType == typeof(JobbyHostedService));
-    }
 }
