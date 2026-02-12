@@ -38,8 +38,7 @@ public class BulkDeleteProcessingJobsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var processingJobs = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkDeleteProcessingJobsAsync(processingJobs);
+        await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
@@ -100,8 +99,7 @@ public class BulkDeleteProcessingJobsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var processingJobs = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkDeleteProcessingJobsAsync(processingJobs, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
@@ -167,8 +165,7 @@ public class BulkDeleteProcessingJobsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var jobsToDelete = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkDeleteProcessingJobsAsync(jobsToDelete, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
@@ -206,7 +203,6 @@ public class BulkDeleteProcessingJobsTests
             },
         };
 
-        var serverId = Guid.NewGuid().ToString();
         var jobs = new List<JobDbModel>
         {
             new JobDbModel
@@ -237,8 +233,7 @@ public class BulkDeleteProcessingJobsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var jobsToDelete = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), "old_server");
-        await storage.BulkDeleteProcessingJobsAsync(jobsToDelete, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch("old_server"));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();

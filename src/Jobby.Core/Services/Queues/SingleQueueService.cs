@@ -14,6 +14,8 @@ internal class SingleQueueService : IQueueService
     private readonly string _serverId;
     private readonly int _maxBatchSize;
     private readonly string _queueName;
+    private readonly bool _disableSerializableGroups;
+    private readonly JobbyServerSettings _settings;
     private readonly GeometryProgression _pollingInterval;
 
     private bool _isEmpty;
@@ -26,6 +28,7 @@ internal class SingleQueueService : IQueueService
         _serverId = serverId;
         _storage = storage;
         _timer = timer;
+        _settings = settings;
 
         var queueSettings = settings.Queues.First();
         
@@ -34,6 +37,9 @@ internal class SingleQueueService : IQueueService
             : settings.MaxDegreeOfParallelism;
         
         _queueName = queueSettings.QueueName;
+
+        _disableSerializableGroups =
+            queueSettings.DisableSerializableGroups ?? settings.DisableSerializableGroups ?? false;
         
         _pollingInterval = new GeometryProgression(
             start: settings.PollingIntervalStartMs, 
@@ -62,7 +68,14 @@ internal class SingleQueueService : IQueueService
         }
         
         result.Clear();
-        await _storage.TakeBatchToProcessingAsync(_serverId, batchSize, _queueName, result);
+        var request = new GetJobsRequest
+        {
+            QueueName = _queueName,
+            BatchSize = batchSize,
+            ServerId = _serverId,
+            DisableSerializableGroups = _disableSerializableGroups,
+        };
+        await _storage.TakeBatchToProcessingAsync(request, result);
 
         if (result.Count == 0)
         {

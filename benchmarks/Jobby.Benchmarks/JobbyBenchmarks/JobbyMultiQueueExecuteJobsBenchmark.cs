@@ -35,6 +35,7 @@ public class JobbyMultiQueueExecuteJobsBenchmark : IBenchmark
             action.JobsCount = benchmarkParams.JobsCount;
             action.DegreeOfParallelism = benchmarkParams.DegreeOfParallelism;
             action.CompleteWithBatching = benchmarkParams.CompleteWithBatching;
+            action.DisableSerializableGroups = benchmarkParams.DisableSerializableGroups;
 
             Console.WriteLine("Warmup...");
             action.Setup();
@@ -74,6 +75,9 @@ public class JobbyMultiQueueExecuteJobsBenchmarkAction
     [Params(false, true)]
     public bool CompleteWithBatching { get; set; } = false;
     
+    [Params(false, true)]
+    public bool DisableSerializableGroups { get; set; } = false;
+    
     public int JobsCount { get; set; } = 1000;
     
     [IterationSetup]
@@ -93,7 +97,8 @@ public class JobbyMultiQueueExecuteJobsBenchmarkAction
                 new QueueSettings { QueueName = "q3" },
                 new QueueSettings { QueueName = "q4" },
                 new QueueSettings { QueueName = "q5" },
-            ]
+            ],
+            DisableSerializableGroups = DisableSerializableGroups
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
 

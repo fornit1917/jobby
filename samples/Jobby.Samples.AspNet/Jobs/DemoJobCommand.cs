@@ -4,10 +4,13 @@ namespace Jobby.Samples.AspNet.Jobs
 {
     public class DemoJobCommand : IJobCommand
     {
+        public string Value { get; init; } = "SomeValue";
         public bool ShouldBeFailed { get; init; } = false;
         public bool ShouldThrowIgnoredException { get; init; } = false;
         public DateTime? StartAfter { get; init; }
         public int DelayMs { get; init; }
+        public string? SerializableGroupId { get; init; }
+        public bool LockGroupIfFailed { get; init; } = false;
 
         public static string GetJobName() => "DemoJob";
         public bool CanBeRestarted() => true;

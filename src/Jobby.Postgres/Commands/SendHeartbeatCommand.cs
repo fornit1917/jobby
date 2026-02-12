@@ -13,7 +13,7 @@ internal class SendHeartbeatCommand
     {
         _dataSource = dataSource;
         _commandText = $@"
-            INSERT INTO {TableName.Servers(settings)}
+            INSERT INTO {DbName.Servers(settings)}
                 (id, heartbeat_ts)
                 VALUES ($1, $2)
             ON CONFLICT (id) DO

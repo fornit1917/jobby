@@ -10,8 +10,9 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
     private readonly JobbyServerSettings _settings;
     private readonly string _serverId;
 
-    private readonly record struct QueueItem(TaskCompletionSource Tcs, Guid JobId, Guid? NextJobId);
-    private Channel<QueueItem> _chan;
+    private readonly record struct QueueItem(TaskCompletionSource Tcs, JobExecutionModel Job);
+    
+    private readonly Channel<QueueItem> _chan;
 
     public BatchingJobCompletionService(IJobbyStorage storage, JobbyServerSettings settings, string serverId)
     {
@@ -31,12 +32,11 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
         _serverId = serverId;
     }
 
-    public Task CompleteJob(Guid jobId, Guid? nextJobId)
+    public Task CompleteJob(JobExecutionModel job)
     {
         var queueItem = new QueueItem
         {
-            JobId = jobId,
-            NextJobId = nextJobId,
+            Job = job,
             Tcs = new TaskCompletionSource()
         };
         
@@ -77,10 +77,10 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
                 }
 
                 taskCompletionSources.Add(queueItem.Tcs);
-                jobIds.Add(queueItem.JobId);
-                if (queueItem.NextJobId.HasValue)
+                jobIds.Add(queueItem.Job.Id);
+                if (queueItem.Job.NextJobId.HasValue)
                 {
-                    nextJobIds.Add(queueItem.NextJobId.Value);
+                    nextJobIds.Add(queueItem.Job.NextJobId.Value);
                 }
             }
 
@@ -92,14 +92,19 @@ internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
             // If batch is not empty - send bulk command to DB
             try
             {
-                var processingJobsList = new ProcessingJobsList(jobIds, _serverId);
+                var completeJobsBatch = new CompleteJobsBatch
+                {
+                    ServerId = _serverId,
+                    JobIds = jobIds,
+                    NextJobIds = nextJobIds,
+                };
                 if (_settings.DeleteCompleted)
                 {
-                    await _storage.BulkDeleteProcessingJobsAsync(processingJobsList, nextJobIds);
+                    await _storage.BulkDeleteProcessingJobsAsync(completeJobsBatch);
                 }
                 else
                 {
-                    await _storage.BulkUpdateProcessingJobsToCompletedAsync(processingJobsList, nextJobIds);
+                    await _storage.BulkUpdateProcessingJobsToCompletedAsync(completeJobsBatch);
                 }
                 
                 SetCompletedForTasks(taskCompletionSources);

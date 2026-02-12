@@ -14,7 +14,7 @@ internal class InsertJobCommand
         _dataSource = dataSource;
         
         _commandText = @$"
-            INSERT INTO {TableName.Jobs(settings)} (
+            INSERT INTO {DbName.Jobs(settings)} (
                 id,
                 job_name,
                 job_param,
@@ -24,28 +24,20 @@ internal class InsertJobCommand
                 cron,
                 next_job_id,
                 can_be_restarted,
-                queue_name
+                queue_name,
+                serializable_group_id,
+                lock_group_if_failed
             )
-            VALUES (
-                $1,
-                $2,
-                $3,
-                $4,
-                $5,
-                $6,
-                $7,
-                $8,
-                $9,
-                $10                    
-            )
-            ON CONFLICT (job_name) WHERE cron IS NOT null DO 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (job_name) WHERE cron IS NOT NULL DO
             UPDATE SET
                 id = $1,
                 job_param = $3,
 	            cron = $7,
 	            scheduled_start_at = $6,
                 can_be_restarted = $9,
-                queue_name = $10
+                queue_name = $10,
+                serializable_group_id = $11
         ";
     }
 
@@ -64,7 +56,9 @@ internal class InsertJobCommand
                 new() { Value = (object?)job.Cron ?? DBNull.Value },                // 7
                 new() { Value = (object?)job.NextJobId ?? DBNull.Value },           // 8
                 new() { Value = job.CanBeRestarted },                               // 9
-                new() { Value = (object?)job.QueueName ?? DBNull.Value },           // 10
+                new() { Value = job.QueueName },                                    // 10
+                new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value }, // 11
+                new() { Value = job.LockGroupIfFailed },                            // 12
             }
         };
     }

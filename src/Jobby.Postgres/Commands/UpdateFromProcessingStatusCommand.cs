@@ -16,7 +16,7 @@ internal class UpdateFromProcessingStatusCommand
         _dataSource = dataSource;
 
         _updateStatusCommandText = $@"
-            UPDATE {TableName.Jobs(settings)}
+            UPDATE {DbName.Jobs(settings)}
             SET
                 status = $1,
                 last_finished_at = $2,
@@ -29,7 +29,7 @@ internal class UpdateFromProcessingStatusCommand
 
         _updateAndUnlockNextCommandText = @$"
             WITH complete_and_get_next_job_id AS (
-	            UPDATE {TableName.Jobs(settings)} 
+	            UPDATE {DbName.Jobs(settings)} 
 	            SET
 		            status = $1,
 		            last_finished_at = $2,
@@ -40,7 +40,7 @@ internal class UpdateFromProcessingStatusCommand
 		            AND server_id = $5
 	            RETURNING next_job_id 
             )
-            UPDATE {TableName.Jobs(settings)} 
+            UPDATE {DbName.Jobs(settings)} 
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE
@@ -50,39 +50,29 @@ internal class UpdateFromProcessingStatusCommand
         ";
     }
 
-    public async Task ExecuteAsync(ProcessingJob job, JobStatus newStatus, string? error, Guid? nextJobId)
+    public async Task ExecuteAsync(JobExecutionModel job, JobStatus newStatus, string? error)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         var finishedAt = DateTime.UtcNow;
-        if (nextJobId == null || newStatus != JobStatus.Completed)
+        if (job.NextJobId == null || newStatus != JobStatus.Completed)
         {
-            await using var cmd = new NpgsqlCommand(_updateStatusCommandText, conn)
-            {
-                Parameters =
-                {
-                    new() { Value = (int)newStatus },                  // 1
-                    new() { Value = finishedAt },                      // 2
-                    new() { Value = error as object ?? DBNull.Value }, // 3
-                    new() { Value = job.JobId },                       // 4
-                    new() { Value = job.ServerId }                     // 5 
-                }
-            };
+            await using var cmd = new NpgsqlCommand(_updateStatusCommandText, conn);
+            cmd.Parameters.Add(new() { Value = (int)newStatus });                  // 1
+            cmd.Parameters.Add(new() { Value = finishedAt });                      // 2
+            cmd.Parameters.Add(new() { Value = error as object ?? DBNull.Value }); // 3
+            cmd.Parameters.Add(new() { Value = job.Id });                          // 4
+            cmd.Parameters.Add(new() { Value = job.ServerId });                    // 5 
             await cmd.ExecuteNonQueryAsync();
         }
         else
         {
-            await using var updateAndUnlockNextCmd = new NpgsqlCommand(_updateAndUnlockNextCommandText, conn)
-            {
-                Parameters =
-                {
-                    new() { Value = (int)newStatus },                  // 1
-                    new() { Value = finishedAt },                      // 2
-                    new() { Value = error as object ?? DBNull.Value }, // 3
-                    new() { Value = job.JobId },                       // 4
-                    new() { Value = job.ServerId },                    // 5
-                    new() { Value = nextJobId }                        // 6
-                }
-            };
+            await using var updateAndUnlockNextCmd = new NpgsqlCommand(_updateAndUnlockNextCommandText, conn);
+            updateAndUnlockNextCmd.Parameters.Add(new() { Value = (int)newStatus }); // 1
+            updateAndUnlockNextCmd.Parameters.Add(new() { Value = finishedAt });     // 2
+            updateAndUnlockNextCmd.Parameters.Add(new() { Value = error as object ?? DBNull.Value }); // 3
+            updateAndUnlockNextCmd.Parameters.Add(new() { Value = job.Id });         // 4
+            updateAndUnlockNextCmd.Parameters.Add(new() { Value = job.ServerId });   // 5
+            updateAndUnlockNextCmd.Parameters.Add(new() { Value = job.NextJobId });  // 6
             await updateAndUnlockNextCmd.ExecuteNonQueryAsync();
         }
     }

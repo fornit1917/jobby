@@ -29,9 +29,9 @@ internal static class BenchmarksHelper
         input = Console.ReadLine()?.Trim();
         result.CompleteWithBatching = input == "y" || input == "Y";
         
-        Console.Write("Use UuidV7 (y/n, default y): ");
+        Console.Write("Disable serializable groups (y/n, default n): ");
         input = Console.ReadLine()?.Trim();
-        result.UseUuidV7 = input == "y" || input == "Y";
+        result.DisableSerializableGroups = input == "y" || input == "Y";
 
         return result;
     }

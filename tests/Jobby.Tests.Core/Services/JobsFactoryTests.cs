@@ -54,6 +54,8 @@ public class JobsFactoryTests
         Assert.Null(job.NextJobId);
         Assert.Equal(expectedQueue, job.QueueName);
         Assert.Equal(canBeRestarted, job.CanBeRestarted);
+        Assert.Null(job.SerializableGroupId);
+        Assert.False(job.LockGroupIfFailed);
     }
 
     [Theory]
@@ -83,6 +85,8 @@ public class JobsFactoryTests
         Assert.Null(job.NextJobId);
         Assert.Equal(expectedQueue, job.QueueName);
         Assert.Equal(canBeRestarted, job.CanBeRestarted);
+        Assert.Null(job.SerializableGroupId);
+        Assert.False(job.LockGroupIfFailed);
     }
 
     [Theory]
@@ -115,21 +119,23 @@ public class JobsFactoryTests
     }
 
     [Fact]
-    public void Create_CreationOptionsSpecified_CreatesExpected()
+    public void Create_OptionsSpecified_CreatesExpected()
     {
         var command = new TestJobCommand();
-        var creationOptions = new JobOpts
+        var opts = new JobOpts
         {
             QueueName = "custom_q",
             StartTime = DateTime.UtcNow.AddDays(1),
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = true,
         };
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
         var expectedQueue = "q";
         _queueNameAssignorMock
-            .Setup(x => x.GetQueueName(TestJobCommand.GetJobName(), creationOptions))
+            .Setup(x => x.GetQueueName(TestJobCommand.GetJobName(), opts))
             .Returns(expectedQueue);
         
-        var job = _factory.Create(command, creationOptions);
+        var job = _factory.Create(command, opts);
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
@@ -138,28 +144,31 @@ public class JobsFactoryTests
         Assert.Null(job.Cron);
         Assert.True(DateTime.UtcNow >= job.CreatedAt);
         Assert.True(DateTime.UtcNow.Subtract(job.CreatedAt) < TimeSpan.FromSeconds(1));
-        Assert.Equal(creationOptions.StartTime.Value, job.ScheduledStartAt);
+        Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
         Assert.Equal(expectedQueue, job.QueueName);
         Assert.Null(job.NextJobId);
+        Assert.Equal(opts.SerializableGroupId, job.SerializableGroupId);
+        Assert.Equal(opts.LockGroupIfFailed, job.LockGroupIfFailed);
     }
 
     [Fact]
-    public void CreateRecurrent_CreationOptionsSpecified_CreatesExpected()
+    public void CreateRecurrent_OptionsSpecified_CreatesExpected()
     {
         var command = new TestJobCommand();
         var cron = "0 3 1 12 *";
-        var creationOptions = new RecurrentJobOpts
+        var opts = new RecurrentJobOpts
         {
             QueueName = "custom_q",
             StartTime = DateTime.UtcNow.AddDays(1),
+            SerializableGroupId = "gid"
         };
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
         var expectedQueue = "q";
         _queueNameAssignorMock
-            .Setup(x => x.GetQueueNameForRecurrent(TestJobCommand.GetJobName(), creationOptions))
+            .Setup(x => x.GetQueueNameForRecurrent(TestJobCommand.GetJobName(), opts))
             .Returns(expectedQueue);
 
-        var job = _factory.CreateRecurrent(command, cron, creationOptions);
+        var job = _factory.CreateRecurrent(command, cron, opts);
         
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
@@ -168,8 +177,9 @@ public class JobsFactoryTests
         Assert.Equal(cron, job.Cron);
         Assert.True(DateTime.UtcNow >= job.CreatedAt);
         Assert.True(DateTime.UtcNow.Subtract(job.CreatedAt) < TimeSpan.FromSeconds(1));
-        Assert.Equal(creationOptions.StartTime.Value, job.ScheduledStartAt);
+        Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
         Assert.Equal(expectedQueue, job.QueueName);
+        Assert.Equal(opts.SerializableGroupId, job.SerializableGroupId);
     }
 }

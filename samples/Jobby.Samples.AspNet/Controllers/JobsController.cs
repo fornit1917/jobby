@@ -24,17 +24,48 @@ public class JobsController
     [HttpPost("enqueue-job")]
     public async Task<string> EnqueueDemoJob([FromBody] DemoJobCommand command)
     {
-        var jobId = await _jobbyClient.EnqueueCommandAsync(command, command.StartAfter ?? DateTime.UtcNow);
+        var opts = new JobOpts
+        {
+            StartTime = command.StartAfter ?? DateTime.UtcNow,
+            SerializableGroupId = command.SerializableGroupId,
+            LockGroupIfFailed = command.LockGroupIfFailed,
+        };
+        var jobId = await _jobbyClient.EnqueueCommandAsync(command, opts);
         return jobId.ToString();
     }
 
     [HttpPost("enqueue-job-by-ef")]
     public async Task<string> EnqueueDemoJobByEF([FromBody] DemoJobCommand command)
     {
-        var job = _jobsFactory.Create(command);
+        var opts = new JobOpts
+        {
+            StartTime = command.StartAfter ?? DateTime.UtcNow,
+            SerializableGroupId = command.SerializableGroupId,
+            LockGroupIfFailed =  command.LockGroupIfFailed,
+        };
+        var job = _jobsFactory.Create(command, opts);
         _dbContext.Jobs.Add(job);
         await _dbContext.SaveChangesAsync();
         return job.Id.ToString();
+    }
+
+    [HttpPost("enqueue-batch")]
+    public async Task<List<string>> EnqueueBatch([FromBody] List<DemoJobCommand> commands)
+    {
+        var jobs = new List<JobCreationModel>(commands.Count);
+        foreach (var command in commands)
+        {
+            var opts = new JobOpts
+            {
+                StartTime = command.StartAfter ?? DateTime.UtcNow,
+                SerializableGroupId = command.SerializableGroupId,
+                LockGroupIfFailed = command.LockGroupIfFailed,
+            };
+            var job = _jobsFactory.Create(command, opts);
+            jobs.Add(job);
+        }
+        await _jobbyClient.EnqueueBatchAsync(jobs);
+        return jobs.Select(x => x.Id.ToString()).ToList();
     }
 
     [HttpPost("cancel-job/{jobId}")]
@@ -57,13 +88,5 @@ public class JobsController
     {
         await _jobbyClient.CancelRecurrentAsync<EmptyRecurrentJobCommand>();
         return "ok";
-    }
-
-    [HttpGet("show-job-model")]
-    public JobCreationModel ShowJobModel(DateTime? startTime = null)
-    {
-        startTime ??= DateTime.UtcNow;
-        var command = new DemoJobCommand();
-        return _jobsFactory.Create(command, startTime.Value);
     }
 }

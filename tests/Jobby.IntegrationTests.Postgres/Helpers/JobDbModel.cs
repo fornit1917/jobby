@@ -49,13 +49,25 @@ internal class JobDbModel
     public bool CanBeRestarted { get; set; }
     
     [Column("queue_name")]
-    public string? QueueName { get; set; } = QueueSettings.DefaultQueueName;
+    public string QueueName { get; set; } = QueueSettings.DefaultQueueName;
+    
+    [Column("serializable_group_id")]
+    public string? SerializableGroupId { get; set; }
+    
+    [Column("lock_group_if_failed")]
+    public bool LockGroupIfFailed { get; set; }
 
-    public ProcessingJob ToProcessingJob()
+    public JobExecutionModel ToJobExecutionModel()
     {
-        if (ServerId == null)
-            throw new ArgumentException("ServerId is null");
-        
-        return new ProcessingJob(Id, ServerId);
+        return new JobExecutionModel
+        {
+            Id = Id,
+            NextJobId = NextJobId,
+            ServerId = ServerId ?? string.Empty,
+            Cron = Cron,
+            JobName = JobName,
+            JobParam = JobParam,
+            StartedCount = StartedCount,
+        };
     }
 }

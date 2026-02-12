@@ -7,19 +7,16 @@ internal class SimpleJobCompletionService : IJobCompletionService
 {
     private readonly IJobbyStorage _storage;
     private readonly bool _deleteCompleted;
-    private readonly string _serverId;
-
-    public SimpleJobCompletionService(IJobbyStorage storage, bool deleteCompletedJobs, string serverId)
+    public SimpleJobCompletionService(IJobbyStorage storage, bool deleteCompletedJobs)
     {
         _storage = storage;
         _deleteCompleted = deleteCompletedJobs;
-        _serverId = serverId;
     }
 
-    public Task CompleteJob(Guid jobId, Guid? nextJobId)
+    public Task CompleteJob(JobExecutionModel job)
     {
         return _deleteCompleted
-            ? _storage.DeleteProcessingJobAsync(new ProcessingJob(jobId, _serverId), nextJobId)
-            : _storage.UpdateProcessingJobToCompletedAsync(new ProcessingJob(jobId, _serverId), nextJobId);
+            ? _storage.DeleteProcessingJobAsync(job)
+            : _storage.UpdateProcessingJobToCompletedAsync(job);
     }
 }

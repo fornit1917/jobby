@@ -72,6 +72,8 @@ public class JobbyServerSettings
     public bool DeleteCompleted { get; init; } = true;
     
     public bool CompleteWithBatching { get; init; } = false;
+    
+    public bool? DisableSerializableGroups { get; init; }
 
     private readonly int _heartbeatIntervalSeconds = 10;
     public int HeartbeatIntervalSeconds

@@ -29,7 +29,7 @@ public class UpdateProcessingJobToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.UpdateProcessingJobToCompletedAsync(job.ToProcessingJob());
+        await storage.UpdateProcessingJobToCompletedAsync(job.ToJobExecutionModel());
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
@@ -66,7 +66,7 @@ public class UpdateProcessingJobToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.UpdateProcessingJobToCompletedAsync(job.ToProcessingJob(), job.NextJobId);
+        await storage.UpdateProcessingJobToCompletedAsync(job.ToJobExecutionModel());
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
@@ -106,7 +106,7 @@ public class UpdateProcessingJobToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.UpdateProcessingJobToCompletedAsync(job.ToProcessingJob(), job.NextJobId);
+        await storage.UpdateProcessingJobToCompletedAsync(job.ToJobExecutionModel());
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Failed, actualJob.Status);
@@ -143,7 +143,8 @@ public class UpdateProcessingJobToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.UpdateProcessingJobToCompletedAsync(new ProcessingJob(job.Id, "old_server"), job.NextJobId);
+        job.ServerId = "old_server";
+        await storage.UpdateProcessingJobToCompletedAsync(job.ToJobExecutionModel());
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Processing, actualJob.Status);

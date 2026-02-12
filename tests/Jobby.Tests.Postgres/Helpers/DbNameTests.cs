@@ -3,13 +3,13 @@ using Jobby.Postgres.Helpers;
 
 namespace Jobby.Tests.Postgres.Helpers;
 
-public class TableNameTests
+public class DbNameTests
 {
     [Fact]
     public void SchemaEmpty_ReturnsOnlyTableName()
     {
         var settings = new PostgresqlStorageSettings { TablesPrefix = "prefix_" };
-        Assert.Equal("\"prefix_jobs\"", TableName.For("jobs", settings));
+        Assert.Equal("\"prefix_jobs\"", DbName.For("jobs", settings));
     }
 
     [Fact]
@@ -20,6 +20,6 @@ public class TableNameTests
             TablesPrefix = "prefix_",
             SchemaName = "jobby"
         };
-        Assert.Equal("\"jobby\".\"prefix_jobs\"", TableName.For("jobs", settings));
+        Assert.Equal("\"jobby\".\"prefix_jobs\"", DbName.For("jobs", settings));
     }
 }

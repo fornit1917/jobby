@@ -14,7 +14,7 @@ internal class RescheduleProcessingJobCommand
         _dataSource = dataSource;
 
         _commandText = @$"
-            UPDATE {TableName.Jobs(settings)}
+            UPDATE {DbName.Jobs(settings)}
             SET
                 status = {(int)JobStatus.Scheduled},
                 last_finished_at = $1,
@@ -27,20 +27,15 @@ internal class RescheduleProcessingJobCommand
         ";
     }
 
-    public async Task ExecuteAsync(ProcessingJob job, DateTime scheduledStartTime, string? error)
+    public async Task ExecuteAsync(JobExecutionModel job, DateTime scheduledStartTime, string? error)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
-        await using var cmd = new NpgsqlCommand(_commandText, conn)
-        {
-            Parameters =
-            {
-                new() { Value = DateTime.UtcNow },
-                new() { Value = scheduledStartTime },
-                new() { Value = error as object ?? DBNull.Value },
-                new() { Value = job.JobId },
-                new() { Value = job.ServerId }
-            }
-        };
+        await using var cmd = new NpgsqlCommand(_commandText, conn);
+        cmd.Parameters.Add(new() { Value = DateTime.UtcNow });
+        cmd.Parameters.Add(new() { Value = scheduledStartTime });
+        cmd.Parameters.Add(new() { Value = error as object ?? DBNull.Value });
+        cmd.Parameters.Add(new() { Value = job.Id });
+        cmd.Parameters.Add(new() { Value = job.ServerId });
         await cmd.ExecuteNonQueryAsync();
     }
 }

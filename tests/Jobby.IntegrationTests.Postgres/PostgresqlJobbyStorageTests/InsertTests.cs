@@ -24,6 +24,8 @@ public class InsertTests
             Status = JobStatus.Scheduled,
             JobParam = "param1",
             QueueName = "q1",
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = false,
         };
 
         var secondJob = new JobCreationModel
@@ -37,7 +39,9 @@ public class InsertTests
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Failed,
             JobParam = "param2",
-            QueueName = "q2"
+            QueueName = "q2",
+            SerializableGroupId = null,
+            LockGroupIfFailed = true
         };
 
         var storage = DbHelper.CreateJobbyStorage();
@@ -70,6 +74,8 @@ public class InsertTests
             Status = JobStatus.Scheduled,
             JobParam = "param1",
             QueueName = "q1",
+            SerializableGroupId = null,
+            LockGroupIfFailed = false,
         };
 
         var secondJob = new JobCreationModel
@@ -83,7 +89,9 @@ public class InsertTests
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Failed,
             JobParam = "param2",
-            QueueName = "q2"
+            QueueName = "q2",
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = true
         };
 
         var storage = DbHelper.CreateJobbyStorage();
@@ -114,7 +122,8 @@ public class InsertTests
             CanBeRestarted = true,
             ScheduledStartAt = DateTime.UtcNow.AddDays(100),
             Status = JobStatus.Scheduled,
-            JobParam = "param1"
+            JobParam = "param1",
+            SerializableGroupId = "old_gid",
         };
         var newJob = new JobCreationModel
         {
@@ -126,7 +135,8 @@ public class InsertTests
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Scheduled,
             JobParam = "param2",
-            QueueName = "new_q"
+            QueueName = "new_q",
+            SerializableGroupId = "new_gid",
         };
 
         var storage = DbHelper.CreateJobbyStorage();
@@ -167,7 +177,8 @@ public class InsertTests
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Scheduled,
             JobParam = "param2",
-            QueueName = "new_q"
+            QueueName = "new_q",
+            SerializableGroupId = "new_gid",
         };
 
         var storage = DbHelper.CreateJobbyStorage();

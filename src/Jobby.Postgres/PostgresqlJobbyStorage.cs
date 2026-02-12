@@ -52,35 +52,34 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _insertJobCommand.Execute(job);
     }
 
-    public Task TakeBatchToProcessingAsync(string serverId, int batchSize, string queueName, List<JobExecutionModel> result)
+    public Task TakeBatchToProcessingAsync(GetJobsRequest request, List<JobExecutionModel> result)
     {
-        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(serverId, DateTime.UtcNow, batchSize, queueName,
-            result);
+        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(request, result);
     }
 
-    public Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null)
+    public Task UpdateProcessingJobToCompletedAsync(JobExecutionModel job)
     {
-        return UpdateFromProcessingStatus(job, JobStatus.Completed, error: null, nextJobId);
+        return UpdateFromProcessingStatus(job, JobStatus.Completed, error: null);
     }
 
-    public Task UpdateProcessingJobToFailedAsync(ProcessingJob job, string error)
+    public Task UpdateProcessingJobToFailedAsync(JobExecutionModel job, string error)
     {
         return UpdateFromProcessingStatus(job, JobStatus.Failed, error);
     }
 
-    public Task RescheduleProcessingJobAsync(ProcessingJob job, DateTime sheduledStartTime, string? error = null)
+    public Task RescheduleProcessingJobAsync(JobExecutionModel job, DateTime sheduledStartTime, string? error = null)
     {
         return _rescheduleProcessingJobCommand.ExecuteAsync(job, sheduledStartTime, error);
     }
 
-    private Task UpdateFromProcessingStatus(ProcessingJob job, JobStatus newStatus, string? error = null, Guid? nextJobId = null)
+    private Task UpdateFromProcessingStatus(JobExecutionModel job, JobStatus newStatus, string? error)
     {
-        return _updateFromProcessingStatusCommand.ExecuteAsync(job, newStatus, error, nextJobId);
+        return _updateFromProcessingStatusCommand.ExecuteAsync(job, newStatus, error);
     }
 
-    public Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null)
+    public Task DeleteProcessingJobAsync(JobExecutionModel job)
     {
-        return _deleteProcessingJobCommand.ExecuteAsync(job, nextJobId);
+        return _deleteProcessingJobCommand.ExecuteAsync(job);
     }
 
     public Task BulkInsertJobsAsync(IReadOnlyList<JobCreationModel> jobs)
@@ -93,14 +92,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _bulkInsertJobsCommand.Execute(jobs);
     }
 
-    public Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null)
+    public Task BulkDeleteProcessingJobsAsync(CompleteJobsBatch jobs)
     {
-        return _bulkDeleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds);
+        return _bulkDeleteProcessingJobsCommand.ExecuteAsync(jobs);
     }
 
-    public Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds)
+    public Task BulkUpdateProcessingJobsToCompletedAsync(CompleteJobsBatch jobs)
     {
-        return _bulkCompleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds);
+        return _bulkCompleteProcessingJobsCommand.ExecuteAsync(jobs);
     }
 
     public Task SendHeartbeatAsync(string serverId)

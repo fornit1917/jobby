@@ -59,7 +59,9 @@ public class JobbyClientIntegrationTests
         var opts = new JobOpts
         {
             QueueName = "CustomQueue",
-            StartTime = DateTime.UtcNow.AddDays(1)
+            StartTime = DateTime.UtcNow.AddDays(1),
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = true
         };
         var jobId = await client.EnqueueCommandAsync(command, opts);
 
@@ -67,6 +69,8 @@ public class JobbyClientIntegrationTests
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
         Assert.Equal(opts.QueueName, actualJob.QueueName);
+        Assert.Equal(opts.SerializableGroupId, actualJob.SerializableGroupId);
+        Assert.Equal(opts.LockGroupIfFailed, actualJob.LockGroupIfFailed);
         Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
 
         await client.CancelJobsByIdsAsync(jobId);
@@ -84,7 +88,9 @@ public class JobbyClientIntegrationTests
         var opts = new JobOpts
         {
             QueueName = "CustomQueue",
-            StartTime = DateTime.UtcNow.AddDays(1)
+            StartTime = DateTime.UtcNow.AddDays(1),
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = true
         };
         var jobId = client.EnqueueCommand(command, opts);
 
@@ -92,6 +98,8 @@ public class JobbyClientIntegrationTests
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
         Assert.Equal(opts.QueueName, actualJob.QueueName);
+        Assert.Equal(opts.SerializableGroupId, actualJob.SerializableGroupId);
+        Assert.Equal(opts.LockGroupIfFailed, actualJob.LockGroupIfFailed);
         Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
 
         client.CancelJobsByIds(jobId);
@@ -148,7 +156,7 @@ public class JobbyClientIntegrationTests
     }
 
     [Fact]
-    public async Task SchedulesRecurrentAndCancelsByAsyncMethods()
+    public async Task DefaultOpts_SchedulesRecurrentAndCancelsByAsyncMethods()
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
         var client = CreateJobbyClient();
@@ -171,7 +179,7 @@ public class JobbyClientIntegrationTests
     }
 
     [Fact]
-    public void SchedulesRecurrentAndCancelsBySyncMethods()
+    public void DefaultOpts_SchedulesRecurrentAndCancelsBySyncMethods()
     {
         var dbContext = DbHelper.CreateContextAndClearDb();
         var client = CreateJobbyClient();
@@ -192,6 +200,71 @@ public class JobbyClientIntegrationTests
             .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName());
         Assert.Null(actualJobFromDb);
     }
+    
+    [Fact]
+    public async Task SpecifiedOpts_SchedulesRecurrentAndCancelsByAsyncMethods()
+    {
+        var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        var client = CreateJobbyClient();
+
+        var command = new TestJobCommand();
+        var cron = "0 3 1 1 *";
+        var opts = new RecurrentJobOpts
+        {
+            QueueName = "CustomQueue",
+            StartTime = DateTime.UtcNow.AddDays(3),
+            SerializableGroupId = "gid"
+        };
+        await client.ScheduleRecurrentAsync(command, cron, opts);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+            .FirstOrDefaultAsync();
+        Assert.NotNull(actualJob);
+        Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
+        Assert.Equal(opts.QueueName, actualJob.QueueName);
+        Assert.Equal(opts.SerializableGroupId, actualJob.SerializableGroupId);
+        Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));        
+        
+        await client.CancelRecurrentAsync<TestJobCommand>();
+
+        actualJob = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.JobName == TestJobCommand.GetJobName())
+            .FirstOrDefaultAsync();
+        Assert.Null(actualJob);
+    }
+
+    [Fact]
+    public void SpecifiedOpts_SchedulesRecurrentAndCancelsBySyncMethods()
+    {
+        var dbContext = DbHelper.CreateContextAndClearDb();
+        var client = CreateJobbyClient();
+
+        var command = new TestJobCommand();
+        var cron = "0 3 1 1 *";
+        var opts = new RecurrentJobOpts
+        {
+            QueueName = "CustomQueue",
+            StartTime = DateTime.UtcNow.AddDays(3),
+            SerializableGroupId = "gid"
+        };
+        client.ScheduleRecurrent(command, cron, opts);
+
+        var actualJob = dbContext.Jobs
+            .AsNoTracking()
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron);
+        Assert.NotNull(actualJob);
+        Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
+        Assert.Equal(opts.QueueName, actualJob.QueueName);
+        Assert.Equal(opts.SerializableGroupId, actualJob.SerializableGroupId);
+        Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+        client.CancelRecurrent<TestJobCommand>();
+
+        actualJob = dbContext.Jobs
+            .AsNoTracking()
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName());
+        Assert.Null(actualJob);
+    }    
 
     private IJobbyClient CreateJobbyClient()
     {

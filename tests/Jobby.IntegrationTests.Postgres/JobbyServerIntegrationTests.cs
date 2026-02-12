@@ -13,15 +13,18 @@ public class JobbyServerIntegrationTests
 {
     private readonly ExecutedCommandsList _executedCommands = new();
     
-    [Fact]
-    public async Task CompleteWithBatchingOn_DeleteCompletedOn_ExecutesAndRemovesCommands()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CompleteWithBatchingOn_DeleteCompletedOn_ExecutesAndRemovesCommands(bool disableSerializableGroups)
     {
         var dbContext = await DbHelper.CreateContextAndClearDbAsync();
         var jobbyBuilder = ConfigureBuilder(new JobbyServerSettings
         {
             CompleteWithBatching = true,
             DeleteCompleted = true,
-            PollingIntervalMs = 100
+            PollingIntervalMs = 100,
+            DisableSerializableGroups = disableSerializableGroups
         });
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
