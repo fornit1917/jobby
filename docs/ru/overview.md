@@ -8,6 +8,7 @@
 - Выполнение задач из очереди
 - Транзакционное создание нескольких задач
 - Настройка порядка выполнения при создании нескольких задач
+- Группы задач с последовательным выполнением
 - Повтор упавших задач согласно настроенным политикам повторов
 - Мультиочереди
 - Настраиваемый middlewares pipeline для исполнения кода фоновых задач
@@ -210,6 +211,29 @@ sequenceBuilder.Add(jobbyClient.Factory
 var jobs = sequenceBuilder.GetJobs();
 
 await jobbyClient.EnqueueBatchAsync(jobs);
+```
+
+#### Группы задач с последовательным выполнением
+
+При создании задачи можно задать идентификатор группы, и Jobby будет гарантировать, что в каждой группе в один момент времени выполняется не более одной задачи.
+
+```csharp
+await jobbyClient.EnqueueCommandAsync(command, new JobOpts 
+{
+    SerializableGroupId = "SomeGroupId"
+});
+```
+
+Следующая задача группы запустится только после успешного или не успешного завершения текущей задачи. Если при неуспешном
+завершении необходимо блокировать запуск любых задач из той же группы, то при создании задачи нужно установить
+флаг `LockGriyoIfFailed`:
+
+```csharp
+await jobbyClient.EnqueueCommandAsync(command, new JobOpts 
+{
+    SerializableGroupId = "SomeGroupId",
+    LockGroupIfFailed = true
+});
 ```
 
 #### Использование EntityFramework для добавления задач
