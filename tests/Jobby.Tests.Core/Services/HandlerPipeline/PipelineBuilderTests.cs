@@ -134,7 +134,6 @@ public class PipelineBuilderTests
         public List<string> Traces { get; } = new List<string>();
 
         public static string GetJobName() => "Test";
-        public bool CanBeRestarted() => true;
     }
 
     private class MwTestHandler : IJobCommandHandler<MwTestCommand>

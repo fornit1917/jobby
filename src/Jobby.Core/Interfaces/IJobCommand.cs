@@ -3,5 +3,4 @@
 public interface IJobCommand
 {
     static abstract string GetJobName();
-    bool CanBeRestarted();
 }

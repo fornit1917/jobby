@@ -37,13 +37,7 @@ public class JobsController
     [HttpPost("enqueue-job-by-ef")]
     public async Task<string> EnqueueDemoJobByEF([FromBody] DemoJobCommand command)
     {
-        var opts = new JobOpts
-        {
-            StartTime = command.StartAfter ?? DateTime.UtcNow,
-            SerializableGroupId = command.SerializableGroupId,
-            LockGroupIfFailed =  command.LockGroupIfFailed,
-        };
-        var job = _jobsFactory.Create(command, opts);
+        var job = _jobsFactory.Create(command);
         _dbContext.Jobs.Add(job);
         await _dbContext.SaveChangesAsync();
         return job.Id.ToString();
@@ -55,13 +49,7 @@ public class JobsController
         var jobs = new List<JobCreationModel>(commands.Count);
         foreach (var command in commands)
         {
-            var opts = new JobOpts
-            {
-                StartTime = command.StartAfter ?? DateTime.UtcNow,
-                SerializableGroupId = command.SerializableGroupId,
-                LockGroupIfFailed = command.LockGroupIfFailed,
-            };
-            var job = _jobsFactory.Create(command, opts);
+            var job = _jobsFactory.Create(command);
             jobs.Add(job);
         }
         await _jobbyClient.EnqueueBatchAsync(jobs);

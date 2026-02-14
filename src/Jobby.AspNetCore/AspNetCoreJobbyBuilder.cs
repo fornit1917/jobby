@@ -25,12 +25,6 @@ internal class AspNetCoreJobbyBuilder : IAspNetCoreJobbyConfigurable
         return this;
     }
 
-    public IAspNetCoreJobbyConfigurable UseQueueForJob<TCommand>(string queueName) where TCommand : IJobCommand
-    {
-        JobbyBuilder.UseQueueForJob<TCommand>(queueName);
-        return this;
-    }
-
     public IAspNetCoreJobbyConfigurable UseQueueForAllRecurrent(string queueName)
     {
         JobbyBuilder.UseQueueForAllRecurrent(queueName);

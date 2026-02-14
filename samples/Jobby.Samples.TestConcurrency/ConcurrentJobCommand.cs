@@ -7,7 +7,6 @@ namespace Jobby.Samples.TestConcurrency;
 public class ConcurrentJobCommand : IJobCommand
 {
     public static string GetJobName() => "ConcurrencyDemo";
-    public bool CanBeRestarted() => true;
     
     public string Id { get; init; }
     public int TotalCount { get; init; }
@@ -18,12 +17,12 @@ public class ConcurrentJobCommand : IJobCommand
 public class ConcurrentJobCommandHandler : IJobCommandHandler<ConcurrentJobCommand>
 {
     public static int ExecutedCount = 0;
-    
-    public static int InTimeWithoutGroup = 0;
+
+    private static int _inParallelWithoutGroup = 0;
     public static bool WithoutGroupExecutedInParallel = false;
-    
-    public static ConcurrentDictionary<string, int> InTimeByGroupId = new();
-    public static ConcurrentDictionary<string, bool> GroupsExecutedInParallel = new();
+
+    private static readonly ConcurrentDictionary<string, int> InParallelByGroupId = new();
+    public static readonly ConcurrentDictionary<string, bool> GroupsExecutedInParallel = new();
     
     public static readonly TaskCompletionSource JobsCompletedTcs = new TaskCompletionSource();
     
@@ -31,7 +30,7 @@ public class ConcurrentJobCommandHandler : IJobCommandHandler<ConcurrentJobComma
     {
         if (command.SerializableGroupId == null)
         {
-            var inTimeWithoutGroup = Interlocked.Increment(ref InTimeWithoutGroup);
+            var inTimeWithoutGroup = Interlocked.Increment(ref _inParallelWithoutGroup);
             if (inTimeWithoutGroup > 1)
             {
                 WithoutGroupExecutedInParallel = true;
@@ -39,7 +38,7 @@ public class ConcurrentJobCommandHandler : IJobCommandHandler<ConcurrentJobComma
         }
         else
         {
-            var inTimeWithGroup = InTimeByGroupId
+            var inTimeWithGroup = InParallelByGroupId
                 .AddOrUpdate(command.SerializableGroupId, 1, (key, oldValue) => oldValue + 1);
             if (inTimeWithGroup > 1)
             {
@@ -60,11 +59,11 @@ public class ConcurrentJobCommandHandler : IJobCommandHandler<ConcurrentJobComma
 
         if (command.SerializableGroupId == null)
         {
-            Interlocked.Decrement(ref InTimeWithoutGroup);
+            Interlocked.Decrement(ref _inParallelWithoutGroup);
         }
         else
         {
-            InTimeByGroupId.AddOrUpdate(command.SerializableGroupId, 0, (key, oldValue) => oldValue - 1);
+            InParallelByGroupId.AddOrUpdate(command.SerializableGroupId, 0, (key, oldValue) => oldValue - 1);
         }
     }
 }

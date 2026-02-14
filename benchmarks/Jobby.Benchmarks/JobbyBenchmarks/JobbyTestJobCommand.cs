@@ -10,7 +10,6 @@ public class JobbyTestJobCommand : IJobCommand
     public int DelayMs { get; set; }
 
     public static string GetJobName() => "TestJob";
-    public bool CanBeRestarted() => false;
 }
 
 public class JobbyTestJobCommandHandler : IJobCommandHandler<JobbyTestJobCommand>

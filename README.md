@@ -54,12 +54,7 @@ public class SendEmailCommand : IJobCommand
     public string Email { get; init; }  
 
     // Return a unique name identifying the task  
-    public static string GetJobName() => "SendEmail";  
-
-    // Return a flag indicating whether the task can be automatically restarted  
-    // if the executing server is presumed to have failed.  
-    // Recommended to return true only for idempotent tasks.  
-    public bool CanBeRestarted() => true;  
+    public static string GetJobName() => "SendEmail";
 }  
 
 public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>  
@@ -269,7 +264,6 @@ EF Core example: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree
 public class RecurrentJobCommand : IJobCommand  
 {  
     public static string GetJobName() => "SomeRecurrentJob";  
-    public bool CanBeRestarted() => true;  
 }  
 
 public class RecurrentJobHandler : IJobCommandHandler<RecurrentJobCommand>  
@@ -327,28 +321,40 @@ jobbyBuilder
 
 ### Multi-Queues  
 
-Jobby allows you to distribute tasks across independent queues. For example, it can be useful to send tasks that need to run on time (such as recurrent jobs) or tasks that are very heavy and require a reduced degree of parallelism to a separate queue.  
+Jobby allows you to distribute tasks across independent queues. For example, it can be useful to allocate tasks that need to be executed on time (such as recurrent jobs) to a separate queue, or tasks that are very heavy and require reduced parallelism.
 
-By default, all tasks go to the `default` queue.  
+By default, all tasks go to the `default` queue.
 
-During library configuration, you can override the queue for all tasks of a specific type or for all recurrent tasks:  
+The queue can be specified when creating a task:
+
+```csharp
+jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue"});
+```
+
+Or defined in the command class by implementing the `IHasDefaultJobOptions` interface:
+
+```csharp
+class SomeCommand : IJobCommand, IHasDefaultJobOptions
+{
+    public string GetJobName() => "JobName";
+
+    // Queue for non-recurrent jobs
+    public JobOpts GetOptionsForEnqueuedJob() => new() { QueueName = "special_queue" };
+    
+    // Queue for recurrent jobs
+    public RecurrentJobOptions GetOptionsForRecurrentJob() => new() { QueueName = "special_queue" };
+}
+```
+
+Additionally, when configuring the library, you can specify a default queue for all recurrent jobs:
 
 ```csharp
 builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
 {
     jobbyBuilder
         .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly)
-        // separate queue for all scheduled tasks
+        // separate queue for all recurrent tasks
         .UseQueueForAllRecurrent("recurrent")
-        // separate queue for tasks of a specific type
-        .UseQueueForJob<HeavyJobCommand>("heavy");
-```
-
-Alternatively, you can specify the queue name when creating each task instance:  
-
-```csharp
-var command = new SomeJobCommand();
-jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue" });
 ```
 
 By default, JobbyServer only executes tasks from the `default` queue. To run tasks from other queues, you need to specify them during configuration in the `UseServerSettings` method:  
