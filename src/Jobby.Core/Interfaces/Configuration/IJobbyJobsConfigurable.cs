@@ -14,7 +14,5 @@ public interface IJobbyJobsConfigurable
 
     IJobbyJobsConfigurable AddJobsFromAssemblies(params Assembly[] assemblies);
     
-    IJobbyJobsConfigurable UseQueueForJob<TCommand>(string queueName) where TCommand : IJobCommand;
-    
     IJobbyJobsConfigurable UseQueueForAllRecurrent(string queueName);
 }

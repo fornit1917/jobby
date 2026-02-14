@@ -30,7 +30,5 @@ public class SystemTextJsonJobParamSerializerTests
         public string? Name { get; set; }
 
         public static string GetJobName() => "TestJobName";
-
-        public bool CanBeRestarted() => false;
     }
 }

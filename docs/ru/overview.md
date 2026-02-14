@@ -49,11 +49,6 @@ public class SendEmailCommand : IJobCommand
 
     // Из этого метода нужно вернуть любое уникальное название идентифицирующее задачу
     public static string GetJobName() => "SendEmail";
-
-    // Из этого метода нужно вернуть флаг, указывающий допустимо ли автоматически перезапускать задачу
-    // если выполняющий её сервер предположительно вышел из строя.
-    // Рекомендуется возвращать true только для идемпотентных задач.
-    public bool CanBeRestarted() => true;
 }
 
 public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
@@ -273,7 +268,6 @@ await _dbContext.SaveChangesAsync();
 public class RecurrentJobCommand : IJobCommand
 {
     public static string GetJobName() => "SomeRecurrentJob";
-    public bool CanBeRestarted() => true;
 }
 
 public class RecurrentJobHandler : IJobCommandHandler<RecurrentJobCommand>
@@ -340,7 +334,28 @@ Jobby позволяет распределять задачи по незави
 
 По умолчанию все задачи попадают в очередь `default`.
 
-При конфигурации библиотеки можно переопределить очередь для всех задач конкретного типа или для всех рекуррентных задач:
+Очередь можно указывать при создании задачи:
+
+```csharp
+jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue"});
+```
+
+Или определить в классе команды, реализовав интерфейс `IHasDefaultJobOptions`:
+
+```csharp
+class SomeCommand : IJobCommand, IHasDefaultJobOptions
+{
+    public string GetJobName() => "JobName";
+
+    // Очередь для нерекуррентных джобов
+    public JobOpts GetOptionsForEnqueuedJob() => new() { QueueName = "special_queue" };
+    
+    // Очередь для рекуррентных джобов
+    public RecurrentJobOptions() => new() => { QueueName = "special_queue" };
+}
+```
+
+Также при конфигурации библиотеки можно указать очередь по умолчанию для всех рекуррентных джобов:
 
 ```csharp
 builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
@@ -349,15 +364,6 @@ builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuil
         .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly)
         // отдельная очередь для всех задач по расписания
         .UseQueueForAllRecurrent("recurrent")
-        // отдельная очередь для задач конкретного типа
-        .UseQueueForJob<HeavyJobCommand>("heavy");
-```
-
-Или можно указывать название очереди при создании каждого экземпляра задачи:
-
-```csharp
-var command = new SomeJobCommand();
-jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue"});
 ```
 
 JobbyServer по умолчанию выполняет задачи только из очереди `default`. Чтобы запускались задачи из других очередей, их необходимо

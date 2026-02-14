@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Helpers;
+﻿using System.IO.Pipes;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Models;
@@ -9,33 +10,47 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
-    private readonly IQueueNameAssignor _queueNameAssignor;
+    private readonly string _defaultQueueForRecurrent;
 
     public JobsFactory(IGuidGenerator guidGenerator,
         IJobParamSerializer serializer,
-        IQueueNameAssignor queueNameAssignor)
+        string? defaultQueueForRecurrent)
     {
         _guidGenerator = guidGenerator;
         _serializer = serializer;
-        _queueNameAssignor = queueNameAssignor;
+        _defaultQueueForRecurrent = defaultQueueForRecurrent ?? QueueSettings.DefaultQueueName;
     }
 
     public JobCreationModel Create<TCommand>(TCommand command, JobOpts opts = default)
         where TCommand : IJobCommand
     {
         var jobName = TCommand.GetJobName();
+        var defaultOpts = default(JobOpts);
+        if (command is IHasDefaultJobOptions hasDefaultOpts)
+        {
+            defaultOpts = hasDefaultOpts.GetOptionsForEnqueuedJob();
+        }
+        
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),
             CreatedAt = DateTime.UtcNow,
             JobName = jobName,
             JobParam = _serializer.SerializeJobParam(command),
-            ScheduledStartAt = opts.StartTime ?? DateTime.UtcNow,
+            ScheduledStartAt = opts.StartTime 
+                               ?? defaultOpts.StartTime 
+                               ?? DateTime.UtcNow,
             Status = JobStatus.Scheduled,
-            CanBeRestarted = command.CanBeRestarted(),
-            QueueName = _queueNameAssignor.GetQueueName(jobName, opts),
-            SerializableGroupId = opts.SerializableGroupId,
-            LockGroupIfFailed = opts.LockGroupIfFailed ?? false
+            CanBeRestarted = opts.CanBeRestartedIfServerGoesDown 
+                             ?? defaultOpts.CanBeRestartedIfServerGoesDown 
+                             ?? true,
+            QueueName = opts.QueueName 
+                        ?? defaultOpts.QueueName 
+                        ?? QueueSettings.DefaultQueueName,
+            SerializableGroupId = opts.SerializableGroupId ?? defaultOpts.SerializableGroupId,
+            LockGroupIfFailed = opts.LockGroupIfFailed 
+                                ?? defaultOpts.LockGroupIfFailed 
+                                ?? false
         };    
     }
 
@@ -48,6 +63,12 @@ internal class JobsFactory : IJobsFactory
         where TCommand : IJobCommand
     {
         var jobName = TCommand.GetJobName();
+        var defaultOpts = default(RecurrentJobOpts);
+        if (command is IHasDefaultJobOptions hasDefaultOpts)
+        {
+            defaultOpts = hasDefaultOpts.GetOptionsForRecurrentJob();
+        }
+        
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),
@@ -56,10 +77,16 @@ internal class JobsFactory : IJobsFactory
             Cron = cron,
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
-            ScheduledStartAt = opts.StartTime ?? CronHelper.GetNext(cron, DateTime.UtcNow),
-            CanBeRestarted = command.CanBeRestarted(),
-            QueueName = _queueNameAssignor.GetQueueNameForRecurrent(jobName, opts),
-            SerializableGroupId = opts.SerializableGroupId,
+            ScheduledStartAt = opts.StartTime 
+                               ?? defaultOpts.StartTime
+                               ?? CronHelper.GetNext(cron, DateTime.UtcNow),
+            CanBeRestarted = opts.CanBeRestartedIfServerGoesDown
+                             ??  defaultOpts.CanBeRestartedIfServerGoesDown
+                             ?? true,
+            QueueName = opts.QueueName 
+                        ?? defaultOpts.QueueName
+                        ?? _defaultQueueForRecurrent,
+            SerializableGroupId = opts.SerializableGroupId ?? defaultOpts.SerializableGroupId,
         };
     }
 

@@ -9,5 +9,4 @@ internal class TestCliJobCommand : IJobCommand
     public bool ShouldBeFailed { get; set; }
 
     public static string GetJobName() => "TestJob";
-    public bool CanBeRestarted() => Id % 2 == 0;
 }

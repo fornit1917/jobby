@@ -48,8 +48,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     private JobbyServerSettings _serverSettings = new();
 
-    private string? _queueForAllRecurrent;
-    private readonly Dictionary<string, string> _queueByJobName = new();
+    private string? _defaultRecurrentQueue;
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -120,7 +119,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     public IJobsFactory CreateJobsFactory()
     {
-        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer, new QueueNameAssignor(_queueByJobName, _queueForAllRecurrent));
+        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer, _defaultRecurrentQueue);
         return _jobsFactory;
     }
 
@@ -292,16 +291,10 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         _tracingMiddleware ??= new TracingMiddleware();
         return this;
     }
-    
-    public IJobbyJobsConfigurable UseQueueForJob<TCommand>(string queueName) where TCommand : IJobCommand
-    {
-        _queueByJobName[TCommand.GetJobName()] = queueName;
-        return this;
-    }
 
     public IJobbyJobsConfigurable UseQueueForAllRecurrent(string queueName)
     {
-        _queueForAllRecurrent = queueName;
+        _defaultRecurrentQueue = queueName;
         return this;
     }    
 

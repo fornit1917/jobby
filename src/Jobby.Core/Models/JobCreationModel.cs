@@ -10,7 +10,7 @@ public class JobCreationModel
     public DateTime CreatedAt { get; set; }
     public DateTime ScheduledStartAt { get; set; }
     public Guid? NextJobId { get; set; }
-    public bool CanBeRestarted { get; set; }
+    public bool CanBeRestarted { get; set; } = true;
     public string QueueName { get; set; } = QueueSettings.DefaultQueueName;
     public string? SerializableGroupId  { get; set; }
     public bool LockGroupIfFailed { get; set; }
