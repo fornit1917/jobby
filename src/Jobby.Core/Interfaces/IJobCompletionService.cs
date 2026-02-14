@@ -1,6 +1,8 @@
-﻿namespace Jobby.Core.Interfaces;
+﻿using Jobby.Core.Models;
+
+namespace Jobby.Core.Interfaces;
 
 internal interface IJobCompletionService
 {
-    Task CompleteJob(Guid jobId, Guid? nextJobId);
+    Task CompleteJob(JobExecutionModel job);
 }

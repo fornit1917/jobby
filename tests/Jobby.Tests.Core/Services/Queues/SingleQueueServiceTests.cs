@@ -28,11 +28,17 @@ public class SingleQueueServiceTests
     public async Task WaitIfEmpty_NotEmpty_DoesNotDelay()
     {
         var batchSize = 5;
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = batchSize,
+            ServerId = ServerId,
+        };        
         var jobs = new List<JobExecutionModel>()
         {
             new()
         };
-        _storageMock.SetupTakeToProcessing(ServerId, batchSize, QueueSettings.DefaultQueueName, jobs);
+        _storageMock.SetupTakeToProcessing(request, jobs);
         
         var settings = new JobbyServerSettings();
         var queueService = CreateQueueService(settings);
@@ -48,8 +54,14 @@ public class SingleQueueServiceTests
     public async Task WaitIfEmpty_Empty_DoesDelay()
     {
         var batchSize = 5;
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = batchSize,
+            ServerId = ServerId,
+        };
         var jobs = new List<JobExecutionModel>();
-        _storageMock.SetupTakeToProcessing(ServerId, batchSize, QueueSettings.DefaultQueueName, jobs);
+        _storageMock.SetupTakeToProcessing(request, jobs);
         
         var settings = new JobbyServerSettings();
         var queueService = CreateQueueService(settings);
@@ -61,16 +73,39 @@ public class SingleQueueServiceTests
         _timerMock.Verify(x => x.Delay(settings.PollingIntervalMs), Times.Once);
     }
 
-    [Fact]
-    public async Task TakeBatchToProcessing_DefaultQueueSettings_TakesJobsDefaultQueueSettings()
+    [Theory]
+    [InlineData(false, null, false)]
+    [InlineData(null, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, true)]
+    public async Task TakeBatchToProcessing_DefaultQueueSettings_TakesJobsDefaultQueueSettings(
+        bool? disableSerializableGroupsGlobal, bool? disableSerializableGroupsForQueue,
+        bool expectedDisableSerializableGroups)
     {
         var batchSize = 5;
-        var settings = new JobbyServerSettings();
+        var settings = new JobbyServerSettings
+        {
+            DisableSerializableGroups = disableSerializableGroupsGlobal,
+            Queues = new []
+            {
+                new QueueSettings
+                {
+                    QueueName = QueueSettings.DefaultQueueName,
+                    DisableSerializableGroups = disableSerializableGroupsForQueue
+                }
+            }
+        };
         var queueService = CreateQueueService(settings);
         
         await queueService.TakeBatchToProcessing(batchSize, new List<JobExecutionModel>());
 
-        _storageMock.VerifyTakeToProcessing(ServerId, batchSize, QueueSettings.DefaultQueueName);
+        _storageMock.VerifyTakeToProcessing(new()
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize =  batchSize,
+            ServerId =  ServerId,
+            DisableSerializableGroups = expectedDisableSerializableGroups
+        });
     }
 
     [Fact]
@@ -90,7 +125,13 @@ public class SingleQueueServiceTests
         
         await queueService.TakeBatchToProcessing(batchSize, new List<JobExecutionModel>());
 
-        _storageMock.VerifyTakeToProcessing(ServerId, queueSettings.MaxDegreeOfParallelism, queueSettings.QueueName);
+        var expectedRequest = new GetJobsRequest
+        {
+            QueueName = queueSettings.QueueName,
+            BatchSize = queueSettings.MaxDegreeOfParallelism,
+            ServerId = ServerId,
+        };
+        _storageMock.VerifyTakeToProcessing(expectedRequest);
     }
 
     private SingleQueueService CreateQueueService(JobbyServerSettings settings)

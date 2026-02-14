@@ -42,8 +42,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, Array.Empty<Guid>());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Completed, firstActualJob.Status);
@@ -115,8 +114,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Completed, firstActualJob.Status);
@@ -194,8 +192,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), serverId);
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Failed, firstActualJob.Status);
@@ -266,8 +263,7 @@ public class BulkUpdateProcessingJobsToCompletedTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        var jobsToUpdate = new ProcessingJobsList(jobs.Select(x => x.Id).ToList(), "old_server");
-        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobsToUpdate, nextJobs.Select(x => x.Id).ToList());
+        await storage.BulkUpdateProcessingJobsToCompletedAsync(jobs.ToCompleteJobsBatch("old_server"));
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == jobs[0].Id);
         Assert.Equal(JobStatus.Processing, firstActualJob.Status);

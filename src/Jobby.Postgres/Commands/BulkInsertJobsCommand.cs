@@ -14,7 +14,7 @@ internal class BulkInsertJobsCommand
         _dataSource = dataSource;
 
         _commandText = @$"
-            INSERT INTO {TableName.Jobs(settings)} (
+            INSERT INTO {DbName.Jobs(settings)} (
                 id,
                 job_name,
                 job_param,
@@ -24,20 +24,11 @@ internal class BulkInsertJobsCommand
                 next_job_id,
                 can_be_restarted,
                 cron,
-                queue_name
+                queue_name,
+                serializable_group_id,
+                lock_group_if_failed
             )
-            VALUES (
-                $1,
-                $2,
-                $3,
-                $4,
-                $5,
-                $6,
-                $7,
-                $8,
-                $9,
-                $10
-            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ";
     }
 
@@ -80,7 +71,9 @@ internal class BulkInsertJobsCommand
                     new() { Value = (object?)job.NextJobId ?? DBNull.Value },
                     new() { Value = job.CanBeRestarted },
                     new() { Value = (object?)job.Cron ?? DBNull.Value },
-                    new() { Value = (object?)job.QueueName ?? DBNull.Value },
+                    new() { Value = job.QueueName },
+                    new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value },
+                    new() { Value = job.LockGroupIfFailed },
                 }
             };
             batch.BatchCommands.Add(cmd);

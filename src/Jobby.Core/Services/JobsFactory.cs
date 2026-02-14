@@ -34,6 +34,8 @@ internal class JobsFactory : IJobsFactory
             Status = JobStatus.Scheduled,
             CanBeRestarted = command.CanBeRestarted(),
             QueueName = _queueNameAssignor.GetQueueName(jobName, opts),
+            SerializableGroupId = opts.SerializableGroupId,
+            LockGroupIfFailed = opts.LockGroupIfFailed ?? false
         };    
     }
 
@@ -57,6 +59,7 @@ internal class JobsFactory : IJobsFactory
             ScheduledStartAt = opts.StartTime ?? CronHelper.GetNext(cron, DateTime.UtcNow),
             CanBeRestarted = command.CanBeRestarted(),
             QueueName = _queueNameAssignor.GetQueueNameForRecurrent(jobName, opts),
+            SerializableGroupId = opts.SerializableGroupId,
         };
     }
 

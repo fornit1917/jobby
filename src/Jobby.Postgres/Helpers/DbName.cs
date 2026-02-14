@@ -1,6 +1,6 @@
 ﻿namespace Jobby.Postgres.Helpers;
 
-internal class TableName
+internal static class DbName
 {
     public static string For(string name, PostgresqlStorageSettings settings)
     {
@@ -17,5 +17,10 @@ internal class TableName
     public static string Servers(PostgresqlStorageSettings settings)
     {
         return For("servers", settings);
+    }
+
+    public static string TakeToProcessing(PostgresqlStorageSettings settings)
+    {
+        return For("take_to_processing", settings);
     }
 }

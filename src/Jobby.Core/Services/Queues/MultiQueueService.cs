@@ -11,8 +11,9 @@ internal class MultiQueueService : IQueueService
     private readonly IJobbyStorage _storage;
     private readonly ITimerService _timer;
     private readonly string _serverId;
+    private readonly JobbyServerSettings _settings;
 
-    private record QueueInfo(string QueueName, int MaxBatchSize)
+    private record QueueInfo(string QueueName, int MaxBatchSize, bool DisableSerializableGroups)
     {
         public long LastRequestTs { get; set; }
     };
@@ -35,6 +36,7 @@ internal class MultiQueueService : IQueueService
         _storage = storage;
         _timer = timer;
         _serverId = serverId;
+        _settings = settings;
         
         _hotWaitingList = new Queue<QueueInfo>(capacity: settings.Queues.Count);
         _coldWaitingList = new Queue<QueueInfo>(capacity: settings.Queues.Count);
@@ -43,7 +45,10 @@ internal class MultiQueueService : IQueueService
             var maxBatchSize = queueSettings.MaxDegreeOfParallelism > 0 && queueSettings.MaxDegreeOfParallelism <= settings.MaxDegreeOfParallelism
                 ? queueSettings.MaxDegreeOfParallelism
                 : settings.MaxDegreeOfParallelism;
-            var queueInfo = new QueueInfo(queueSettings.QueueName, maxBatchSize);
+            var disableSerializableGroups = queueSettings.DisableSerializableGroups 
+                                            ?? _settings.DisableSerializableGroups 
+                                            ?? false;
+            var queueInfo = new QueueInfo(queueSettings.QueueName, maxBatchSize, disableSerializableGroups);
             _hotWaitingList.Enqueue(queueInfo);
         }
         
@@ -96,8 +101,15 @@ internal class MultiQueueService : IQueueService
         {
             batchSize = _current.MaxBatchSize;
         }
-        
-        await _storage.TakeBatchToProcessingAsync(_serverId, batchSize, _current.QueueName, result);
+
+        var request = new GetJobsRequest
+        {
+            QueueName = _current.QueueName,
+            BatchSize = batchSize,
+            ServerId = _serverId,
+            DisableSerializableGroups = _current.DisableSerializableGroups
+        };
+        await _storage.TakeBatchToProcessingAsync(request, result);
         _current.LastRequestTs = _timer.GetCurrentTicks();
         
         if (result.Count == 0)

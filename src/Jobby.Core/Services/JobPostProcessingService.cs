@@ -97,7 +97,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     private Task HandleCompletedInternal(JobExecutionModel job)
     {
-        return _jobCompletingService.CompleteJob(job.Id, job.NextJobId);
+        return _jobCompletingService.CompleteJob(job);
     }
 
     private Task HandleFailedInternal(JobExecutionModel job, RetryPolicy retryPolicy, string error)
@@ -105,12 +105,12 @@ internal class JobPostProcessingService : IJobPostProcessingService
         TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
         if (retryInterval.HasValue)
         {
-            var sheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
-            return _storage.RescheduleProcessingJobAsync(new ProcessingJob(job.Id, _serverId), sheduledStartTime, error);
+            var scheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
+            return _storage.RescheduleProcessingJobAsync(job, scheduledStartTime, error);
         }
         else
         {
-            return _storage.UpdateProcessingJobToFailedAsync(new ProcessingJob(job.Id, _serverId), error);
+            return _storage.UpdateProcessingJobToFailedAsync(job, error);
         }
     }
 
@@ -118,7 +118,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
         var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
-        return _storage.RescheduleProcessingJobAsync(new ProcessingJob(job.Id, _serverId), nextStartAt, error);
+        return _storage.RescheduleProcessingJobAsync(job, nextStartAt, error);
     }
 
     public void Dispose()

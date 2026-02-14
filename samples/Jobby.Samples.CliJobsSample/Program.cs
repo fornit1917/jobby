@@ -76,6 +76,7 @@ internal static class Program
         Console.WriteLine("3. Enqueue jobs sequence");
         Console.WriteLine("4. Schedule recurrent job");
         Console.WriteLine("5. Cancel recurrent job");
+        Console.WriteLine("6. Enqueue serializable jobs group");
 
         string? action = Console.ReadLine();
 
@@ -98,6 +99,9 @@ internal static class Program
                 break;
             case "5":
                 CancelRecurrent(jobbyClient);
+                break;
+            case "6":
+                CreateSerializableJobsGroup(jobbyClient, 5, queuesCount);
                 break;
         }
 
@@ -156,6 +160,20 @@ internal static class Program
             sequenceBuilder.Add(command, new JobOpts { QueueName = queueName });
         }
         jobbyClient.EnqueueBatch(sequenceBuilder.GetJobs());
+    }
+
+    private static void CreateSerializableJobsGroup(IJobbyClient jobbyClient, int jobsCount, int queuesCount)
+    {
+        for (int i = 1; i <= jobsCount; i++)
+        {
+            var queueName = $"q{(i - 1) % queuesCount + 1}";
+            var command = new TestCliJobCommand { Id = i, Name = $"Job in sequence {i}", ShouldBeFailed = false }; 
+            jobbyClient.EnqueueCommand(command, new JobOpts
+            {
+                QueueName = queueName,
+                SerializableGroupId = "gid"
+            });
+        }
     }
 
     private static void CancelRecurrent(IJobbyClient client)

@@ -12,4 +12,6 @@ public class JobCreationModel
     public Guid? NextJobId { get; set; }
     public bool CanBeRestarted { get; set; }
     public string QueueName { get; set; } = QueueSettings.DefaultQueueName;
+    public string? SerializableGroupId  { get; set; }
+    public bool LockGroupIfFailed { get; set; }
 }

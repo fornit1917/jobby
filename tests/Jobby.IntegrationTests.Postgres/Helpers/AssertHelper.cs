@@ -21,5 +21,7 @@ internal static class AssertHelper
         Assert.Equal(0, actual.StartedCount);
         Assert.Null(actual.ServerId);
         Assert.Equal(expected.QueueName, actual.QueueName);
+        Assert.Equal(expected.SerializableGroupId, actual.SerializableGroupId);
+        Assert.Equal(expected.LockGroupIfFailed, actual.LockGroupIfFailed);
     }    
 }

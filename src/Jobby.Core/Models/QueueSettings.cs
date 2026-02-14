@@ -6,4 +6,5 @@ public class QueueSettings
     
     public required string QueueName { get; init; }
     public int MaxDegreeOfParallelism { get; init; }
+    public bool? DisableSerializableGroups { get; init; }
 }

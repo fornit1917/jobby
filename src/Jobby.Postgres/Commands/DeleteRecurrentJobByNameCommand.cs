@@ -12,7 +12,7 @@ internal class DeleteRecurrentJobByNameCommand
     {
         _dataSource = dataSource;
         _commandText = $@"
-            DELETE FROM {TableName.Jobs(settings)}
+            DELETE FROM {DbName.Jobs(settings)}
             WHERE job_name = $1 AND cron IS NOT NULL
         ";
     }

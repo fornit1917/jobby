@@ -31,7 +31,7 @@ public class RescheduleProcessingJobTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var newStartTime = DateTime.UtcNow.AddDays(2);
-        await storage.RescheduleProcessingJobAsync(job.ToProcessingJob(), newStartTime, error);
+        await storage.RescheduleProcessingJobAsync(job.ToJobExecutionModel(), newStartTime, error);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Scheduled, actualJob.Status);
@@ -62,7 +62,7 @@ public class RescheduleProcessingJobTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var newStartTime = DateTime.UtcNow.AddDays(2);
-        await storage.RescheduleProcessingJobAsync(job.ToProcessingJob(), newStartTime, null);
+        await storage.RescheduleProcessingJobAsync(job.ToJobExecutionModel(), newStartTime, null);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
@@ -90,7 +90,8 @@ public class RescheduleProcessingJobTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var newStartTime = DateTime.UtcNow.AddDays(2);
-        await storage.RescheduleProcessingJobAsync(new ProcessingJob(job.Id, "old_server"), newStartTime, null);
+        job.ServerId = "old_server";
+        await storage.RescheduleProcessingJobAsync(job.ToJobExecutionModel(), newStartTime, null);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Processing, actualJob.Status);

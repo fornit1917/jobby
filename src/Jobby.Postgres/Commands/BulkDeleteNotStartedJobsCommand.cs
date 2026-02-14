@@ -14,7 +14,7 @@ internal class BulkDeleteNotStartedJobsCommand
         _dataSource = dataSource;
 
         _deleteCommandText = @$"
-            DELETE FROM {TableName.Jobs(settings)}
+            DELETE FROM {DbName.Jobs(settings)}
             WHERE
                 id = ANY($1)
                 AND (status={(int)JobStatus.Scheduled} OR status={(int)JobStatus.WaitingPrev})

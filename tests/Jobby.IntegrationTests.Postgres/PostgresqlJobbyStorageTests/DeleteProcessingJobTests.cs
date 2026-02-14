@@ -24,7 +24,7 @@ public class DeleteProcessingJobTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteProcessingJobAsync(job.ToProcessingJob());
+        await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.False(jobExists);
@@ -56,7 +56,7 @@ public class DeleteProcessingJobTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteProcessingJobAsync(job.ToProcessingJob(), job.NextJobId);
+        await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.False(jobExists);
@@ -92,7 +92,7 @@ public class DeleteProcessingJobTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteProcessingJobAsync(job.ToProcessingJob(), job.NextJobId);
+        await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.True(jobExists);
@@ -128,7 +128,8 @@ public class DeleteProcessingJobTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteProcessingJobAsync(new ProcessingJob(job.Id, "old_server"), job.NextJobId);
+        job.ServerId = "old_server";
+        await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.True(jobExists);

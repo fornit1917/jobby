@@ -24,6 +24,8 @@ public class BulkInsertTests
             Status = JobStatus.Scheduled,
             JobParam = "param1",
             QueueName = "q1",
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = false
         };
 
         var secondJob = new JobCreationModel
@@ -37,7 +39,9 @@ public class BulkInsertTests
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Failed,
             JobParam = "param2",
-            QueueName = "q2"
+            QueueName = "q2",
+            SerializableGroupId = null,
+            LockGroupIfFailed = true
         };
 
         var storage = DbHelper.CreateJobbyStorage();
@@ -70,6 +74,8 @@ public class BulkInsertTests
             Status = JobStatus.Scheduled,
             JobParam = "param1",
             QueueName = "q1",
+            SerializableGroupId = "gid",
+            LockGroupIfFailed = false,
         };
 
         var secondJob = new JobCreationModel
@@ -83,7 +89,9 @@ public class BulkInsertTests
             ScheduledStartAt = DateTime.UtcNow.AddDays(200),
             Status = JobStatus.Failed,
             JobParam = "param2",
-            QueueName = "q2"
+            QueueName = "q2",
+            SerializableGroupId = null,
+            LockGroupIfFailed = true
         };
 
         var storage = DbHelper.CreateJobbyStorage();

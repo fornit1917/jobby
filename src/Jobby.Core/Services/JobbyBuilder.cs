@@ -49,7 +49,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _queueForAllRecurrent;
-    private Dictionary<string, string> _queueByJobName = new();
+    private readonly Dictionary<string, string> _queueByJobName = new();
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -89,7 +89,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         IJobCompletionService completionService = _serverSettings.CompleteWithBatching
             ? new BatchingJobCompletionService(storage, _serverSettings, serverId)
-            : new SimpleJobCompletionService(storage, _serverSettings.DeleteCompleted, serverId);
+            : new SimpleJobCompletionService(storage, _serverSettings.DeleteCompleted);
 
         IJobPostProcessingService postProcessingService = new JobPostProcessingService(storage,
             completionService,

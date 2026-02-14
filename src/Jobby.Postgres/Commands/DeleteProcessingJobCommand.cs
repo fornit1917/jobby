@@ -15,7 +15,7 @@ internal class DeleteProcessingJobCommand
         _dataSource = dataSource;
         
         _deleteCommandText = @$"
-            DELETE FROM {TableName.Jobs(settings)}
+            DELETE FROM {DbName.Jobs(settings)}
             WHERE
                 id = $1
                 AND status = {(int)JobStatus.Processing}
@@ -23,14 +23,14 @@ internal class DeleteProcessingJobCommand
 
         _deleteAndUnlockNextCommandText = $@"
             WITH complete_and_get_next_job_id AS (
-	            DELETE FROM {TableName.Jobs(settings)} 
+	            DELETE FROM {DbName.Jobs(settings)} 
 	            WHERE 
 		            id = $1
 		            AND status = {(int)JobStatus.Processing}
 		            AND server_id = $2
 	            RETURNING next_job_id
             )
-            UPDATE {TableName.Jobs(settings)}
+            UPDATE {DbName.Jobs(settings)}
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE
@@ -40,33 +40,23 @@ internal class DeleteProcessingJobCommand
         ";
     }
 
-    public async Task ExecuteAsync(ProcessingJob job, Guid? nextJobId = null)
+    public async Task ExecuteAsync(JobExecutionModel job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
 
-        if (nextJobId == null)
+        if (job.NextJobId == null)
         {
-            await using var cmd = new NpgsqlCommand(_deleteCommandText, conn)
-            {
-                Parameters =
-                {
-                    new() { Value = job.JobId },
-                    new() { Value = job.ServerId }
-                }
-            };
+            await using var cmd = new NpgsqlCommand(_deleteCommandText, conn);
+            cmd.Parameters.Add(new() { Value = job.Id });
+            cmd.Parameters.Add(new() { Value = job.ServerId });
             await cmd.ExecuteNonQueryAsync();
         }
         else
         {
-            await using var deleteAndUnlockNextCmd = new NpgsqlCommand(_deleteAndUnlockNextCommandText, conn)
-            {
-                Parameters =
-                {
-                    new() { Value = job.JobId },
-                    new() { Value = job.ServerId },
-                    new() { Value = nextJobId }
-                }
-            };
+            await using var deleteAndUnlockNextCmd = new NpgsqlCommand(_deleteAndUnlockNextCommandText, conn);
+            deleteAndUnlockNextCmd.Parameters.Add(new() { Value = job.Id });
+            deleteAndUnlockNextCmd.Parameters.Add(new() { Value = job.ServerId });
+            deleteAndUnlockNextCmd.Parameters.Add(new() { Value = job.NextJobId });
 
             await deleteAndUnlockNextCmd.ExecuteNonQueryAsync();
         }

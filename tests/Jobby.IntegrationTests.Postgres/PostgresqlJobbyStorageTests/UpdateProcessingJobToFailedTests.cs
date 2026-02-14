@@ -29,7 +29,7 @@ public class UpdateProcessingJobToFailedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var failedReason = "some error message";
-        await storage.UpdateProcessingJobToFailedAsync(job.ToProcessingJob(), failedReason);
+        await storage.UpdateProcessingJobToFailedAsync(job.ToJobExecutionModel(), failedReason);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Failed, actualJob.Status);
@@ -60,7 +60,7 @@ public class UpdateProcessingJobToFailedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var failedReason = "some error message";
-        await storage.UpdateProcessingJobToFailedAsync(job.ToProcessingJob(), failedReason);
+        await storage.UpdateProcessingJobToFailedAsync(job.ToJobExecutionModel(), failedReason);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
@@ -88,7 +88,8 @@ public class UpdateProcessingJobToFailedTests
 
         var storage = DbHelper.CreateJobbyStorage();
         var failedReason = "some error message";
-        await storage.UpdateProcessingJobToFailedAsync(new ProcessingJob(job.Id, "old_server"), failedReason);
+        job.ServerId = "old_server";
+        await storage.UpdateProcessingJobToFailedAsync(job.ToJobExecutionModel(), failedReason);
 
         var actualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == job.Id);
         Assert.Equal(JobStatus.Processing, actualJob.Status);

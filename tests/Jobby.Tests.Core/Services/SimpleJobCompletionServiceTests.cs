@@ -10,35 +10,29 @@ public class SimpleJobCompletionServiceTests
 {
     private readonly Mock<IJobbyStorage> _storageMock = new Mock<IJobbyStorage>();
 
-    private const string ServerId = "serverId";
-
     private SimpleJobCompletionService? _service;
 
     [Fact]
     public async Task CompleteJob_DeleteCompletedTrue_DeletesJob()
     {
-        _service = new SimpleJobCompletionService(_storageMock.Object, deleteCompletedJobs: true, ServerId);
-        var jobId = Guid.NewGuid();
-        var nextJobId = Guid.NewGuid();
+        _service = new SimpleJobCompletionService(_storageMock.Object, deleteCompletedJobs: true);
+        var job = new JobExecutionModel();
 
-        await _service.CompleteJob(jobId, nextJobId);
+        await _service.CompleteJob(job);
 
-        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == jobId && x.ServerId == ServerId;
-        _storageMock.Verify(x => x.DeleteProcessingJobAsync(It.Is(expectedJob), nextJobId), Times.Once);
-        _storageMock.Verify(x => x.UpdateProcessingJobToCompletedAsync(It.Is(expectedJob), nextJobId), Times.Never);
+        _storageMock.Verify(x => x.DeleteProcessingJobAsync(job), Times.Once);
+        _storageMock.Verify(x => x.UpdateProcessingJobToCompletedAsync(job), Times.Never);
     }
 
     [Fact]
     public async Task CompleteJob_DeleteCompletedFalse_MarksCompleted()
     {
-        _service = new SimpleJobCompletionService(_storageMock.Object, deleteCompletedJobs: false, ServerId);
-        var jobId = Guid.NewGuid();
-        var nextJobId = Guid.NewGuid();
+        _service = new SimpleJobCompletionService(_storageMock.Object, deleteCompletedJobs: false);
+        var job = new JobExecutionModel();
 
-        await _service.CompleteJob(jobId, nextJobId);
+        await _service.CompleteJob(job);
 
-        Expression<Func<ProcessingJob, bool>> expectedJob = x => x.JobId == jobId && x.ServerId == ServerId;
-        _storageMock.Verify(x => x.DeleteProcessingJobAsync(It.Is(expectedJob), nextJobId), Times.Never);
-        _storageMock.Verify(x => x.UpdateProcessingJobToCompletedAsync(It.Is(expectedJob), nextJobId), Times.Once);
+        _storageMock.Verify(x => x.DeleteProcessingJobAsync(job), Times.Never);
+        _storageMock.Verify(x => x.UpdateProcessingJobToCompletedAsync(job), Times.Once);
     }
 }

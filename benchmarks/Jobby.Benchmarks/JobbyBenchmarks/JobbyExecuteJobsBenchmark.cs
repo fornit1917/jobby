@@ -36,6 +36,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
             action.JobsCount = benchmarkParams.JobsCount;
             action.DegreeOfParallelism = benchmarkParams.DegreeOfParallelism;
             action.CompleteWithBatching = benchmarkParams.CompleteWithBatching;
+            action.DisableSerializableGroups = benchmarkParams.DisableSerializableGroups;
 
             Console.WriteLine("Warmup...");
             action.Setup();
@@ -81,7 +82,7 @@ public class JobbyExecuteJobsBenchmarkAction
     public bool CompleteWithBatching { get; set; } = false;
     
     [Params(false, true)]
-    public bool UseUuidV7 { get; set; }    
+    public bool DisableSerializableGroups { get; set; } = false;
 
     public int JobsCount { get; set; } = 1000;
 
@@ -96,6 +97,7 @@ public class JobbyExecuteJobsBenchmarkAction
             DbErrorPauseMs = 5000,
             DeleteCompleted = true,
             CompleteWithBatching = CompleteWithBatching,
+            DisableSerializableGroups = DisableSerializableGroups,
         };
         var scopeFactory = new JobbyTestExecutionScopeFactory();
 
@@ -105,10 +107,6 @@ public class JobbyExecuteJobsBenchmarkAction
             .UsePostgresql(_dataSource)
             .UseServerSettings(serverSettings)
             .UseExecutionScopeFactory(scopeFactory);
-        if (!UseUuidV7)
-        {
-            builder.UseGuidGenerator(new GuidV4Generator());
-        }            
 
         _jobbyServer = builder.CreateJobbyServer();
         _jobbyClient = builder.CreateJobbyClient();

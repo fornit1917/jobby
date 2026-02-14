@@ -1,52 +1,24 @@
--- Tables
+﻿ALTER TABLE ${jobs_table_fullname}
+    ADD COLUMN IF NOT EXISTS serializable_group_id TEXT DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS lock_group_if_failed BOOLEAN DEFAULT FALSE;
 
-CREATE TABLE IF NOT EXISTS jobby_jobs (
-	id UUID NOT NULL PRIMARY KEY,
-	job_name TEXT NOT NULL,
-	cron TEXT DEFAULT NULL,
-	job_param TEXT DEFAULT NULL,
-	status int NOT NULL,
-	error TEXT DEFAULT NULL,
-	created_at timestamptz NOT NULL,
-	scheduled_start_at timestamptz NOT NULL,
-	last_started_at timestamptz DEFAULT NULL,
-	last_finished_at timestamptz DEFAULT NULL,
-	started_count int NOT NULL DEFAULT 0,
-	next_job_id UUID DEFAULT NULL,
-	server_id TEXT DEFAULT NULL,
-	can_be_restarted boolean NOT NULL DEFAULT FALSE,
-    queue_name TEXT NOT NULL DEFAULT 'default',
-    serializable_group_id TEXT DEFAULT NULL,
-    lock_group_if_failed BOOLEAN DEFAULT FALSE,
-    is_group_locker BOOLEAN GENERATED ALWAYS AS (
+ALTER TABLE ${jobs_table_fullname}
+    ADD COLUMN IF NOT EXISTS is_group_locker BOOLEAN GENERATED ALWAYS AS (
         serializable_group_id IS NOT NULL
         AND (
             status = 2
             OR (
-                lock_group_if_failed = TRUE
+                lock_group_if_failed = TRUE 
                 AND (status = 4 OR status = 1 AND started_count > 0)
             )
-        )
-    ) STORED
-);
+        )   
+    ) STORED; 
 
-CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
-    ON jobby_jobs(queue_name, status, scheduled_start_at);
-
-CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_recurrent_name_idx ON jobby_jobs(job_name) WHERE cron IS NOT NULL;
-
-CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_locked_group_idx
-    ON jobby_jobs(serializable_group_id)
+CREATE UNIQUE INDEX IF NOT EXISTS ${tables_prefix}jobs_locked_group_idx
+    ON ${jobs_table_fullname}(serializable_group_id)
     WHERE is_group_locker = TRUE;
 
-CREATE TABLE IF NOT EXISTS jobby_servers (
-	id TEXT NOT NULL PRIMARY KEY,
-	heartbeat_ts timestamptz NOT NULL
-);
-
--- Functions
-
-CREATE OR REPLACE FUNCTION jobby_take_to_processing(p_queue TEXT, p_batch_size int, p_server_id TEXT)
+CREATE OR REPLACE FUNCTION ${take_to_processing_function_fullname}(p_queue TEXT, p_batch_size int, p_server_id TEXT)
 RETURNS TABLE (
     id uuid,
     job_name TEXT,
@@ -77,7 +49,7 @@ BEGIN
         FOR rec IN
             WITH
                 candidates AS (
-                    SELECT c.id, c.serializable_group_id, c.scheduled_start_at FROM jobby_jobs c
+                    SELECT c.id, c.serializable_group_id, c.scheduled_start_at FROM ${jobs_table_fullname} c
                     WHERE
                         c.queue_name = p_queue
                         AND c.status = 1
@@ -85,10 +57,10 @@ BEGIN
                     AND (
                         c.serializable_group_id IS NULL
                         OR NOT EXISTS (
-                            SELECT 1 FROM jobby_jobs jl 
+                            SELECT 1 FROM ${jobs_table_fullname} jl
                             WHERE
                                 jl.serializable_group_id = c.serializable_group_id
-                                AND jl.is_group_locker = TRUE 
+                                AND jl.is_group_locker = TRUE
                                 AND jl.id != c.id
                         )
                     )
@@ -108,7 +80,7 @@ BEGIN
                         ORDER BY c.serializable_group_id, c.scheduled_start_at 
                     ),
                 taken AS (
-                    UPDATE jobby_jobs t
+                    UPDATE ${jobs_table_fullname} t
                     SET
                         status = 2,
                         last_started_at = now(),

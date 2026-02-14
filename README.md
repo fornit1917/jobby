@@ -15,7 +15,8 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Scheduled tasks  
 - Queue-based task execution  
 - Transactional creation of multiple tasks  
-- Configurable execution order for multiple tasks  
+- Configurable execution order for multiple tasks
+- Groups of tasks with sequential execution
 - Retry policies for failed tasks
 - Multi-Queues
 - Configurable middlewares pipeline for executing background tasks code
@@ -210,6 +211,27 @@ sequenceBuilder.Add(jobbyClient.Factory
 var jobs = sequenceBuilder.GetJobs();  
 
 await jobbyClient.EnqueueBatchAsync(jobs);  
+```
+
+#### Groups of tasks with sequential execution
+
+When creating a task, you can specify a group ID, and Jobby will ensure that no more than one task within each group is executed at any given time.
+
+```csharp
+await jobbyClient.EnqueueCommandAsync(command, new JobOpts 
+{
+    SerializableGroupId = "SomeGroupId"
+});
+```
+
+The next task in the group will only start after the current task completes, whether successfully or unsuccessfully. If, in the event of an unsuccessful completion, you need to block the execution of any tasks from the same group, you must set the `LockGroupIfFailed` flag when creating the task:
+
+```csharp
+await jobbyClient.EnqueueCommandAsync(command, new JobOpts 
+{
+    SerializableGroupId = "SomeGroupId",
+    LockGroupIfFailed = true
+});
 ```
 
 #### Using EntityFramework  
