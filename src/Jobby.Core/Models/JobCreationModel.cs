@@ -2,17 +2,21 @@
 
 public class JobCreationModel
 {
-    public Guid Id { get; set; }
-    public string JobName { get; set; } = string.Empty;
-    public string? JobParam { get; set; }
-    public string? Cron { get; set; }
-    public bool IsExclusive { get; set; }
-    public JobStatus Status { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime ScheduledStartAt { get; set; }
-    public Guid? NextJobId { get; set; }
-    public bool CanBeRestarted { get; set; } = true;
-    public string QueueName { get; set; } = QueueSettings.DefaultQueueName;
-    public string? SerializableGroupId  { get; set; }
-    public bool LockGroupIfFailed { get; set; }
+    public Guid Id { get; internal set; }
+    public string JobName { get; internal set; } = string.Empty;
+    public string? JobParam { get; internal set; }
+    public string? Cron { get; internal set; }
+    public bool IsExclusive { get; internal set; }
+    public JobStatus Status { get; internal set; }
+    public DateTime CreatedAt { get; internal set; }
+    public DateTime ScheduledStartAt { get; internal set; }
+    public Guid? NextJobId { get; internal set; }
+    public bool CanBeRestarted { get; internal set; } = true;
+    public string QueueName { get; internal set; } = QueueSettings.DefaultQueueName;
+    public string? SerializableGroupId  { get; internal set; }
+    public bool LockGroupIfFailed { get; internal set; }
+
+    internal JobCreationModel()
+    {
+    }
 }
