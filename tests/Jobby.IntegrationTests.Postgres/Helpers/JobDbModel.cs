@@ -57,6 +57,9 @@ internal class JobDbModel
     [Column("lock_group_if_failed")]
     public bool LockGroupIfFailed { get; set; }
 
+    [Column("is_exclusive")]
+    public bool IsExclusive { get; set; }
+
     public JobExecutionModel ToJobExecutionModel()
     {
         return new JobExecutionModel

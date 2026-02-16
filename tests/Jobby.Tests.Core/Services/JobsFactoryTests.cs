@@ -35,6 +35,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Null(job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(DateTime.UtcNow, job.ScheduledStartAt, TimeSpan.FromSeconds(1));
         Assert.Null(job.NextJobId);
@@ -58,6 +59,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Null(job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(startTime, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -88,6 +90,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Null(job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -119,6 +122,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Null(job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(defaultOpts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -152,6 +156,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Null(job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -175,6 +180,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Cron);
+        Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         var expectedStartTime = CronHelper.GetNext(cron, job.CreatedAt);
         Assert.Equal(expectedStartTime, job.ScheduledStartAt);
@@ -196,6 +202,7 @@ public class JobsFactoryTests
             QueueName = "queueName",
             SerializableGroupId = "groupId",
             StartTime = DateTime.UtcNow.AddHours(1),
+            IsExclusive = false
         };
         var job = GetFactory().CreateRecurrent(command, cron, opts);
 
@@ -204,6 +211,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -234,6 +242,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Cron);
+        Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(defaultOpts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -251,6 +260,7 @@ public class JobsFactoryTests
             CanBeRestartedIfServerGoesDown = false,
             QueueName = "queueName",
             SerializableGroupId = "groupId",
+            IsExclusive = false,
         };
         var command = new TestJobWithDefaultOptsCommand(default, defaultOpts);
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
@@ -267,6 +277,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Cron);
+        Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
         Assert.Null(job.NextJobId);
@@ -291,6 +302,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Cron);
+        Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         var expectedStartTime = CronHelper.GetNext(cron, job.CreatedAt);
         Assert.Equal(expectedStartTime, job.ScheduledStartAt);

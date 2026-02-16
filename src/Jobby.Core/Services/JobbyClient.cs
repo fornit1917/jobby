@@ -28,12 +28,12 @@ internal class JobbyClient : IJobbyClient
 
     public void CancelRecurrent<TCommand>() where TCommand : IJobCommand
     {
-        _storage.DeleteRecurrent(TCommand.GetJobName());
+        _storage.DeleteExclusiveByName(TCommand.GetJobName());
     }
 
     public Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand
     {
-        return _storage.DeleteRecurrentAsync(TCommand.GetJobName());
+        return _storage.DeleteExclusiveByNameAsync(TCommand.GetJobName());
     }
 
     public void EnqueueBatch(IReadOnlyList<JobCreationModel> jobs)

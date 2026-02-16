@@ -3,17 +3,17 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class DeleteRecurrentJobByNameCommand
+internal class DeleteExclusiveJobByNameCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _commandText;
 
-    public DeleteRecurrentJobByNameCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public DeleteExclusiveJobByNameCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
         _commandText = $@"
             DELETE FROM {DbName.Jobs(settings)}
-            WHERE job_name = $1 AND cron IS NOT NULL
+            WHERE job_name = $1 AND is_exclusive = true;
         ";
     }
 

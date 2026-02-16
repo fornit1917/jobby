@@ -40,14 +40,14 @@ public class JobbyClientTests
     public void CancelRecurrent_CallsDeleteRecurrent()
     {
         _client.CancelRecurrent<TestJobCommand>();
-        _storageMock.Verify(x => x.DeleteRecurrent(TestJobCommand.GetJobName()));
+        _storageMock.Verify(x => x.DeleteExclusiveByName(TestJobCommand.GetJobName()));
     }
 
     [Fact]
     public async Task CancelRecurrentAsync_CallsDeleteRecurrentAsync()
     {
         await _client.CancelRecurrentAsync<TestJobCommand>();
-        _storageMock.Verify(x => x.DeleteRecurrentAsync(TestJobCommand.GetJobName()));
+        _storageMock.Verify(x => x.DeleteExclusiveByNameAsync(TestJobCommand.GetJobName()));
     }
 
     [Fact]

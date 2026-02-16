@@ -74,9 +74,10 @@ internal static class Program
         Console.WriteLine("1. Enqueue success jobs");
         Console.WriteLine("2. Enqueue failed job");
         Console.WriteLine("3. Enqueue jobs sequence");
-        Console.WriteLine("4. Schedule recurrent job");
-        Console.WriteLine("5. Cancel recurrent job");
+        Console.WriteLine("4. Schedule recurrent exclusive job");
+        Console.WriteLine("5. Cancel recurrent exclusive job");
         Console.WriteLine("6. Enqueue serializable jobs group");
+        Console.WriteLine("7. Schedule recurrent not exclusive jobs");
 
         string? action = Console.ReadLine();
 
@@ -102,6 +103,9 @@ internal static class Program
                 break;
             case "6":
                 CreateSerializableJobsGroup(jobbyClient, 5, queuesCount);
+                break;
+            case "7":
+                CreateRecurrentNotExclusive(jobbyClient);
                 break;
         }
 
@@ -174,6 +178,21 @@ internal static class Program
                 SerializableGroupId = "gid"
             });
         }
+    }
+
+    private static void CreateRecurrentNotExclusive(IJobbyClient jobbyClient)
+    {
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand { Value = "1" }, "*/2 * * * * *", new()
+        {
+            QueueName = "q1",
+            IsExclusive = false
+        });
+        
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand() { Value = "2" }, "*/3 * * * * *", new()
+        {
+            QueueName = "q1",
+            IsExclusive = false
+        });
     }
 
     private static void CancelRecurrent(IJobbyClient client)

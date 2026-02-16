@@ -27,13 +27,16 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
                 AND (status = 4 OR status = 1 AND started_count > 0)
             )
         )
-    ) STORED
+    ) STORED,
+    is_exclusive BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
     ON jobby_jobs(queue_name, status, scheduled_start_at);
 
-CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_recurrent_name_idx ON jobby_jobs(job_name) WHERE cron IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_exclusive_name_idx
+    ON jobby_jobs(job_name)
+    WHERE is_exclusive = true;
 
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_locked_group_idx
     ON jobby_jobs(serializable_group_id)

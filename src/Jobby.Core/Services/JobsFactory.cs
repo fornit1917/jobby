@@ -75,6 +75,7 @@ internal class JobsFactory : IJobsFactory
             JobParam = _serializer.SerializeJobParam(command),
             JobName = jobName,
             Cron = cron,
+            IsExclusive = opts.IsExclusive ?? defaultOpts.IsExclusive ?? true,
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = opts.StartTime 

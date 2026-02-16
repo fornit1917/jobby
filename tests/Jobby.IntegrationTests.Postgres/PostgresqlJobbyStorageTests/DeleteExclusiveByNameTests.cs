@@ -5,15 +5,16 @@ using Microsoft.EntityFrameworkCore;
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
 [Collection(PostgresqlTestsCollection.Name)]
-public class DeleteRecurrentTests
+public class DeleteExclusiveByNameTests
 {
     [Fact]
-    public async Task DeleteRecurrentAsync_Deletes()
+    public async Task DeleteExclusiveByNameAsync_Deletes()
     {
         var job = new JobDbModel
         {
             Id = Guid.NewGuid(),
             Cron = "*/5 * * * *",
+            IsExclusive = true,
             JobName = Guid.NewGuid().ToString(),
             JobParam = "param",
             ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -24,19 +25,20 @@ public class DeleteRecurrentTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.DeleteRecurrentAsync(job.JobName);
+        await storage.DeleteExclusiveByNameAsync(job.JobName);
 
         var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
         Assert.False(jobExists);
     }
 
     [Fact]
-    public void DeleteRecurrent_Deletes()
+    public void DeleteExclusiveByName_Deletes()
     {
         var job = new JobDbModel
         {
             Id = Guid.NewGuid(),
             Cron = "*/5 * * * *",
+            IsExclusive = true,
             JobName = Guid.NewGuid().ToString(),
             JobParam = "param",
             ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -47,9 +49,9 @@ public class DeleteRecurrentTests
         dbContext.SaveChanges();
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.DeleteRecurrent(job.JobName);
+        storage.DeleteExclusiveByName(job.JobName);
 
-        var jobExists = dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).Any();
+        var jobExists = dbContext.Jobs.AsNoTracking().Any(x => x.Id == job.Id);
         Assert.False(jobExists);
     }    
 }
