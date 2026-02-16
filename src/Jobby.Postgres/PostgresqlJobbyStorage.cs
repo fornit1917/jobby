@@ -20,7 +20,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     private readonly SendHeartbeatCommand _sendHeartbeatCommand;
     private readonly FindAndDeleteLostServersCommands _findAndDeleteLostServersCommand;
     private readonly FindAndRestartStuckJobsCommand _findAndRestartStuckJobsCommand;
-    private readonly DeleteRecurrentJobByNameCommand _deleteRecurrentJobByNameCommand;
+    private readonly DeleteExclusiveJobByNameCommand _deleteExclusiveJobByNameCommand;
     private readonly BulkDeleteNotStartedJobsCommand _bulkDeleteNotStartedJobsCommand;
 
     public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
@@ -38,7 +38,7 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
         _findAndDeleteLostServersCommand = new FindAndDeleteLostServersCommands(settings);
         _findAndRestartStuckJobsCommand = new FindAndRestartStuckJobsCommand(settings);
-        _deleteRecurrentJobByNameCommand = new DeleteRecurrentJobByNameCommand(dataSource, settings);
+        _deleteExclusiveJobByNameCommand = new DeleteExclusiveJobByNameCommand(dataSource, settings);
         _bulkDeleteNotStartedJobsCommand = new BulkDeleteNotStartedJobsCommand(dataSource, settings);
     }
 
@@ -125,14 +125,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         await transaction.CommitAsync();
     }
 
-    public Task DeleteRecurrentAsync(string jobName)
+    public Task DeleteExclusiveByNameAsync(string jobName)
     {
-        return _deleteRecurrentJobByNameCommand.ExecuteAsync(jobName);
+        return _deleteExclusiveJobByNameCommand.ExecuteAsync(jobName);
     }
 
-    public void DeleteRecurrent(string jobName)
+    public void DeleteExclusiveByName(string jobName)
     {
-        _deleteRecurrentJobByNameCommand.Execute(jobName);
+        _deleteExclusiveJobByNameCommand.Execute(jobName);
     }
 
     public Task BulkDeleteNotStartedJobsAsync(IReadOnlyList<Guid> jobIds)

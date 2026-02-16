@@ -7,8 +7,10 @@ namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 [Collection(PostgresqlTestsCollection.Name)]
 public class BulkInsertTests
 {
-    [Fact]
-    public async Task BulkInsertAsync_Inserts()
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task BulkInsertAsync_Inserts(bool isExclusiveRecurrent, bool lockIfFailedNotRecurrent)
     {
         await using var dbContext = DbHelper.CreateContext();
 
@@ -16,6 +18,7 @@ public class BulkInsertTests
         {
             Id = Guid.NewGuid(),
             Cron = "*/10 * * * *",
+            IsExclusive = isExclusiveRecurrent,
             CreatedAt = DateTime.UtcNow.AddMinutes(-10),
             JobName = Guid.NewGuid().ToString(),
             CanBeRestarted = true,
@@ -25,7 +28,6 @@ public class BulkInsertTests
             JobParam = "param1",
             QueueName = "q1",
             SerializableGroupId = "gid",
-            LockGroupIfFailed = false
         };
 
         var secondJob = new JobCreationModel
@@ -41,7 +43,7 @@ public class BulkInsertTests
             JobParam = "param2",
             QueueName = "q2",
             SerializableGroupId = null,
-            LockGroupIfFailed = true
+            LockGroupIfFailed = lockIfFailedNotRecurrent
         };
 
         var storage = DbHelper.CreateJobbyStorage();
@@ -57,8 +59,10 @@ public class BulkInsertTests
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
     }
 
-    [Fact]
-    public void BulkInsert_Inserts()
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void BulkInsert_Inserts(bool isExclusiveRecurrent, bool lockIfFailedNotRecurrent)
     {
         using var dbContext = DbHelper.CreateContext();
 
@@ -66,6 +70,7 @@ public class BulkInsertTests
         {
             Id = Guid.NewGuid(),
             Cron = "*/10 * * * *",
+            IsExclusive = isExclusiveRecurrent,
             CreatedAt = DateTime.UtcNow.AddMinutes(-10),
             JobName = Guid.NewGuid().ToString(),
             CanBeRestarted = true,
@@ -75,7 +80,6 @@ public class BulkInsertTests
             JobParam = "param1",
             QueueName = "q1",
             SerializableGroupId = "gid",
-            LockGroupIfFailed = false,
         };
 
         var secondJob = new JobCreationModel
@@ -91,7 +95,7 @@ public class BulkInsertTests
             JobParam = "param2",
             QueueName = "q2",
             SerializableGroupId = null,
-            LockGroupIfFailed = true
+            LockGroupIfFailed = lockIfFailedNotRecurrent
         };
 
         var storage = DbHelper.CreateJobbyStorage();

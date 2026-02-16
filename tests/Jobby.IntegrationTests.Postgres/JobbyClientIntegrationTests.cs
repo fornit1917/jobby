@@ -264,6 +264,55 @@ public class JobbyClientIntegrationTests
             .AsNoTracking()
             .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName());
         Assert.Null(actualJob);
+    }
+    
+    [Fact]
+    public async Task SpecifiedOpts_NotExclusive_SchedulesFewRecurrentAsyncMethods()
+    {
+        var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        var client = CreateJobbyClient();
+
+        var command = new TestJobCommand();
+        var cron = "0 3 1 1 *";
+        var opts = new RecurrentJobOpts
+        {
+            QueueName = "CustomQueue",
+            StartTime = DateTime.UtcNow.AddDays(3),
+            SerializableGroupId = "gid",
+            IsExclusive = false,
+        };
+        await client.ScheduleRecurrentAsync(command, cron, opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts);
+
+        var actualJobs = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+            .ToListAsync();
+        Assert.Equal(2, actualJobs.Count);
+    }
+
+    [Fact]
+    public void SpecifiedOpts_NotExclusive_SchedulesFewRecurrentBySyncMethods()
+    {
+        var dbContext = DbHelper.CreateContextAndClearDb();
+        var client = CreateJobbyClient();
+
+        var command = new TestJobCommand();
+        var cron = "0 3 1 1 *";
+        var opts = new RecurrentJobOpts
+        {
+            QueueName = "CustomQueue",
+            StartTime = DateTime.UtcNow.AddDays(3),
+            SerializableGroupId = "gid",
+            IsExclusive = false,
+        };
+        client.ScheduleRecurrent(command, cron, opts);
+        client.ScheduleRecurrent(command, cron, opts);
+
+        var actualJobs = dbContext.Jobs
+            .AsNoTracking()
+            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+            .ToList();
+        Assert.Equal(2, actualJobs.Count);
     }    
 
     private IJobbyClient CreateJobbyClient()

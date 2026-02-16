@@ -21,8 +21,8 @@ public interface IJobbyStorage
     Task BulkDeleteNotStartedJobsAsync(IReadOnlyList<Guid> jobIds);
     void BulkDeleteNotStartedJobs(IReadOnlyList<Guid> jobIds);
 
-    Task DeleteRecurrentAsync(string jobName);
-    void DeleteRecurrent(string jobName);
+    Task DeleteExclusiveByNameAsync(string jobName);
+    void DeleteExclusiveByName(string jobName);
 
     Task SendHeartbeatAsync(string serverId);
     Task DeleteLostServersAndRestartTheirJobsAsync(DateTime minLastHeartbeat,

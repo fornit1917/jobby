@@ -26,9 +26,10 @@ internal class BulkInsertJobsCommand
                 cron,
                 queue_name,
                 serializable_group_id,
-                lock_group_if_failed
+                lock_group_if_failed,
+                is_exclusive
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ";
     }
 
@@ -74,6 +75,7 @@ internal class BulkInsertJobsCommand
                     new() { Value = job.QueueName },
                     new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value },
                     new() { Value = job.LockGroupIfFailed },
+                    new() { Value = job.IsExclusive },
                 }
             };
             batch.BatchCommands.Add(cmd);

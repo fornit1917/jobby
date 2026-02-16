@@ -7,7 +7,16 @@ internal class TestCliRecurrentJobCommandHandler : IJobCommandHandler<TestCliRec
 {
     public Task ExecuteAsync(TestCliRecurrentJobCommand command, JobExecutionContext ctx)
     {
-        Console.WriteLine($"Recurrent Job {ctx.JobName} executed, {DateTime.Now}");
+        if (command.Value == null)
+        {
+            Console.WriteLine($"Recurrent Job {ctx.JobName} executed, {DateTime.Now}");
+        }
+        else
+        {
+            Console.WriteLine($"Recurrent Job {ctx.JobName} executed, value={command.Value}, {DateTime.Now}");
+        }
+                
+        
         return Task.CompletedTask;
     }
 }

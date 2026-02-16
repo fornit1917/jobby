@@ -6,6 +6,7 @@ public class JobCreationModel
     public string JobName { get; set; } = string.Empty;
     public string? JobParam { get; set; }
     public string? Cron { get; set; }
+    public bool IsExclusive { get; set; }
     public JobStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime ScheduledStartAt { get; set; }

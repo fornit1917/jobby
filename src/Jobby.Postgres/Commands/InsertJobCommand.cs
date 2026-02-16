@@ -26,10 +26,11 @@ internal class InsertJobCommand
                 can_be_restarted,
                 queue_name,
                 serializable_group_id,
-                lock_group_if_failed
+                lock_group_if_failed,
+                is_exclusive
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            ON CONFLICT (job_name) WHERE cron IS NOT NULL DO
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            ON CONFLICT (job_name) WHERE is_exclusive=true DO
             UPDATE SET
                 id = $1,
                 job_param = $3,
@@ -59,6 +60,7 @@ internal class InsertJobCommand
                 new() { Value = job.QueueName },                                    // 10
                 new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value }, // 11
                 new() { Value = job.LockGroupIfFailed },                            // 12
+                new() { Value = job.IsExclusive },                                  // 13
             }
         };
     }
