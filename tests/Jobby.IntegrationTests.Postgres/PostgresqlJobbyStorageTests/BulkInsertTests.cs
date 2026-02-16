@@ -1,5 +1,8 @@
-﻿using Jobby.Core.Models;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Models;
+using Jobby.Core.Services;
 using Jobby.IntegrationTests.Postgres.Helpers;
+using Jobby.TestsUtils.Jobs;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
@@ -12,51 +15,55 @@ public class BulkInsertTests
     [InlineData(false, false)]
     public async Task BulkInsertAsync_Inserts(bool isExclusiveRecurrent, bool lockIfFailedNotRecurrent)
     {
-        await using var dbContext = DbHelper.CreateContext();
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
 
-        var firstJob = new JobCreationModel
+        var factory = CreateJobsFactory();
+        
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
         {
-            Id = Guid.NewGuid(),
-            Cron = "*/10 * * * *",
             IsExclusive = isExclusiveRecurrent,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = true,
-            NextJobId = Guid.NewGuid(),
-            ScheduledStartAt = DateTime.UtcNow.AddDays(100),
-            Status = JobStatus.Scheduled,
-            JobParam = "param1",
+            CanBeRestartedIfServerGoesDown = true,
             QueueName = "q1",
             SerializableGroupId = "gid",
-        };
+            StartTime = DateTime.UtcNow.AddDays(100)
+        });
 
-        var secondJob = new JobCreationModel
-        {
-            Id = Guid.NewGuid(),
-            Cron = null,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-20),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = false,
-            NextJobId = null,
-            ScheduledStartAt = DateTime.UtcNow.AddDays(200),
-            Status = JobStatus.Failed,
-            JobParam = "param2",
-            QueueName = "q2",
-            SerializableGroupId = null,
-            LockGroupIfFailed = lockIfFailedNotRecurrent
-        };
+        var jobs = factory.CreateSequenceBuilder()
+            .Add(new TestJobCommand { UniqueId = Guid.NewGuid() }, new JobOpts
+            {
+                CanBeRestartedIfServerGoesDown = false,
+                QueueName = "q2",
+                SerializableGroupId = null,
+                LockGroupIfFailed = lockIfFailedNotRecurrent,
+                StartTime = DateTime.UtcNow.AddDays(200),
+            })
+            .Add(new TestJobCommand { UniqueId = Guid.NewGuid() }, new JobOpts
+            {
+                CanBeRestartedIfServerGoesDown = false,
+                QueueName = "q2",
+                SerializableGroupId = null,
+                LockGroupIfFailed = lockIfFailedNotRecurrent,
+                StartTime = DateTime.UtcNow.AddDays(200),
+            })
+            .GetJobs();
+
+        var secondJob = jobs[0];
+        var thirdJob = jobs[1];
 
         var storage = DbHelper.CreateJobbyStorage();
 
-        await storage.BulkInsertJobsAsync([firstJob, secondJob]);
+        await storage.BulkInsertJobsAsync([firstJob, secondJob, thirdJob]);
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == firstJob.Id);
         var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == secondJob.Id);
+        var thirdActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == thirdJob.Id);
 
         Assert.NotNull(firstActualJob);
         Assert.NotNull(secondActualJob);
+        Assert.NotNull(thirdActualJob);
         AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
+        AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
     }
 
     [Theory]
@@ -64,49 +71,58 @@ public class BulkInsertTests
     [InlineData(false, false)]
     public void BulkInsert_Inserts(bool isExclusiveRecurrent, bool lockIfFailedNotRecurrent)
     {
-        using var dbContext = DbHelper.CreateContext();
+        using var dbContext = DbHelper.CreateContextAndClearDb();
 
-        var firstJob = new JobCreationModel
+        var factory = CreateJobsFactory();
+        
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
         {
-            Id = Guid.NewGuid(),
-            Cron = "*/10 * * * *",
             IsExclusive = isExclusiveRecurrent,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = true,
-            NextJobId = Guid.NewGuid(),
-            ScheduledStartAt = DateTime.UtcNow.AddDays(100),
-            Status = JobStatus.Scheduled,
-            JobParam = "param1",
+            CanBeRestartedIfServerGoesDown = true,
             QueueName = "q1",
             SerializableGroupId = "gid",
-        };
+            StartTime = DateTime.UtcNow.AddDays(100)
+        });
 
-        var secondJob = new JobCreationModel
-        {
-            Id = Guid.NewGuid(),
-            Cron = null,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-20),
-            JobName = Guid.NewGuid().ToString(),
-            CanBeRestarted = false,
-            NextJobId = null,
-            ScheduledStartAt = DateTime.UtcNow.AddDays(200),
-            Status = JobStatus.Failed,
-            JobParam = "param2",
-            QueueName = "q2",
-            SerializableGroupId = null,
-            LockGroupIfFailed = lockIfFailedNotRecurrent
-        };
+        var jobs = factory.CreateSequenceBuilder()
+            .Add(new TestJobCommand { UniqueId = Guid.NewGuid() }, new JobOpts
+            {
+                CanBeRestartedIfServerGoesDown = false,
+                QueueName = "q2",
+                SerializableGroupId = null,
+                LockGroupIfFailed = lockIfFailedNotRecurrent,
+                StartTime = DateTime.UtcNow.AddDays(200),
+            })
+            .Add(new TestJobCommand { UniqueId = Guid.NewGuid() }, new JobOpts
+            {
+                CanBeRestartedIfServerGoesDown = false,
+                QueueName = "q2",
+                SerializableGroupId = null,
+                LockGroupIfFailed = lockIfFailedNotRecurrent,
+                StartTime = DateTime.UtcNow.AddDays(200),
+            })
+            .GetJobs();
+
+        var secondJob = jobs[0];
+        var thirdJob = jobs[1];
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.BulkInsertJobs([firstJob, secondJob]);
+        storage.BulkInsertJobs([firstJob, secondJob, thirdJob]);
 
         var firstActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == firstJob.Id);
         var secondActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == secondJob.Id);
+        var thirdActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == thirdJob.Id);
 
         Assert.NotNull(firstActualJob);
         Assert.NotNull(secondActualJob);
+        Assert.NotNull(thirdActualJob);
         AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
-    }    
+        AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
+    }
+
+    private IJobsFactory CreateJobsFactory()
+    {
+        return new JobbyBuilder().CreateJobsFactory();
+    }
 }
