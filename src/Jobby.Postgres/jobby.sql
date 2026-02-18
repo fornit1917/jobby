@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
             )
         )
     ) STORED,
-    is_exclusive BOOLEAN NOT NULL DEFAULT FALSE
+    is_exclusive BOOLEAN NOT NULL DEFAULT FALSE,
+    scheduler_type TEXT DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
@@ -58,7 +59,8 @@ RETURNS TABLE (
     cron TEXT,
     next_job_id uuid,
     scheduled_start_at timestamptz,
-    server_id TEXT
+    server_id TEXT,
+    scheduler_type TEXT
 )
 LANGUAGE plpgsql
 AS $$
@@ -88,10 +90,10 @@ BEGIN
                     AND (
                         c.serializable_group_id IS NULL
                         OR NOT EXISTS (
-                            SELECT 1 FROM jobby_jobs jl 
+                            SELECT 1 FROM jobby_jobs jl
                             WHERE
                                 jl.serializable_group_id = c.serializable_group_id
-                                AND jl.is_group_locker = TRUE 
+                                AND jl.is_group_locker = TRUE
                                 AND jl.id != c.id
                         )
                     )
@@ -131,7 +133,8 @@ BEGIN
                         t.cron AS r_cron,
                         t.next_job_id AS r_next_job_id,
                         t.scheduled_start_at AS r_scheduled_start_at,
-                        t.server_id AS r_server_id
+                        t.server_id AS r_server_id,
+                        t.scheduler_type AS r_scheduler_type
                 ),
                 skipped AS (
                     SELECT
@@ -143,7 +146,8 @@ BEGIN
                         NULL AS r_cron,
                         NULL::uuid AS r_next_job_id,
                         NULL::timestamptz AS r_scheduled_start_at,
-                        NULL AS r_server_id
+                        NULL AS r_server_id,
+                        NULL AS r_scheduler_type
                     FROM candidates c 
                     WHERE c.serializable_group_id IS NOT NULL 
                     AND c.id NOT IN (
@@ -163,6 +167,7 @@ BEGIN
                     next_job_id := rec.r_next_job_id;
                     scheduled_start_at := rec.r_scheduled_start_at;
                     server_id := rec.r_server_id;
+                    scheduler_type := rec.r_scheduler_type;
                     
                     RETURN NEXT;
                     

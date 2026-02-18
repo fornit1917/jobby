@@ -10,7 +10,9 @@ using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
 using Jobby.Core.Interfaces.Queues;
+using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Services.Queues;
+using Jobby.Core.Services.Schedulers;
 
 namespace Jobby.Core.Services;
 
@@ -49,6 +51,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _defaultRecurrentQueue;
+    private readonly Dictionary<string, IScheduler> _schedulersByType = JobbySchedulerTypes.CreateSchedulers();
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -92,8 +95,8 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         IJobPostProcessingService postProcessingService = new JobPostProcessingService(storage,
             completionService,
-            LoggerFactory.CreateLogger<JobPostProcessingService>(),
-            serverId);
+            _schedulersByType.ToFrozenDictionary(),
+            LoggerFactory.CreateLogger<JobPostProcessingService>());
 
         IJobExecutionService executionService = new JobExecutionService(_scopeFactory,
             _jobsRegistry,
@@ -119,7 +122,11 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     public IJobsFactory CreateJobsFactory()
     {
-        _jobsFactory ??= new JobsFactory(GuidGenerator, Serializer, _defaultRecurrentQueue);
+        _jobsFactory ??= new JobsFactory(GuidGenerator,
+            Serializer,
+            _schedulersByType.ToFrozenDictionary(),
+            _defaultRecurrentQueue);
+        
         return _jobsFactory;
     }
 
@@ -289,6 +296,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     public IJobbyComponentsConfigurable UseTracing()
     {
         _tracingMiddleware ??= new TracingMiddleware();
+        return this;
+    }
+
+    public IJobbyComponentsConfigurable UseScheduler(string schedulerType, IScheduler scheduler)
+    {
+        _schedulersByType[schedulerType] = scheduler;
         return this;
     }
 

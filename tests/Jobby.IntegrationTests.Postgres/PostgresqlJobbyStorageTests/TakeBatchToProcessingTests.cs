@@ -19,6 +19,7 @@ public class TakeBatchToProcessingTests
             Id = Guid.NewGuid(),
             JobName = "firstJob",
             Cron = "*/20 * * * *",
+            SchedulerType = "scheduler-type",
             JobParam = "param1",
             StartedCount = 1,
             NextJobId = Guid.NewGuid(),
@@ -289,6 +290,7 @@ public class TakeBatchToProcessingTests
         Assert.Equal(createdJob.JobParam, takenJob.JobParam);
         Assert.Equal(createdJob.StartedCount + 1, takenJob.StartedCount);
         Assert.Equal(createdJob.NextJobId, takenJob.NextJobId);
+        Assert.Equal(createdJob.SchedulerType, takenJob.SchedulerType);
         Assert.Equal(serverId, takenJob.ServerId);
     }
 

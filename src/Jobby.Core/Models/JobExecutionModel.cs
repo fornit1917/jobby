@@ -5,6 +5,7 @@ public class JobExecutionModel
     public Guid Id { get; init; }
     public string JobName { get; init; } = string.Empty;
     public string? Cron { get; init; }
+    public string? SchedulerType { get; init; }
     public string? JobParam { get; init; }
     public DateTime ScheduledStartAt { get; init; }
     public int StartedCount { get; init; }

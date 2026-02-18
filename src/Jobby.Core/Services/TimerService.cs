@@ -21,4 +21,9 @@ internal class TimerService : ITimerService
     {
         return Stopwatch.GetElapsedTime(startTicks);
     }
+
+    public DateTime GetUtcNow()
+    {
+        return DateTime.UtcNow;
+    }
 }

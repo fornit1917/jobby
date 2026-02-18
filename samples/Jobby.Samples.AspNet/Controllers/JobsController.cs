@@ -2,6 +2,7 @@
 using Jobby.Core.Models;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
+using Jobby.Samples.AspNet.Schedulers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jobby.Samples.AspNet.Controllers;
@@ -67,14 +68,32 @@ public class JobsController
     public async Task<string> ScheduleRecurrent([FromBody] string cron = "*/5 * * * * *")
     {
         var command = new EmptyRecurrentJobCommand();
-        await _jobbyClient.ScheduleRecurrentAsync(command, cron);
-        return "ok";
+        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, cron);
+        return jobId.ToString();
+    }
+
+    [HttpPost("schedule-recurrent-with-custom-scheduler")]
+    public async Task<string> ScheduleRecurrentWithCustomScheduler([FromBody] string secondsInterval)
+    {
+        var command = new CustomSchedulerRecurrentJobCommand();
+        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, secondsInterval, CustomSecondsScheduler.Name, new RecurrentJobOpts()
+        {
+            StartTime = DateTime.UtcNow,
+        });
+        return jobId.ToString();
     }
 
     [HttpPost("cancel-recurrent")]
     public async Task<string> CancelRecurrent()
     {
         await _jobbyClient.CancelRecurrentAsync<EmptyRecurrentJobCommand>();
+        return "ok";
+    }
+    
+    [HttpPost("cancel-recurrent-with-custom-scheduler")]
+    public async Task<string> CancelRecurrentWithCustomScheduler()
+    {
+        await _jobbyClient.CancelRecurrentAsync<CustomSchedulerRecurrentJobCommand>();
         return "ok";
     }
 }

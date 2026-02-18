@@ -6,6 +6,7 @@ using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
 using Jobby.Samples.AspNet.JobsMiddlewares;
+using Jobby.Samples.AspNet.Schedulers;
 using Jobby.Samples.AspNet.Settings;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -69,6 +70,7 @@ public static class Program
                         MaxCount = 3,
                         IntervalsSeconds = [1, 2]
                     })
+                    .UseScheduler(CustomSecondsScheduler.Name, new CustomSecondsScheduler())
                     .ConfigurePipeline(pipeline =>
                     {   
                         // Some custom middlewares

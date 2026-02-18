@@ -1,8 +1,9 @@
-﻿using Jobby.Core.Helpers;
-using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Services.Schedulers;
 
 namespace Jobby.Core.Services;
 
@@ -10,22 +11,22 @@ internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
+    private readonly IReadOnlyDictionary<string, IScheduler> _schedulersByType;
     private readonly ILogger<JobPostProcessingService> _logger;
-    private readonly string _serverId;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
     private readonly ConcurrentQueue<RetryQueueItem> _retryQueue;
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        ILogger<JobPostProcessingService> logger,
-        string serverId)
+        IReadOnlyDictionary<string, IScheduler> schedulersByType,
+        ILogger<JobPostProcessingService> logger)
     {
         _storage = storage;
         _jobCompletingService = jobCompletingService;
+        _schedulersByType = schedulersByType;
         _logger = logger;
         _retryQueue = new ConcurrentQueue<RetryQueueItem>();
-        _serverId = serverId;
     }
 
     public bool IsRetryQueueEmpty => _retryQueue.IsEmpty;
@@ -117,7 +118,20 @@ internal class JobPostProcessingService : IJobPostProcessingService
     private Task RescheduleRecurrentInternal(JobExecutionModel job, string? error)
     {
         ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
-        var nextStartAt = CronHelper.GetNext(job.Cron, DateTime.UtcNow);
+
+        DateTime nextStartAt;
+        var schedulerType = job.SchedulerType ?? JobbySchedulerTypes.CronFromNow;
+        if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
+        {
+            nextStartAt = DateTime.UtcNow.Add(TimeSpan.FromMinutes(1));
+            _logger.LogError("Recurrent job {JobName} with id={JobId} has invalid SchedulerType: {SchedulerType}", 
+                job.JobName, job.Id, schedulerType);
+        }
+        else
+        {
+            nextStartAt = scheduler.GetNextStartTime(job.Cron, job.ScheduledStartAt); 
+        }
+        
         return _storage.RescheduleProcessingJobAsync(job, nextStartAt, error);
     }
 

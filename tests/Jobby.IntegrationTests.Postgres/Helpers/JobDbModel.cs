@@ -60,6 +60,9 @@ internal class JobDbModel
     [Column("is_exclusive")]
     public bool IsExclusive { get; set; }
 
+    [Column("scheduler_type")]
+    public string? SchedulerType { get; set; }
+
     public JobExecutionModel ToJobExecutionModel()
     {
         return new JobExecutionModel
