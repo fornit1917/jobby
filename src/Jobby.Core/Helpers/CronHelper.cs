@@ -3,7 +3,7 @@ using Jobby.Core.Exceptions;
 
 namespace Jobby.Core.Helpers;
 
-internal static class CronHelper
+public static class CronHelper
 {
     public static DateTime GetNext(string cron, DateTime from)
     {

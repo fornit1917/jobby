@@ -27,9 +27,10 @@ internal class InsertJobCommand
                 queue_name,
                 serializable_group_id,
                 lock_group_if_failed,
-                is_exclusive
+                is_exclusive,
+                scheduler_type
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (job_name) WHERE is_exclusive=true DO
             UPDATE SET
                 id = $1,
@@ -38,7 +39,8 @@ internal class InsertJobCommand
 	            scheduled_start_at = $6,
                 can_be_restarted = $9,
                 queue_name = $10,
-                serializable_group_id = $11
+                serializable_group_id = $11,
+                scheduler_type = $14
         ";
     }
 
@@ -61,6 +63,7 @@ internal class InsertJobCommand
                 new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value }, // 11
                 new() { Value = job.LockGroupIfFailed },                            // 12
                 new() { Value = job.IsExclusive },                                  // 13
+                new() { Value = (object?)job.SchedulerType ?? DBNull.Value },       // 14
             }
         };
     }

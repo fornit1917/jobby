@@ -1,10 +1,10 @@
-﻿using Jobby.Core.Helpers;
-using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Linq.Expressions;
+using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Tests.Core.Services;
 
@@ -13,21 +13,27 @@ public class JobPostProcessingServiceTests
     private readonly Mock<IJobbyStorage> _storageMock;
     private readonly Mock<IJobCompletionService> _completionServiceMock;
     private readonly Mock<ILogger<JobPostProcessingService>> _loggerMock;
+    private readonly Mock<IScheduler> _schedulerMock;
 
     private readonly JobPostProcessingService _postProcessingService;
 
-    private const string ServerId = "serverId";
+    private const string SchedulerType = "scheduler-type";
 
     public JobPostProcessingServiceTests()
     {
         _storageMock = new Mock<IJobbyStorage>();
         _completionServiceMock = new Mock<IJobCompletionService>();
         _loggerMock = new Mock<ILogger<JobPostProcessingService>>();
+        _schedulerMock = new Mock<IScheduler>();
+        var schedulers = new Dictionary<string, IScheduler>
+        {
+            [SchedulerType] = _schedulerMock.Object,
+        };
         _postProcessingService = new JobPostProcessingService(
             _storageMock.Object,
             _completionServiceMock.Object,
-            _loggerMock.Object,
-            ServerId);
+            schedulers,
+            _loggerMock.Object);
     }
 
     [Fact]
@@ -95,14 +101,19 @@ public class JobPostProcessingServiceTests
         var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            Cron = "0 3 1 12 *"
+            Cron = "0 3 1 12 *",
+            SchedulerType = SchedulerType,
+            ScheduledStartAt = DateTime.UtcNow,
         };
         var error = "error";
+        var expectedNextTime = DateTime.UtcNow.AddSeconds(123);
+        _schedulerMock
+            .Setup(x => x.GetNextStartTime(job.Cron, job.ScheduledStartAt))
+            .Returns(expectedNextTime);
 
         await _postProcessingService.RescheduleRecurrent(job, error);
 
-        Expression<Func<DateTime, bool>> expectedNewStartTime = x => CronHelper.GetNext(job.Cron, DateTime.UtcNow).Subtract(x) < TimeSpan.FromSeconds(1);
-        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, It.Is(expectedNewStartTime), error), Times.Once());
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, expectedNextTime, error), Times.Once());
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
     }
 
@@ -165,7 +176,8 @@ public class JobPostProcessingServiceTests
         var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            Cron = "0 3 1 12 *"
+            Cron = "0 3 1 12 *",
+            SchedulerType = SchedulerType
         };
         var error = "error";
         _storageMock
@@ -187,7 +199,10 @@ public class JobPostProcessingServiceTests
     public void Dispose_CallsDisposeInJobCompletionServiceIfItIsDisposable()
     {
         var completionService = new DisposableCompletionService();
-        var postProcessingService = new JobPostProcessingService(_storageMock.Object, completionService, _loggerMock.Object, ServerId);
+        var postProcessingService = new JobPostProcessingService(_storageMock.Object,
+            completionService, 
+            new Dictionary<string, IScheduler>(),
+            _loggerMock.Object);
 
         postProcessingService.Dispose();
 
@@ -196,7 +211,7 @@ public class JobPostProcessingServiceTests
 
     private class DisposableCompletionService : IJobCompletionService, IDisposable
     {
-        public bool Disposed { get; private set; } = false;
+        public bool Disposed { get; private set; }
 
         public Task CompleteJob(JobExecutionModel job)
         {

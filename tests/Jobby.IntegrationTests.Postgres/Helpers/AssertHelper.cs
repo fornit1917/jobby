@@ -24,5 +24,6 @@ internal static class AssertHelper
         Assert.Equal(expected.SerializableGroupId, actual.SerializableGroupId);
         Assert.Equal(expected.LockGroupIfFailed, actual.LockGroupIfFailed);
         Assert.Equal(expected.IsExclusive, actual.IsExclusive);
+        Assert.Equal(expected.SchedulerType, actual.SchedulerType);
     }    
 }

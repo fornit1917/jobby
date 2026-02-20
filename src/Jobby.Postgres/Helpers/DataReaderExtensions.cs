@@ -28,6 +28,7 @@ internal static class DataReaderExtensions
             NextJobId = reader.GetNullableGuid("next_job_id"),
             ServerId =  reader.GetString(reader.GetOrdinal("server_id")),
             ScheduledStartAt = reader.GetDateTime(reader.GetOrdinal("scheduled_start_at")),
+            SchedulerType = reader.GetNullableString("scheduler_type"),
         };
         return job;
     }

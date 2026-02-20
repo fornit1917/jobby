@@ -21,15 +21,26 @@ internal class BulkInsertJobsCommand
                 status,
                 created_at,
                 scheduled_start_at,
+                cron,
                 next_job_id,
                 can_be_restarted,
-                cron,
                 queue_name,
                 serializable_group_id,
                 lock_group_if_failed,
-                is_exclusive
+                is_exclusive,
+                scheduler_type
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            ON CONFLICT (job_name) WHERE is_exclusive=true DO
+            UPDATE SET
+                id = $1,
+                job_param = $3,
+	            cron = $7,
+	            scheduled_start_at = $6,
+                can_be_restarted = $9,
+                queue_name = $10,
+                serializable_group_id = $11,
+                scheduler_type = $14
         ";
     }
 
@@ -63,19 +74,20 @@ internal class BulkInsertJobsCommand
             {
                 Parameters =
                 {
-                    new() { Value = job.Id },
-                    new() { Value = job.JobName },
-                    new() { Value = (object?)job.JobParam ?? DBNull.Value },
-                    new() { Value = (int)job.Status },
-                    new() { Value = job.CreatedAt },
-                    new() { Value = job.ScheduledStartAt },
-                    new() { Value = (object?)job.NextJobId ?? DBNull.Value },
-                    new() { Value = job.CanBeRestarted },
-                    new() { Value = (object?)job.Cron ?? DBNull.Value },
-                    new() { Value = job.QueueName },
-                    new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value },
-                    new() { Value = job.LockGroupIfFailed },
-                    new() { Value = job.IsExclusive },
+                    new() { Value = job.Id },                                           // 1
+                    new() { Value = job.JobName },                                      // 2
+                    new() { Value = (object?)job.JobParam ?? DBNull.Value },            // 3
+                    new() { Value = (int)job.Status },                                  // 4
+                    new() { Value = job.CreatedAt },                                    // 5
+                    new() { Value = job.ScheduledStartAt },                             // 6
+                    new() { Value = (object?)job.Cron ?? DBNull.Value },                // 7
+                    new() { Value = (object?)job.NextJobId ?? DBNull.Value },           // 8
+                    new() { Value = job.CanBeRestarted },                               // 9
+                    new() { Value = job.QueueName },                                    // 10
+                    new() { Value = (object?)job.SerializableGroupId ?? DBNull.Value }, // 11
+                    new() { Value = job.LockGroupIfFailed },                            // 12
+                    new() { Value = job.IsExclusive },                                  // 13
+                    new() { Value = (object?)job.SchedulerType ?? DBNull.Value },       // 14
                 }
             };
             batch.BatchCommands.Add(cmd);

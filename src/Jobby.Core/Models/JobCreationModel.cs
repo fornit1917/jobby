@@ -1,4 +1,6 @@
-﻿namespace Jobby.Core.Models;
+﻿using Jobby.Core.Services.Schedulers;
+
+namespace Jobby.Core.Models;
 
 public class JobCreationModel
 {
@@ -6,6 +8,7 @@ public class JobCreationModel
     public string JobName { get; internal set; } = string.Empty;
     public string? JobParam { get; internal set; }
     public string? Cron { get; internal set; }
+    public string? SchedulerType { get; internal set; }
     public bool IsExclusive { get; internal set; }
     public JobStatus Status { get; internal set; }
     public DateTime CreatedAt { get; internal set; }

@@ -1,8 +1,9 @@
-﻿using System.IO.Pipes;
+﻿using Jobby.Core.Exceptions;
 using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
-using Jobby.Core.Interfaces.Queues;
+using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models;
+using Jobby.Core.Services.Schedulers;
 
 namespace Jobby.Core.Services;
 
@@ -10,14 +11,17 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
+    private readonly IReadOnlyDictionary<string, IScheduler> _schedulersByType;
     private readonly string _defaultQueueForRecurrent;
 
     public JobsFactory(IGuidGenerator guidGenerator,
         IJobParamSerializer serializer,
+        IReadOnlyDictionary<string, IScheduler> schedulersByType,
         string? defaultQueueForRecurrent)
     {
         _guidGenerator = guidGenerator;
         _serializer = serializer;
+        _schedulersByType = schedulersByType;
         _defaultQueueForRecurrent = defaultQueueForRecurrent ?? QueueSettings.DefaultQueueName;
     }
 
@@ -59,9 +63,23 @@ internal class JobsFactory : IJobsFactory
         return Create(command, new JobOpts { StartTime = startTime });
     }
 
-    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
-        where TCommand : IJobCommand
+    public JobCreationModel CreateRecurrent<TCommand>(TCommand command,
+        string cron,
+        RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
+        return CreateRecurrent(command, cron, JobbySchedulerTypes.CronFromNow, opts);
+    }
+
+    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, 
+        string schedule,
+        string schedulerType,
+        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    {
+        if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
+        {
+            throw new UnknownSchedulerTypeException($"Unknown scheduler type: {schedulerType}");
+        }
+        
         var jobName = TCommand.GetJobName();
         var defaultOpts = default(RecurrentJobOpts);
         if (command is IHasDefaultJobOptions hasDefaultOpts)
@@ -74,13 +92,14 @@ internal class JobsFactory : IJobsFactory
             Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
             JobName = jobName,
-            Cron = cron,
+            Cron = schedule,
+            SchedulerType = schedulerType,
             IsExclusive = opts.IsExclusive ?? defaultOpts.IsExclusive ?? true,
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = opts.StartTime 
                                ?? defaultOpts.StartTime
-                               ?? CronHelper.GetNext(cron, DateTime.UtcNow),
+                               ?? scheduler.GetNextStartTime(schedule, previousScheduledStartTime: null),
             CanBeRestarted = opts.CanBeRestartedIfServerGoesDown
                              ??  defaultOpts.CanBeRestartedIfServerGoesDown
                              ?? true,

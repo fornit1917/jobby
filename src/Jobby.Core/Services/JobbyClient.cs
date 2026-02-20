@@ -75,18 +75,39 @@ internal class JobbyClient : IJobbyClient
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
+    
+    public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
+        string cron,
+        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    {
+        var job = _jobFactory.CreateRecurrent(command, cron, opts);
+        await _storage.InsertJobAsync(job);
+        return job.Id;
+    }
 
-    public void ScheduleRecurrent<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
-        where TCommand : IJobCommand
+    public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
+        string schedule,
+        string schedulerType,
+        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    {
+        var job = _jobFactory.CreateRecurrent(command, schedule, schedulerType, opts);
+        await _storage.InsertJobAsync(job);
+        return job.Id;
+    }
+
+    public Guid ScheduleRecurrent<TCommand>(TCommand command,
+        string cron,
+        RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
         var job = _jobFactory.CreateRecurrent(command, cron, opts);
         _storage.InsertJob(job);
+        return job.Id;
     }
-
-    public Task ScheduleRecurrentAsync<TCommand>(TCommand command, string cron, RecurrentJobOpts opts = default)
-        where TCommand : IJobCommand
+    
+    public Guid ScheduleRecurrent<TCommand>(TCommand command, string schedule, string schedulerType,
+        RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
-        var job = _jobFactory.CreateRecurrent(command, cron, opts);
-        return _storage.InsertJobAsync(job);
-    }
+        var job = _jobFactory.CreateRecurrent(command, schedule, schedulerType, opts);
+        _storage.InsertJob(job);
+        return job.Id;    }
 }

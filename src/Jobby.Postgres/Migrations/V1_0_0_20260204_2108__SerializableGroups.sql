@@ -27,7 +27,8 @@ RETURNS TABLE (
     cron TEXT,
     next_job_id uuid,
     scheduled_start_at timestamptz,
-    server_id TEXT
+    server_id TEXT,
+    scheduler_type TEXT
 )
 LANGUAGE plpgsql
 AS $$
@@ -100,7 +101,8 @@ BEGIN
                         t.cron AS r_cron,
                         t.next_job_id AS r_next_job_id,
                         t.scheduled_start_at AS r_scheduled_start_at,
-                        t.server_id AS r_server_id
+                        t.server_id AS r_server_id,
+                        t.scheduler_type AS r_scheduler_type
                 ),
                 skipped AS (
                     SELECT
@@ -112,7 +114,8 @@ BEGIN
                         NULL AS r_cron,
                         NULL::uuid AS r_next_job_id,
                         NULL::timestamptz AS r_scheduled_start_at,
-                        NULL AS r_server_id
+                        NULL AS r_server_id,
+                        NULL AS r_scheduler_type
                     FROM candidates c 
                     WHERE c.serializable_group_id IS NOT NULL 
                     AND c.id NOT IN (
@@ -132,6 +135,7 @@ BEGIN
                     next_job_id := rec.r_next_job_id;
                     scheduled_start_at := rec.r_scheduled_start_at;
                     server_id := rec.r_server_id;
+                    scheduler_type := rec.r_scheduler_type;
                     
                     RETURN NEXT;
                     

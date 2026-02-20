@@ -1,6 +1,7 @@
 ﻿using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Core.Interfaces.Configuration;
 
@@ -28,4 +29,6 @@ public interface IJobbyComponentsConfigurable
 
     IJobbyComponentsConfigurable UseMetrics();
     IJobbyComponentsConfigurable UseTracing();
+    
+    IJobbyComponentsConfigurable UseScheduler(string schedulerType, IScheduler scheduler);
 }

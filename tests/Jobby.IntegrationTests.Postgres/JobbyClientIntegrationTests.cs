@@ -1,6 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
+using Jobby.Core.Services.Schedulers;
 using Jobby.IntegrationTests.Postgres.Helpers;
 using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.TestsUtils.Jobs;
@@ -169,6 +170,7 @@ public class JobbyClientIntegrationTests
                                              .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
                                              .FirstOrDefaultAsync();
         Assert.NotNull(actualJobFromDb);
+        Assert.Equal(JobbySchedulerTypes.CronFromNow, actualJobFromDb.SchedulerType);
 
         await client.CancelRecurrentAsync<TestJobCommand>();
 
@@ -186,12 +188,13 @@ public class JobbyClientIntegrationTests
 
         var command = new TestJobCommand();
         var cron = "0 3 1 1 *";
-        client.ScheduleRecurrent(command, cron);
+        client.ScheduleRecurrent(command, cron, JobbySchedulerTypes.CronFromPrev);
 
         var actualJobFromDb = dbContext.Jobs
             .AsNoTracking()
             .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron);
         Assert.NotNull(actualJobFromDb);
+        Assert.Equal(JobbySchedulerTypes.CronFromPrev, actualJobFromDb.SchedulerType);
 
         client.CancelRecurrent<TestJobCommand>();
 
