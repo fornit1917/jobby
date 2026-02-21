@@ -12,9 +12,6 @@ public interface IJobbyClient
     Guid EnqueueCommand<TCommand>(TCommand command, JobOpts opts = default) where TCommand : IJobCommand;
     Guid EnqueueCommand<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
 
-    Task CancelJobsByIdsAsync(params Guid[] ids);
-    void CancelJobsByIds(params Guid[] ids);
-
     Task EnqueueBatchAsync(IReadOnlyList<JobCreationModel> jobs);
     void EnqueueBatch(IReadOnlyList<JobCreationModel> jobs);
 
@@ -38,4 +35,10 @@ public interface IJobbyClient
     
     Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;
     void CancelRecurrent<TCommand>() where TCommand : IJobCommand;
+    
+    Task CancelJobsByIdsAsync(params Guid[] ids);
+    void CancelJobsByIds(params Guid[] ids);
+    
+    Task DeleteJobsByIdsAsync(params Guid[] ids);
+    void DeleteJobsByIds(params Guid[] ids);
 }

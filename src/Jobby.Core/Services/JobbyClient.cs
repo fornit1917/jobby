@@ -21,6 +21,16 @@ internal class JobbyClient : IJobbyClient
         _storage.BulkDeleteNotStartedJobs(ids);
     }
 
+    public Task DeleteJobsByIdsAsync(params Guid[] ids)
+    {
+        return _storage.BulkDeleteJobsAsync(ids);
+    }
+
+    public void DeleteJobsByIds(params Guid[] ids)
+    {
+        _storage.BulkDeleteJobs(ids);
+    }
+
     public Task CancelJobsByIdsAsync(params Guid[] ids)
     {
         return _storage.BulkDeleteNotStartedJobsAsync(ids);
