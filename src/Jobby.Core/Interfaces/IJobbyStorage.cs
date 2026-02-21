@@ -20,6 +20,9 @@ public interface IJobbyStorage
 
     Task BulkDeleteNotStartedJobsAsync(IReadOnlyList<Guid> jobIds);
     void BulkDeleteNotStartedJobs(IReadOnlyList<Guid> jobIds);
+    
+    Task BulkDeleteJobsAsync(IReadOnlyList<Guid> jobIds);
+    void BulkDeleteJobs(IReadOnlyList<Guid> jobIds);
 
     Task DeleteExclusiveByNameAsync(string jobName);
     void DeleteExclusiveByName(string jobName);

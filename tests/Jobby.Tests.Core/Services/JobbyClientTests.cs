@@ -210,5 +210,25 @@ public class JobbyClientTests
         await _client.ScheduleRecurrentAsync(command, cron, opts);
 
         _storageMock.Verify(x => x.InsertJobAsync(job));
-    }    
+    }
+
+    [Fact]
+    public async Task DeleteJobsByIdsAsync_DeletesSpecifiedJobs()
+    {
+        Guid[] ids = [Guid.NewGuid(),  Guid.NewGuid()];
+        
+        await _client.DeleteJobsByIdsAsync(ids);
+        
+        _storageMock.Verify(x => x.BulkDeleteJobsAsync(ids), Times.Once);
+    }
+    
+    [Fact]
+    public void DeleteJobsByIds_DeletesSpecifiedJobs()
+    {
+        Guid[] ids = [Guid.NewGuid(),  Guid.NewGuid()];
+        
+        _client.DeleteJobsByIds(ids);
+        
+        _storageMock.Verify(x => x.BulkDeleteJobs(ids), Times.Once);
+    }
 }

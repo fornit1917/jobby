@@ -1,24 +1,17 @@
-﻿using Jobby.Core.Models;
-using Jobby.Postgres.Helpers;
+﻿using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class BulkDeleteNotStartedJobsCommand
+internal class BulkDeleteJobsCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _deleteCommandText;
 
-    public BulkDeleteNotStartedJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public BulkDeleteJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
-
-        _deleteCommandText = @$"
-            DELETE FROM {DbName.Jobs(settings)}
-            WHERE
-                id = ANY($1)
-                AND (status={(int)JobStatus.Scheduled} OR status={(int)JobStatus.WaitingPrev})
-        ";
+        _deleteCommandText = $@"DELETE FROM {DbName.Jobs(settings)} WHERE id = ANY($1)";
     }
 
     public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds)
