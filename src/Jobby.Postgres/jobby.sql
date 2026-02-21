@@ -89,12 +89,15 @@ BEGIN
                         AND c.scheduled_start_at <= now()
                     AND (
                         c.serializable_group_id IS NULL
-                        OR NOT EXISTS (
-                            SELECT 1 FROM jobby_jobs jl
-                            WHERE
-                                jl.serializable_group_id = c.serializable_group_id
-                                AND jl.is_group_locker = TRUE
-                                AND jl.id != c.id
+                        OR (
+                            NOT EXISTS (
+                                SELECT 1 FROM jobby_jobs jl
+                                WHERE
+                                    jl.serializable_group_id = c.serializable_group_id
+                                    AND jl.is_group_locker = TRUE
+                                    AND jl.id != c.id
+                            ) 
+                            AND pg_try_advisory_xact_lock(hashtext(c.serializable_group_id)) = TRUE                                
                         )
                     )
                     ORDER BY scheduled_start_at
@@ -109,7 +112,6 @@ BEGIN
                     FROM candidates c
                     WHERE
                         c.serializable_group_id IS NOT NULL
-                        AND pg_try_advisory_xact_lock(hashtext(c.serializable_group_id)) = TRUE
                         ORDER BY c.serializable_group_id, c.scheduled_start_at 
                     ),
                 taken AS (
