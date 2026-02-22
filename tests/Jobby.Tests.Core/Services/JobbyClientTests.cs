@@ -213,22 +213,22 @@ public class JobbyClientTests
     }
 
     [Fact]
-    public async Task DeleteJobsByIdsAsync_DeletesSpecifiedJobs()
+    public async Task CancelRecurrentByIdsAsync_DeletesSpecifiedRecurrentJobs()
     {
         Guid[] ids = [Guid.NewGuid(),  Guid.NewGuid()];
         
-        await _client.DeleteJobsByIdsAsync(ids);
+        await _client.CancelRecurrentByIdsAsync(ids);
         
-        _storageMock.Verify(x => x.BulkDeleteJobsAsync(ids), Times.Once);
+        _storageMock.Verify(x => x.BulkDeleteRecurrentAsync(ids), Times.Once);
     }
     
     [Fact]
-    public void DeleteJobsByIds_DeletesSpecifiedJobs()
+    public void CancelRecurrentByIds_DeletesSpecifiedRecurrentJobs()
     {
         Guid[] ids = [Guid.NewGuid(),  Guid.NewGuid()];
         
-        _client.DeleteJobsByIds(ids);
+        _client.CancelRecurrentByIds(ids);
         
-        _storageMock.Verify(x => x.BulkDeleteJobs(ids), Times.Once);
+        _storageMock.Verify(x => x.BulkDeleteRecurrent(ids), Times.Once);
     }
 }

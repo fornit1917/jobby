@@ -3,15 +3,15 @@ using Npgsql;
 
 namespace Jobby.Postgres.Commands;
 
-internal class BulkDeleteJobsCommand
+internal class BulkDeleteRecurrentCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _deleteCommandText;
 
-    public BulkDeleteJobsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public BulkDeleteRecurrentCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
-        _deleteCommandText = $@"DELETE FROM {DbName.Jobs(settings)} WHERE id = ANY($1)";
+        _deleteCommandText = $@"DELETE FROM {DbName.Jobs(settings)} WHERE id = ANY($1) AND cron IS NOT NULL";
     }
 
     public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds)
