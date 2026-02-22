@@ -5,17 +5,19 @@ using Microsoft.EntityFrameworkCore;
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
 [Collection(PostgresqlTestsCollection.Name)]
-public class BulkDeleteJobsTests
+public class BulkDeleteRecurrentTests
 {
     [Fact]
     public async Task BulkDeleteJobsAsync_DeletesSpecifiedJobs()
     {
         var jobs = new List<JobDbModel>
         {
+            // should be deleted
             new JobDbModel
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
+                Cron = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -24,14 +26,26 @@ public class BulkDeleteJobsTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
+                Cron = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Processing,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
             },
+            
+            // should not be deleted
             new JobDbModel
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
+                JobParam = "param",
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel 
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                Cron = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -43,15 +57,15 @@ public class BulkDeleteJobsTests
         await dbContext.SaveChangesAsync();
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.BulkDeleteJobsAsync([jobs[0].Id, jobs[1].Id]);
+        await storage.BulkDeleteRecurrentAsync([jobs[0].Id, jobs[1].Id, jobs[2].Id]);
 
-        var actualDeletedJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
-        Assert.Empty(actualDeletedJobs);
-
-        var actualNotDeletedJob = await dbContext.Jobs.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == jobs[2].Id);
-        Assert.NotNull(actualNotDeletedJob);
+        var actualJobs = await dbContext.Jobs.AsNoTracking()
+            .Where(x => jobs.Select(j => j.Id).Contains(x.Id))
+            .ToListAsync();
+        
+        Assert.Equal(2, actualJobs.Count);
+        Assert.Contains(actualJobs, x => x.Id == jobs[2].Id);
+        Assert.Contains(actualJobs, x => x.Id == jobs[3].Id);
     }
     
     [Fact]
@@ -59,6 +73,27 @@ public class BulkDeleteJobsTests
     {
         var jobs = new List<JobDbModel>
         {
+            // should be deleted
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                Cron = "*/3 * * * *",
+                JobParam = "param",
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = Guid.NewGuid().ToString(),
+                Cron = "*/3 * * * *",
+                JobParam = "param",
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
+            },
+            
+            // should not be deleted
             new JobDbModel
             {
                 Id = Guid.NewGuid(),
@@ -71,14 +106,7 @@ public class BulkDeleteJobsTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                JobParam = "param",
-                Status = JobStatus.Processing,
-                ScheduledStartAt = DateTime.UtcNow.AddDays(1),
-            },
-            new JobDbModel
-            {
-                Id = Guid.NewGuid(),
-                JobName = Guid.NewGuid().ToString(),
+                Cron = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -90,14 +118,14 @@ public class BulkDeleteJobsTests
         dbContext.SaveChanges();
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.BulkDeleteJobs([jobs[0].Id, jobs[1].Id]);
+        storage.BulkDeleteRecurrent([jobs[0].Id, jobs[1].Id, jobs[2].Id]);
 
-        var actualDeletedJobs = dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToList();
-        Assert.Empty(actualDeletedJobs);
-
-        var actualNotDeletedJob = dbContext.Jobs.AsNoTracking()
-            .FirstOrDefault(x => x.Id == jobs[2].Id);
-        Assert.NotNull(actualNotDeletedJob);
+        var actualJobs = dbContext.Jobs.AsNoTracking()
+            .Where(x => jobs.Select(j => j.Id).Contains(x.Id))
+            .ToList();
+        
+        Assert.Equal(2, actualJobs.Count);
+        Assert.Contains(actualJobs, x => x.Id == jobs[2].Id);
+        Assert.Contains(actualJobs, x => x.Id == jobs[3].Id);
     }
 }

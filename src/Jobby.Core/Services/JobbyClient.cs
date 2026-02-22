@@ -21,14 +21,14 @@ internal class JobbyClient : IJobbyClient
         _storage.BulkDeleteNotStartedJobs(ids);
     }
 
-    public Task DeleteJobsByIdsAsync(params Guid[] ids)
+    public Task CancelRecurrentByIdsAsync(params Guid[] ids)
     {
-        return _storage.BulkDeleteJobsAsync(ids);
+        return _storage.BulkDeleteRecurrentAsync(ids);
     }
 
-    public void DeleteJobsByIds(params Guid[] ids)
+    public void CancelRecurrentByIds(params Guid[] ids)
     {
-        _storage.BulkDeleteJobs(ids);
+        _storage.BulkDeleteRecurrent(ids);
     }
 
     public Task CancelJobsByIdsAsync(params Guid[] ids)

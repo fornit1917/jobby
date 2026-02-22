@@ -36,9 +36,9 @@ public interface IJobbyClient
     Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;
     void CancelRecurrent<TCommand>() where TCommand : IJobCommand;
     
+    Task CancelRecurrentByIdsAsync(params Guid[] ids);
+    void CancelRecurrentByIds(params Guid[] ids);
+    
     Task CancelJobsByIdsAsync(params Guid[] ids);
     void CancelJobsByIds(params Guid[] ids);
-    
-    Task DeleteJobsByIdsAsync(params Guid[] ids);
-    void DeleteJobsByIds(params Guid[] ids);
 }
