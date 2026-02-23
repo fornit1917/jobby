@@ -1,12 +1,13 @@
-﻿using Jobby.Core.Interfaces;
+﻿using System.Linq.Expressions;
+using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
+using Jobby.Core.Services.ServerModules.JobsExecution;
 using Microsoft.Extensions.Logging;
 using Moq;
-using System.Linq.Expressions;
-using Jobby.Core.Interfaces.Schedulers;
 
-namespace Jobby.Tests.Core.Services;
+namespace Jobby.Tests.Core.Services.JobsExecution;
 
 public class JobPostProcessingServiceTests
 {
@@ -134,7 +135,7 @@ public class JobPostProcessingServiceTests
 
         Assert.False(_postProcessingService.IsRetryQueueEmpty);
 
-        await _postProcessingService.DoRetriesFromQueue();
+        await _postProcessingService.DoRetriesFromQueue(CancellationToken.None);
 
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
         _completionServiceMock.Verify(x => x.CompleteJob(job), Times.Exactly(2));
@@ -164,7 +165,7 @@ public class JobPostProcessingServiceTests
 
         Assert.False(_postProcessingService.IsRetryQueueEmpty);
 
-        await _postProcessingService.DoRetriesFromQueue();
+        await _postProcessingService.DoRetriesFromQueue(CancellationToken.None);
 
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
         _storageMock.Verify(x => x.UpdateProcessingJobToFailedAsync(job, error), Times.Exactly(2));
@@ -189,38 +190,9 @@ public class JobPostProcessingServiceTests
 
         Assert.False(_postProcessingService.IsRetryQueueEmpty);
 
-        await _postProcessingService.DoRetriesFromQueue();
+        await _postProcessingService.DoRetriesFromQueue(CancellationToken.None);
 
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
         _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, It.IsAny<DateTime>(), error));
-    }
-
-    [Fact]
-    public void Dispose_CallsDisposeInJobCompletionServiceIfItIsDisposable()
-    {
-        var completionService = new DisposableCompletionService();
-        var postProcessingService = new JobPostProcessingService(_storageMock.Object,
-            completionService, 
-            new Dictionary<string, IScheduler>(),
-            _loggerMock.Object);
-
-        postProcessingService.Dispose();
-
-        Assert.True(completionService.Disposed);
-    }
-
-    private class DisposableCompletionService : IJobCompletionService, IDisposable
-    {
-        public bool Disposed { get; private set; }
-
-        public Task CompleteJob(JobExecutionModel job)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Dispose()
-        {
-            Disposed = true;
-        }
     }
 }

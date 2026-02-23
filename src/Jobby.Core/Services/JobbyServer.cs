@@ -1,215 +1,46 @@
-﻿using Jobby.Core.Helpers;
-using Jobby.Core.Interfaces;
-using Jobby.Core.Interfaces.Queues;
-using Jobby.Core.Models;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.ServerModules;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Microsoft.Extensions.Logging;
 
 namespace Jobby.Core.Services;
 
-internal class JobbyServer : IJobbyServer, IDisposable
+internal class JobbyServer : IJobbyServer
 {
-    private readonly IJobbyStorage _storage;
-    private readonly IQueueService _queueService;
-    private readonly IJobExecutionService _executionService;
-    private readonly IJobPostProcessingService _postProcessingService;
+    private readonly IAvailabilityCheckServerModule _availabilityCheckServerModule;
+    private readonly IJobsExecutionServerModule _jobsExecutionServerModule;
     private readonly ILogger<JobbyServer> _logger;
-    private readonly JobbyServerSettings _settings;
+    
+    public string ServerId { get; }
 
-    private readonly SemaphoreSlim _semaphore;
-    public string ServerId { get; private init; }
-    private CancellationTokenSource _cancellationTokenSource;
-
-    public JobbyServer(IJobbyStorage storage,
-        IQueueService queueService,
-        IJobExecutionService executionService,
-        IJobPostProcessingService postProcessingService,
+    public JobbyServer(IAvailabilityCheckServerModule availabilityCheckServerModule,
+        IJobsExecutionServerModule jobsExecutionServerModule,
         ILogger<JobbyServer> logger,
-        JobbyServerSettings settings,
         string serverId)
     {
-        _storage = storage;
-        _queueService = queueService;
-        _executionService = executionService;
-        _postProcessingService = postProcessingService;
-        _settings = settings;
+        _availabilityCheckServerModule = availabilityCheckServerModule;
+        _jobsExecutionServerModule = jobsExecutionServerModule;
         _logger = logger;
-
-        _semaphore = new SemaphoreSlim(settings.MaxDegreeOfParallelism);
-        _cancellationTokenSource = new CancellationTokenSource();
+        
         ServerId = serverId;
     }
 
     public void StartBackgroundService()
     {
-        if (_cancellationTokenSource.IsCancellationRequested)
-        {
-            _cancellationTokenSource = new CancellationTokenSource();
-        }
         _logger.LogInformation("Jobby server is running, serverId = {ServerId}", ServerId);
-        Task.Run(SendHeartbeatAndProcessLostServers);
-        Task.Run(Poll);
+        _availabilityCheckServerModule.Start();
+        _jobsExecutionServerModule.Start();
     }
 
     public void SendStopSignal()
     {
         _logger.LogInformation("Jobby server received stop signal, serverId = {ServerId}", ServerId);
-        _cancellationTokenSource.Cancel();
-    }
-
-    private async Task SendHeartbeatAndProcessLostServers()
-    {
-        List<string> deletedServerIds = new List<string>();
-        List<StuckJobModel> stuckJobs = new List<StuckJobModel>();
-
-        while (!_cancellationTokenSource.IsCancellationRequested)
-        {
-            // send heartbeat
-            try
-            {
-                await _storage.SendHeartbeatAsync(ServerId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during send heartbeat");
-            }
-
-            // detect lost servers and restart their jobs
-            try
-            {
-                var minLastHearbeat = DateTime.UtcNow.AddSeconds(-1 * _settings.MaxNoHeartbeatIntervalSeconds);
-                await _storage.DeleteLostServersAndRestartTheirJobsAsync(minLastHearbeat, deletedServerIds, stuckJobs);
-                foreach (var serverId in deletedServerIds)
-                {
-                    _logger.LogInformation("Lost server was found and deleted, serverId = {ServerId}", serverId);
-                }
-                foreach (var job in stuckJobs)
-                {
-                    if (job.CanBeRestarted)
-                    {
-                        _logger.LogInformation(
-                            "Job was restarted because server did not send hearbeat, jobName = {JobName}, id = {JobId}",
-                            job.JobName, job.Id);
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "Probably job got stuck and can not be restarted automatically, its server did not send heartbeat, jobName = {JobName}, id = {JobId}",
-                            job.JobName, job.Id);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during detect lost servers and restart their jobs");
-            }
-
-            if (!_cancellationTokenSource.IsCancellationRequested)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(_settings.HeartbeatIntervalSeconds));
-            }
-        }
-    }
-
-    private async Task Poll()
-    {
-        var jobs = new List<JobExecutionModel>(capacity: _settings.TakeToProcessingBatchSize);
-
-        while (!_cancellationTokenSource.IsCancellationRequested)
-        {
-            try
-            {
-                if (!_postProcessingService.IsRetryQueueEmpty)
-                {
-                    await Task.Delay(_settings.DbErrorPauseMs);
-                    await _postProcessingService.DoRetriesFromQueue();
-                }
-            }
-            catch (Exception ex)
-            {
-                _semaphore.Release();
-                _logger.LogError(ex, "Error while retry post-processing for jobs");
-                continue;
-            }
-
-            await _queueService.WaitIfEmpty();
-            if (_cancellationTokenSource.IsCancellationRequested)
-                break;
-            
-            await _semaphore.WaitAsync();
-            if (_cancellationTokenSource.IsCancellationRequested)
-                break;
-
-            var batchSize = _semaphore.CurrentCount + 1;
-            if (batchSize > _settings.TakeToProcessingBatchSize)
-            {
-                batchSize = _settings.TakeToProcessingBatchSize;
-            }
-
-            try
-            {
-                await _queueService.TakeBatchToProcessing(batchSize, jobs);
-            }
-            catch (Exception ex)
-            {
-                _semaphore.Release();
-                _logger.LogError(ex, "Error receiveng next jobs from queue");
-                await Task.Delay(_settings.DbErrorPauseMs);
-                continue;
-            }
-
-            if (jobs.Count == 0)
-            {
-                _semaphore.Release();
-            }
-            else
-            {
-                var actualBatchSize = jobs.Count;
-                for (int i = 1; i < actualBatchSize; i++)
-                {
-                    await _semaphore.WaitAsync();
-                }
-                Run(jobs);
-            }
-        }
-    }
-
-    private void Run(JobExecutionModel job)
-    {
-        Task.Run(() => Execute(job));
-    }
-
-    private void Run(IReadOnlyList<JobExecutionModel> jobs)
-    {
-        for (int i = 0; i < jobs.Count; i++)
-        {
-            Run(jobs[i]);
-        }
-    }
-
-    private async Task Execute(JobExecutionModel job)
-    {
-        try
-        {
-            await _executionService.ExecuteJob(job, _cancellationTokenSource.Token);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
-    }
-
-    public void Dispose()
-    {
-        _executionService.Dispose();
-
-        if (!_cancellationTokenSource.IsCancellationRequested)
-        {
-            _cancellationTokenSource.Cancel();
-        }
+        _jobsExecutionServerModule.SendStopSignal();
+        _availabilityCheckServerModule.SendStopSignal();
     }
 
     public bool HasInProgressJobs()
     {
-        return _semaphore.CurrentCount < _settings.MaxDegreeOfParallelism;
+        return _jobsExecutionServerModule.HasInProgressJobs();
     }
 }

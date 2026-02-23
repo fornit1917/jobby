@@ -1,10 +1,9 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
+using Jobby.Core.Services.ServerModules.JobsExecution;
 using Moq;
-using System.Linq.Expressions;
 
-namespace Jobby.Tests.Core.Services;
+namespace Jobby.Tests.Core.Services.JobsExecution;
 
 public class SimpleJobCompletionServiceTests
 {

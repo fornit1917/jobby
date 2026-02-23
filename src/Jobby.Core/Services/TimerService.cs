@@ -7,9 +7,26 @@ internal class TimerService : ITimerService
 {
     public static readonly ITimerService Instance = new TimerService();
     
-    public Task Delay(int milliseconds)
+    public async Task Delay(int milliseconds, CancellationToken cancellationToken = default)
     {
-        return Task.Delay(milliseconds);
+        try
+        {
+            await Task.Delay(milliseconds, cancellationToken);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    public async Task Delay(TimeSpan timeSpan, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await Task.Delay(timeSpan, cancellationToken);
+        }
+        catch (TaskCanceledException)
+        {
+        }
     }
 
     public long GetCurrentTicks()

@@ -1,10 +1,9 @@
-﻿using Jobby.Core.Interfaces;
-using Jobby.Core.Models;
-using Jobby.Core.Services;
+﻿using System.Collections.Frozen;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
+using Jobby.Core.Services.ServerModules.JobsExecution;
 using Jobby.TestsUtils.Jobs;
-using System.Collections.Frozen;
 
-namespace Jobby.Tests.Core.Services;
+namespace Jobby.Tests.Core.Services.JobsExecution;
 
 public class JobsRegistryTests
 {

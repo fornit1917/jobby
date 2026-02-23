@@ -1,8 +1,8 @@
 ﻿using Jobby.Core.Models;
 
-namespace Jobby.Core.Interfaces;
+namespace Jobby.Core.Interfaces.ServerModules.JobsExecution;
 
-internal interface IJobExecutionService : IDisposable
+internal interface IJobExecutionService
 {
     Task ExecuteJob(JobExecutionModel job, CancellationToken cancellationToken);
 }

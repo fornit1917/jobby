@@ -1,7 +1,7 @@
 ﻿using Jobby.Core.Interfaces.HandlerPipeline;
 using Jobby.Core.Models;
 
-namespace Jobby.Core.Interfaces;
+namespace Jobby.Core.Interfaces.ServerModules.JobsExecution;
 
 internal interface IJobExecutor
 {

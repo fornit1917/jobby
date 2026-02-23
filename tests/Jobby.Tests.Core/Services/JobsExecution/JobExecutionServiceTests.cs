@@ -1,11 +1,12 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.HandlerPipeline;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
+using Jobby.Core.Services.ServerModules.JobsExecution;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace Jobby.Tests.Core.Services;
+namespace Jobby.Tests.Core.Services.JobsExecution;
 
 public class JobExecutionServiceTests
 {

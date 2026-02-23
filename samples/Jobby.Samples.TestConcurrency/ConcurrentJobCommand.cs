@@ -7,8 +7,8 @@ namespace Jobby.Samples.TestConcurrency;
 public class ConcurrentJobCommand : IJobCommand
 {
     public static string GetJobName() => "ConcurrencyDemo";
-    
-    public string Id { get; init; }
+
+    public string Id { get; init; } = string.Empty;
     public int TotalCount { get; init; }
     public int DelayMs { get; init; }
     public string? SerializableGroupId { get; init; }

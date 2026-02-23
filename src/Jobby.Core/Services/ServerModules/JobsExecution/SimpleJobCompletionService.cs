@@ -1,7 +1,8 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
 internal class SimpleJobCompletionService : IJobCompletionService
 {
