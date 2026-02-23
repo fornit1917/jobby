@@ -1,11 +1,12 @@
-﻿using Jobby.Core.Interfaces;
-using Jobby.Core.Models;
-using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
+using Jobby.Core.Models;
 using Jobby.Core.Services.Schedulers;
+using Microsoft.Extensions.Logging;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
 internal class JobPostProcessingService : IJobPostProcessingService
 {
@@ -74,9 +75,9 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
     }
 
-    public async Task DoRetriesFromQueue()
+    public async Task DoRetriesFromQueue(CancellationToken cancellationToken)
     {
-        while (_retryQueue.TryPeek(out var queueItem))
+        while (!cancellationToken.IsCancellationRequested && _retryQueue.TryPeek(out var queueItem))
         {
             if (queueItem.Job.Cron != null)
             {
@@ -133,13 +134,5 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
         
         return _storage.RescheduleProcessingJobAsync(job, nextStartAt, error);
-    }
-
-    public void Dispose()
-    {
-        if (_jobCompletingService is IDisposable disposableJobCompletionService)
-        {
-            disposableJobCompletionService.Dispose();
-        }
     }
 }

@@ -1,6 +1,6 @@
-﻿using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
 internal class JobsRegistry : IJobsRegistry
 {

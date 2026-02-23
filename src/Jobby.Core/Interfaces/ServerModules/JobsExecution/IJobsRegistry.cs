@@ -1,4 +1,4 @@
-﻿namespace Jobby.Core.Interfaces;
+﻿namespace Jobby.Core.Interfaces.ServerModules.JobsExecution;
 
 internal interface IJobsRegistry
 {

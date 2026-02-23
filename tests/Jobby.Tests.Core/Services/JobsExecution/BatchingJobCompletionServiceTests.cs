@@ -1,9 +1,9 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
+using Jobby.Core.Services.ServerModules.JobsExecution;
 using Moq;
 
-namespace Jobby.Tests.Core.Services;
+namespace Jobby.Tests.Core.Services.JobsExecution;
 
 public class BatchingJobCompletionServiceTests
 {
@@ -51,7 +51,7 @@ public class BatchingJobCompletionServiceTests
     public async Task CompleteJob_HasNext_DeleteCompletedTrue_DeletesJobsWithUnlock()
     {
         var settings = new JobbyServerSettings { DeleteCompleted = true };
-        using var service = new BatchingJobCompletionService(_storageMock.Object, settings, ServerId);
+        var service = new BatchingJobCompletionService(_storageMock.Object, settings, ServerId);
         var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
@@ -73,7 +73,7 @@ public class BatchingJobCompletionServiceTests
     public async Task CompleteJob_DoesNotHaveNext_DeleteCompletedFalse_MarksCompleted()
     {
         var settings = new JobbyServerSettings { DeleteCompleted = false };
-        using var service = new BatchingJobCompletionService(_storageMock.Object, settings, ServerId);
+        var service = new BatchingJobCompletionService(_storageMock.Object, settings, ServerId);
         var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),

@@ -1,9 +1,10 @@
 ﻿using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.HandlerPipeline;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
 internal class JobExecutor<TCommand, THandler> : IJobExecutor
     where TCommand : IJobCommand

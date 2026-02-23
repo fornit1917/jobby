@@ -1,10 +1,11 @@
-﻿using Jobby.Core.Interfaces;
+﻿using System.Threading.Channels;
+using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
-using System.Threading.Channels;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
-internal class BatchingJobCompletionService : IJobCompletionService, IDisposable
+internal class BatchingJobCompletionService : IJobCompletionService
 {
     private readonly IJobbyStorage _storage;
     private readonly JobbyServerSettings _settings;

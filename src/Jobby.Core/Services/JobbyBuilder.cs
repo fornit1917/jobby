@@ -11,8 +11,12 @@ using System.Reflection;
 using System.Text.Json;
 using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Interfaces.ServerModules;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Services.Queues;
 using Jobby.Core.Services.Schedulers;
+using Jobby.Core.Services.ServerModules;
+using Jobby.Core.Services.ServerModules.JobsExecution;
 
 namespace Jobby.Core.Services;
 
@@ -84,10 +88,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         var storage = GetStorage();
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
-
-        IQueueService queueService = _serverSettings.Queues.Count == 1
-            ? new SingleQueueService(storage, TimerService.Instance, _serverSettings, serverId)
-            : new MultiQueueService(storage, TimerService.Instance, _serverSettings, serverId);
+        
 
         IJobCompletionService completionService = _serverSettings.CompleteWithBatching
             ? new BatchingJobCompletionService(storage, _serverSettings, serverId)
@@ -105,13 +106,25 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _pipelineBuilder,
             postProcessingService,
             LoggerFactory.CreateLogger<JobExecutionService>());
+        
+        IAvailabilityCheckServerModule availabilityCheckServerModule = new AvailabilityCheckServerModule(storage,
+            TimerService.Instance,
+            LoggerFactory.CreateLogger<AvailabilityCheckServerModule>(),
+            _serverSettings,
+            serverId);
 
-        return new JobbyServer(storage,
-            queueService,
+        IJobsExecutionServerModule jobsExecutionServerModule = new JobsExecutionServerModule(storage,
+            QueueServiceFactory.Instance,
             executionService,
             postProcessingService,
-            LoggerFactory.CreateLogger<JobbyServer>(),
+            TimerService.Instance,
+            LoggerFactory.CreateLogger<JobsExecutionServerModule>(),
             _serverSettings,
+            serverId);
+
+        return new JobbyServer(availabilityCheckServerModule,
+            jobsExecutionServerModule,
+            LoggerFactory.CreateLogger<JobbyServer>(),
             serverId);
     }
 

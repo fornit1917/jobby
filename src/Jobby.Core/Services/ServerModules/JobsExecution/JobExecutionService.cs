@@ -1,10 +1,11 @@
 ﻿using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.HandlerPipeline;
+using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Jobby.Core.Services;
+namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
 internal class JobExecutionService : IJobExecutionService
 {
@@ -50,7 +51,7 @@ internal class JobExecutionService : IJobExecutionService
             {
                 CancellationToken = cancellationToken,
                 IsRecurrent = job.IsRecurrent,
-                IsLastAttempt = job.IsRecurrent ? false : retryPolicy.IsLastAttempt(job),
+                IsLastAttempt = !job.IsRecurrent && retryPolicy.IsLastAttempt(job),
                 JobName = job.JobName,
                 StartedCount = job.StartedCount,
             };
@@ -74,10 +75,5 @@ internal class JobExecutionService : IJobExecutionService
             else
                 await _postProcessingService.HandleFailed(job, retryPolicy, error);
         }
-    }
-
-    public void Dispose()
-    {
-        _postProcessingService.Dispose();
     }
 }

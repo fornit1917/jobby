@@ -2,8 +2,8 @@
 
 namespace Jobby.Core.Interfaces.Queues;
 
-internal interface IQueueService
+internal interface IQueueService<T>
 {
-    public Task WaitIfEmpty();
-    public Task TakeBatchToProcessing(int batchSize, List<JobExecutionModel> result);
+    public int GetWaitingIntervalMs();
+    public Task ReadBatch(int batchSize, List<T> result);
 }

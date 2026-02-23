@@ -6,12 +6,11 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services.Queues;
 
-internal class MultiQueueService : IQueueService
+internal class MultiQueueService<T> : IQueueService<T>
 {
-    private readonly IJobbyStorage _storage;
+    private readonly IQueueItemsReader<T> _queueItemsReader;
     private readonly ITimerService _timer;
     private readonly string _serverId;
-    private readonly JobbyServerSettings _settings;
 
     private record QueueInfo(string QueueName, int MaxBatchSize, bool DisableSerializableGroups)
     {
@@ -25,70 +24,63 @@ internal class MultiQueueService : IQueueService
 
     private readonly GeometryProgression _pollingInterval;
 
-    public MultiQueueService(IJobbyStorage storage,
+    public MultiQueueService(IQueueItemsReader<T> queueItemsReader,
         ITimerService timer,
-        JobbyServerSettings settings,
+        QueueServiceConfig config,
         string serverId)
     {
-        if (settings.Queues.Count == 0)
-            throw new InvalidBuilderConfigException("Queues cannot be empty");
-        
-        _storage = storage;
+        if (config.Queues.Count == 0)
+            throw new ArgumentException("Queues cannot be empty");
+
+        _queueItemsReader = queueItemsReader;
         _timer = timer;
         _serverId = serverId;
-        _settings = settings;
         
-        _hotWaitingList = new Queue<QueueInfo>(capacity: settings.Queues.Count);
-        _coldWaitingList = new Queue<QueueInfo>(capacity: settings.Queues.Count);
-        foreach (var queueSettings in settings.Queues)
+        _hotWaitingList = new Queue<QueueInfo>(capacity: config.Queues.Count);
+        _coldWaitingList = new Queue<QueueInfo>(capacity: config.Queues.Count);
+        foreach (var q in config.Queues)
         {
-            var maxBatchSize = queueSettings.MaxDegreeOfParallelism > 0 && queueSettings.MaxDegreeOfParallelism <= settings.MaxDegreeOfParallelism
-                ? queueSettings.MaxDegreeOfParallelism
-                : settings.MaxDegreeOfParallelism;
-            var disableSerializableGroups = queueSettings.DisableSerializableGroups 
-                                            ?? _settings.DisableSerializableGroups 
-                                            ?? false;
-            var queueInfo = new QueueInfo(queueSettings.QueueName, maxBatchSize, disableSerializableGroups);
+            var queueInfo = new QueueInfo(q.QueueName, q.MaxBatchSize, q.DisableSerializableGroups);
             _hotWaitingList.Enqueue(queueInfo);
         }
         
         SetCurrent(_hotWaitingList.Dequeue());
         
         _pollingInterval = new GeometryProgression(
-            start: settings.PollingIntervalStartMs, 
-            factor: settings.PollingIntervalFactor, 
-            max: settings.PollingIntervalMs
+            start: config.WaitingIntervalStartMs, 
+            factor: config.WaitingIntervalFactor, 
+            max: config.WaitingIntervalMaxMs
         );
     }
 
-    public Task WaitIfEmpty()
+    public int GetWaitingIntervalMs()
     {
         if (_current != null || _hotWaitingList.Count > 0 || _coldWaitingList.Count == 0)
         {
-            return Task.CompletedTask;
+            return 0;
         }
 
         var coldHead = _coldWaitingList.Peek();
         if (coldHead.LastRequestTs == 0)
         {
-            return Task.CompletedTask;
+            return 0;
         }
         
         var passedFromLastRequestMs = _timer.GetElapsedTime(coldHead.LastRequestTs).TotalMilliseconds;
         if (passedFromLastRequestMs >= _pollingInterval.CurrentValue)
         {
-            return Task.CompletedTask;
+            return 0;
         }
 
         var delayMs = (int)(_pollingInterval.GetCurrentValueAndSetToNext() - passedFromLastRequestMs);
         if (delayMs > 0)
         {
-            return _timer.Delay(delayMs);
+            return delayMs;
         }
-        return Task.CompletedTask;
+        return 0;
     }
 
-    public async Task TakeBatchToProcessing(int batchSize, List<JobExecutionModel> result)
+    public async Task ReadBatch(int batchSize, List<T> result)
     {
         result.Clear();
         
@@ -109,7 +101,8 @@ internal class MultiQueueService : IQueueService
             ServerId = _serverId,
             DisableSerializableGroups = _current.DisableSerializableGroups
         };
-        await _storage.TakeBatchToProcessingAsync(request, result);
+        await _queueItemsReader.ReadBatch(request, result);
+        
         _current.LastRequestTs = _timer.GetCurrentTicks();
         
         if (result.Count == 0)

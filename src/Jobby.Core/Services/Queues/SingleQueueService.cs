@@ -6,61 +6,53 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services.Queues;
 
-internal class SingleQueueService : IQueueService
+internal class SingleQueueService<T> : IQueueService<T>
 {
-    private readonly IJobbyStorage _storage;
-    private readonly ITimerService _timer;
+    private readonly IQueueItemsReader<T> _queueItemsReader;
     
     private readonly string _serverId;
     private readonly int _maxBatchSize;
     private readonly string _queueName;
     private readonly bool _disableSerializableGroups;
-    private readonly JobbyServerSettings _settings;
     private readonly GeometryProgression _pollingInterval;
 
     private bool _isEmpty;
     
-    public SingleQueueService(IJobbyStorage storage, ITimerService timer, JobbyServerSettings settings, string serverId)
+    public SingleQueueService(IQueueItemsReader<T> queueItemsReader, QueueServiceConfig config, string serverId)
     {
-        if (settings.Queues.Count != 1)
-            throw new InvalidBuilderConfigException("Queues list must contain single item");
+        if (config.Queues.Count != 1)
+            throw new ArgumentException("Queues list must contain single item");
+        
+        _queueItemsReader = queueItemsReader;
         
         _serverId = serverId;
-        _storage = storage;
-        _timer = timer;
-        _settings = settings;
 
-        var queueSettings = settings.Queues.First();
+        var queueConfig = config.Queues[0];
         
-        _maxBatchSize = queueSettings.MaxDegreeOfParallelism > 0 && queueSettings.MaxDegreeOfParallelism <= settings.MaxDegreeOfParallelism
-            ? queueSettings.MaxDegreeOfParallelism
-            : settings.MaxDegreeOfParallelism;
-        
-        _queueName = queueSettings.QueueName;
-
-        _disableSerializableGroups =
-            queueSettings.DisableSerializableGroups ?? settings.DisableSerializableGroups ?? false;
+        _maxBatchSize = queueConfig.MaxBatchSize;
+        _queueName = queueConfig.QueueName;
+        _disableSerializableGroups = queueConfig.DisableSerializableGroups;
         
         _pollingInterval = new GeometryProgression(
-            start: settings.PollingIntervalStartMs, 
-            factor: settings.PollingIntervalFactor, 
-            max: settings.PollingIntervalMs
+            start: config.WaitingIntervalStartMs, 
+            factor: config.WaitingIntervalFactor, 
+            max: config.WaitingIntervalMaxMs
         );
         
         _isEmpty = false;
     }
     
-    public Task WaitIfEmpty()
+    public int GetWaitingIntervalMs()
     {
         if (_isEmpty)
         {
             var delayMs = _pollingInterval.GetCurrentValueAndSetToNext();
-            return _timer.Delay(delayMs);
+            return delayMs;
         }
-        return Task.CompletedTask;
+        return 0;
     }
 
-    public async Task TakeBatchToProcessing(int batchSize, List<JobExecutionModel> result)
+    public async Task ReadBatch(int batchSize, List<T> result)
     {
         if (batchSize > _maxBatchSize)
         {
@@ -75,7 +67,7 @@ internal class SingleQueueService : IQueueService
             ServerId = _serverId,
             DisableSerializableGroups = _disableSerializableGroups,
         };
-        await _storage.TakeBatchToProcessingAsync(request, result);
+        await _queueItemsReader.ReadBatch(request, result);
 
         if (result.Count == 0)
         {
