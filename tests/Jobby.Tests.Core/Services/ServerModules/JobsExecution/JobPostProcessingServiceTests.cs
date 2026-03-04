@@ -102,14 +102,14 @@ public class JobPostProcessingServiceTests
         var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            Cron = "0 3 1 12 *",
+            Schedule = "0 3 1 12 *",
             SchedulerType = SchedulerType,
             ScheduledStartAt = DateTime.UtcNow,
         };
         var error = "error";
         var expectedNextTime = DateTime.UtcNow.AddSeconds(123);
         _schedulerMock
-            .Setup(x => x.GetNextStartTime(job.Cron, job.ScheduledStartAt))
+            .Setup(x => x.GetNextStartTime(job.Schedule, job.ScheduledStartAt))
             .Returns(expectedNextTime);
 
         await _postProcessingService.RescheduleRecurrent(job, error);
@@ -177,7 +177,7 @@ public class JobPostProcessingServiceTests
         var job = new JobExecutionModel
         {
             Id = Guid.NewGuid(),
-            Cron = "0 3 1 12 *",
+            Schedule = "0 3 1 12 *",
             SchedulerType = SchedulerType
         };
         var error = "error";

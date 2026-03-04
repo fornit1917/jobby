@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Helpers;
+﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Services.Schedulers;
 using Moq;
@@ -52,5 +53,16 @@ public class TimeSpanSchedulerTests
         
         var expectedNext = prev.AddSeconds(5);
         Assert.Equal(expectedNext, next);
+    }
+
+    [Fact]
+    public void NegativeInterval_Throws()
+    {
+        var now = DateTime.UtcNow;
+        _timerService.Setup(x => x.GetUtcNow()).Returns(now);
+        
+        var schedule = "-00:00:05";
+        var scheduler = new TimeSpanScheduler(_timerService.Object, calculateNextFromPrev: false);
+        Assert.Throws<InvalidScheduleException>(() => scheduler.GetNextStartTime(schedule, null));
     }
 }

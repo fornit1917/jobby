@@ -18,7 +18,7 @@ public class TakeBatchToProcessingTests
         {
             Id = Guid.NewGuid(),
             JobName = "firstJob",
-            Cron = "*/20 * * * *",
+            Schedule = "*/20 * * * *",
             SchedulerType = "scheduler-type",
             JobParam = "param1",
             StartedCount = 1,
@@ -31,7 +31,7 @@ public class TakeBatchToProcessingTests
         {
             Id = Guid.NewGuid(),
             JobName = "secondJob",
-            Cron = null,
+            Schedule = null,
             JobParam = "param2",
             StartedCount = 0,
             NextJobId = null,
@@ -119,7 +119,7 @@ public class TakeBatchToProcessingTests
         {
             Id = Guid.NewGuid(),
             JobName = "withoutGroup",
-            Cron = null,
+            Schedule = null,
             JobParam = "param1",
             StartedCount = 0,
             NextJobId = null,
@@ -132,7 +132,7 @@ public class TakeBatchToProcessingTests
         {
             Id = Guid.NewGuid(),
             JobName = "1_1",
-            Cron = null,
+            Schedule = null,
             JobParam = "param2",
             StartedCount = 0,
             NextJobId = null,
@@ -145,7 +145,7 @@ public class TakeBatchToProcessingTests
         {
             Id = Guid.NewGuid(),
             JobName = "2_1",
-            Cron = null,
+            Schedule = null,
             JobParam = "param3",
             StartedCount = 0,
             NextJobId = null,
@@ -192,7 +192,7 @@ public class TakeBatchToProcessingTests
             {
                 Id = Guid.NewGuid(),
                 JobName = "1_2",
-                Cron = null,
+                Schedule = null,
                 JobParam = "param2",
                 StartedCount = 0,
                 NextJobId = null,
@@ -240,7 +240,7 @@ public class TakeBatchToProcessingTests
             {
                 Id = Guid.NewGuid(),
                 JobName = "locker",
-                Cron = null,
+                Schedule = null,
                 JobParam = "param",
                 StartedCount = lockerStartedCount,
                 NextJobId = null,
@@ -254,7 +254,7 @@ public class TakeBatchToProcessingTests
             {
                 Id = lockedJobId,
                 JobName = "locked",
-                Cron = null,
+                Schedule = null,
                 JobParam = "param",
                 StartedCount = 0,
                 NextJobId = null,
@@ -286,7 +286,7 @@ public class TakeBatchToProcessingTests
     {
         Assert.Equal(createdJob.Id, takenJob.Id);
         Assert.Equal(createdJob.JobName, takenJob.JobName);
-        Assert.Equal(createdJob.Cron, takenJob.Cron);
+        Assert.Equal(createdJob.Schedule, takenJob.Schedule);
         Assert.Equal(createdJob.JobParam, takenJob.JobParam);
         Assert.Equal(createdJob.StartedCount + 1, takenJob.StartedCount);
         Assert.Equal(createdJob.NextJobId, takenJob.NextJobId);

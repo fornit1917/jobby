@@ -36,7 +36,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Null(job.Cron);
+        Assert.Null(job.Schedule);
         Assert.Null(job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -61,7 +61,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Null(job.Cron);
+        Assert.Null(job.Schedule);
         Assert.Null(job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -93,7 +93,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Null(job.Cron);
+        Assert.Null(job.Schedule);
         Assert.Null(job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -126,7 +126,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobWithDefaultOptsCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Null(job.Cron);
+        Assert.Null(job.Schedule);
         Assert.Null(job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -161,7 +161,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobWithDefaultOptsCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Null(job.Cron);
+        Assert.Null(job.Schedule);
         Assert.Null(job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -186,7 +186,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(cron, job.Cron);
+        Assert.Equal(cron, job.Schedule);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -220,7 +220,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(schedule, job.Cron);
+        Assert.Equal(schedule, job.Schedule);
         Assert.Equal(schedulerType, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -251,7 +251,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(cron, job.Cron);
+        Assert.Equal(cron, job.Schedule);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -283,7 +283,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobWithDefaultOptsCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(cron, job.Cron);
+        Assert.Equal(cron, job.Schedule);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -319,7 +319,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobWithDefaultOptsCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(cron, job.Cron);
+        Assert.Equal(cron, job.Schedule);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
@@ -345,7 +345,7 @@ public class JobsFactoryTests
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(cron, job.Cron);
+        Assert.Equal(cron, job.Schedule);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));

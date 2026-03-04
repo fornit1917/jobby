@@ -1,0 +1,1 @@
+﻿ALTER TABLE ${jobs_table_fullname} RENAME COLUMN cron TO schedule;

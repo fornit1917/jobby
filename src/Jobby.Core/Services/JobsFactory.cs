@@ -92,7 +92,7 @@ internal class JobsFactory : IJobsFactory
             Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
             JobName = jobName,
-            Cron = schedule,
+            Schedule = schedule,
             SchedulerType = schedulerType,
             IsExclusive = opts.IsExclusive ?? defaultOpts.IsExclusive ?? true,
             CreatedAt = DateTime.UtcNow,

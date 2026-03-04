@@ -17,7 +17,7 @@ public class BulkDeleteRecurrentTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                Cron = "*/3 * * * *",
+                Schedule = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -26,7 +26,7 @@ public class BulkDeleteRecurrentTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                Cron = "*/3 * * * *",
+                Schedule = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Processing,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -45,7 +45,7 @@ public class BulkDeleteRecurrentTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                Cron = "*/3 * * * *",
+                Schedule = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -78,7 +78,7 @@ public class BulkDeleteRecurrentTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                Cron = "*/3 * * * *",
+                Schedule = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -87,7 +87,7 @@ public class BulkDeleteRecurrentTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                Cron = "*/3 * * * *",
+                Schedule = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Processing,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),
@@ -106,7 +106,7 @@ public class BulkDeleteRecurrentTests
             {
                 Id = Guid.NewGuid(),
                 JobName = Guid.NewGuid().ToString(),
-                Cron = "*/3 * * * *",
+                Schedule = "*/3 * * * *",
                 JobParam = "param",
                 Status = JobStatus.Scheduled,
                 ScheduledStartAt = DateTime.UtcNow.AddDays(1),

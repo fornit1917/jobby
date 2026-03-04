@@ -12,8 +12,8 @@ internal class JobDbModel
     [Column("job_name")]
     public string JobName { get; set; } = string.Empty;
 
-    [Column("cron")]
-    public string? Cron { get; set; }
+    [Column("schedule")]
+    public string? Schedule { get; set; }
 
     [Column("job_param")]
     public string? JobParam { get; set; }
@@ -70,7 +70,7 @@ internal class JobDbModel
             Id = Id,
             NextJobId = NextJobId,
             ServerId = ServerId ?? string.Empty,
-            Cron = Cron,
+            Schedule = Schedule,
             JobName = JobName,
             JobParam = JobParam,
             StartedCount = StartedCount,

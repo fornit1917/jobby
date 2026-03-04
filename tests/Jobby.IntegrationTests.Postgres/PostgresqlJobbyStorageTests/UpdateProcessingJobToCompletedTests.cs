@@ -16,7 +16,7 @@ public class UpdateProcessingJobToCompletedTests
         {
             Id = Guid.NewGuid(),
             JobName = Guid.NewGuid().ToString(),
-            Cron = null,
+            Schedule = null,
             JobParam = "param",
             StartedCount = 2,
             NextJobId = null,
