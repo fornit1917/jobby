@@ -2,12 +2,11 @@
 using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
-using Jobby.Core.Services;
 using Jobby.Core.Services.ServerModules.JobsExecution;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace Jobby.Tests.Core.Services.JobsExecution;
+namespace Jobby.Tests.Core.Services.ServerModules.JobsExecution;
 
 public class JobsExecutionServerModuleTests
 {
@@ -42,7 +41,7 @@ public class JobsExecutionServerModuleTests
     }
 
     [Fact]
-    public void Constuctor_CreatesQueueServiceWithCorrectConfig()
+    public void Constructor_CreatesQueueServiceWithCorrectConfig()
     {
         var settings = new JobbyServerSettings
         {

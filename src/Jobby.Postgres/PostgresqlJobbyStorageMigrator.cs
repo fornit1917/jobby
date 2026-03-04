@@ -42,6 +42,7 @@ internal class PostgresqlJobbyStorageMigrator : IJobbyStorageMigrator
                 
                 ["${jobs_table_fullname}"] = DbName.Jobs(_settings),
                 ["${servers_table_fullname}"] = DbName.Servers(_settings),
+                ["${unlocking_groups_table_fullname}"] = DbName.UnlockingGroups(_settings),
                 
                 ["${take_to_processing_function_fullname}"] = DbName.TakeToProcessing(_settings)
             },

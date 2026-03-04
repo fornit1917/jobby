@@ -13,10 +13,12 @@ using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
+using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
 using Jobby.Core.Services.Queues;
 using Jobby.Core.Services.Schedulers;
 using Jobby.Core.Services.ServerModules;
 using Jobby.Core.Services.ServerModules.JobsExecution;
+using Jobby.Core.Services.ServerModules.PermanentLocksCheck;
 
 namespace Jobby.Core.Services;
 
@@ -29,6 +31,9 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     
     private IJobbyStorage? _storage;
     private Func<ICommonInfrastructure, IJobbyStorage>? _storageFactory;
+
+    private IPermanentLocksStorage? _permanentLocksStorage;
+    private Func<ICommonInfrastructure, IPermanentLocksStorage>? _permanentLocksStorageFactory;
     
     private IJobbyStorageMigrator? _storageMigrator;
     private Func<ICommonInfrastructure, IJobbyStorageMigrator>? _storageMigratorFactory;
@@ -94,12 +99,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             ? new BatchingJobCompletionService(storage, _serverSettings, serverId)
             : new SimpleJobCompletionService(storage, _serverSettings.DeleteCompleted);
 
-        IJobPostProcessingService postProcessingService = new JobPostProcessingService(storage,
+        var postProcessingService = new JobPostProcessingService(storage,
             completionService,
             _schedulersByType.ToFrozenDictionary(),
             LoggerFactory.CreateLogger<JobPostProcessingService>());
 
-        IJobExecutionService executionService = new JobExecutionService(_scopeFactory,
+        var executionService = new JobExecutionService(_scopeFactory,
             _jobsRegistry,
             _retryPolicyService,
             Serializer,
@@ -107,13 +112,13 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             postProcessingService,
             LoggerFactory.CreateLogger<JobExecutionService>());
         
-        IAvailabilityCheckServerModule availabilityCheckServerModule = new AvailabilityCheckServerModule(storage,
+        var availabilityCheckServerModule = new AvailabilityCheckServerModule(storage,
             TimerService.Instance,
             LoggerFactory.CreateLogger<AvailabilityCheckServerModule>(),
             _serverSettings,
             serverId);
 
-        IJobsExecutionServerModule jobsExecutionServerModule = new JobsExecutionServerModule(storage,
+        var jobsExecutionServerModule = new JobsExecutionServerModule(storage,
             QueueServiceFactory.Instance,
             executionService,
             postProcessingService,
@@ -122,8 +127,18 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _serverSettings,
             serverId);
 
+        var permanentLocksStorage = GetPermanentLocksStorage();
+        var permanentLocksCheckServerModule = new PermanentLocksCheckServerModule(
+            permanentLocksStorage,
+            QueueServiceFactory.Instance,
+            TimerService.Instance,
+            LoggerFactory.CreateLogger<PermanentLocksCheckServerModule>(),
+            _serverSettings,
+            serverId);
+
         return new JobbyServer(availabilityCheckServerModule,
             jobsExecutionServerModule,
+            permanentLocksCheckServerModule,
             LoggerFactory.CreateLogger<JobbyServer>(),
             serverId);
     }
@@ -187,7 +202,13 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         _storageFactory = createStorage;
         return this;
     }
-    
+
+    public IJobbyComponentsConfigurable UsePermanentLocksStorage(Func<ICommonInfrastructure, IPermanentLocksStorage> createPermanentLocksStorage)
+    {
+        _permanentLocksStorageFactory = createPermanentLocksStorage;
+        return this;
+    }
+
     public IJobbyComponentsConfigurable UseStorageMigrator(Func<ICommonInfrastructure, IJobbyStorageMigrator> createMigrator)
     {
         _storageMigratorFactory = createMigrator;
@@ -332,5 +353,14 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         }
         
         return _storage ?? throw new InvalidBuilderConfigException("Storage is not specified");
+    }
+
+    private IPermanentLocksStorage GetPermanentLocksStorage()
+    {
+        if (_permanentLocksStorage == null && _permanentLocksStorageFactory != null)
+        {
+            _permanentLocksStorage = _permanentLocksStorageFactory.Invoke(this);
+        }
+        return _permanentLocksStorage ?? throw new InvalidBuilderConfigException("PermanentLocksStorage is not specified");
     }
 }
