@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 
@@ -18,6 +19,11 @@ internal class TimeSpanScheduler : IScheduler
     public DateTime GetNextStartTime(string schedule, DateTime? previousScheduledStartTime)
     {
         var span = TimeSpan.Parse(schedule, CultureInfo.InvariantCulture);
+        if (span < TimeSpan.Zero)
+        {
+            throw new InvalidScheduleException(
+                $"Interval for TimeSpanScheduler can not be negative, but '{schedule}' is");
+        }
         
         var from = previousScheduledStartTime.HasValue && _calculateNextFromPrev
             ? previousScheduledStartTime.Value

@@ -18,7 +18,7 @@ public class RescheduleProcessingJobTests
         {
             Id = Guid.NewGuid(),
             JobName = Guid.NewGuid().ToString(),
-            Cron = "*/5 * * * *",
+            Schedule = "*/5 * * * *",
             JobParam = "param",
             StartedCount = 1,
             NextJobId = null,

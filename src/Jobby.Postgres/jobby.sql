@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS jobby_jobs (
 	id UUID NOT NULL PRIMARY KEY,
 	job_name TEXT NOT NULL,
-	cron TEXT DEFAULT NULL,
+	schedule TEXT DEFAULT NULL,
 	job_param TEXT DEFAULT NULL,
 	status int NOT NULL,
 	error TEXT DEFAULT NULL,
@@ -72,7 +72,7 @@ RETURNS TABLE (
     job_name TEXT,
     job_param TEXT,
     started_count int,
-    cron TEXT,
+    schedule TEXT,
     next_job_id uuid,
     scheduled_start_at timestamptz,
     server_id TEXT,
@@ -148,7 +148,7 @@ BEGIN
                         t.job_name AS r_job_name,
                         t.job_param AS r_job_param,
                         t.started_count AS r_started_count,
-                        t.cron AS r_cron,
+                        t.schedule AS r_schedule,
                         t.next_job_id AS r_next_job_id,
                         t.scheduled_start_at AS r_scheduled_start_at,
                         t.server_id AS r_server_id,
@@ -161,7 +161,7 @@ BEGIN
                         NULL AS r_job_name,
                         NULL AS r_job_parama,
                         0 AS r_started_count,
-                        NULL AS r_cron,
+                        NULL AS r_schedule,
                         NULL::uuid AS r_next_job_id,
                         NULL::timestamptz AS r_scheduled_start_at,
                         NULL AS r_server_id,
@@ -181,7 +181,7 @@ BEGIN
                     job_name := rec.r_job_name;
                     job_param := rec.r_job_param;
                     started_count := rec.r_started_count;
-                    cron := rec.r_cron;
+                    schedule := rec.r_schedule;
                     next_job_id := rec.r_next_job_id;
                     scheduled_start_at := rec.r_scheduled_start_at;
                     server_id := rec.r_server_id;

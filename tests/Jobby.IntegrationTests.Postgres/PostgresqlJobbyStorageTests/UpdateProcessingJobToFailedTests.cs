@@ -16,7 +16,7 @@ public class UpdateProcessingJobToFailedTests
         {
             Id = Guid.NewGuid(),
             JobName = Guid.NewGuid().ToString(),
-            Cron = null,
+            Schedule = null,
             JobParam = "param",
             StartedCount = 1,
             NextJobId = null,
@@ -47,7 +47,7 @@ public class UpdateProcessingJobToFailedTests
         {
             Id = Guid.NewGuid(),
             JobName = Guid.NewGuid().ToString(),
-            Cron = null,
+            Schedule = null,
             JobParam = "param",
             StartedCount = 1,
             NextJobId = null,
@@ -75,7 +75,7 @@ public class UpdateProcessingJobToFailedTests
         {
             Id = Guid.NewGuid(),
             JobName = Guid.NewGuid().ToString(),
-            Cron = null,
+            Schedule = null,
             JobParam = "param",
             StartedCount = 1,
             NextJobId = null,

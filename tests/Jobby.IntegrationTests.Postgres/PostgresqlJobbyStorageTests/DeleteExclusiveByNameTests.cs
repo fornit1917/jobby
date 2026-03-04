@@ -13,7 +13,7 @@ public class DeleteExclusiveByNameTests
         var job = new JobDbModel
         {
             Id = Guid.NewGuid(),
-            Cron = "*/5 * * * *",
+            Schedule = "*/5 * * * *",
             IsExclusive = true,
             JobName = Guid.NewGuid().ToString(),
             JobParam = "param",
@@ -37,7 +37,7 @@ public class DeleteExclusiveByNameTests
         var job = new JobDbModel
         {
             Id = Guid.NewGuid(),
-            Cron = "*/5 * * * *",
+            Schedule = "*/5 * * * *",
             IsExclusive = true,
             JobName = Guid.NewGuid().ToString(),
             JobParam = "param",

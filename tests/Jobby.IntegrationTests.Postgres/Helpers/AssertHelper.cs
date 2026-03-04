@@ -7,7 +7,7 @@ internal static class AssertHelper
     public static void AssertCreatedJob(JobCreationModel expected, JobDbModel actual)
     {
         Assert.Equal(expected.Id, actual.Id);
-        Assert.Equal(expected.Cron, actual.Cron);
+        Assert.Equal(expected.Schedule, actual.Schedule);
         Assert.Equal(expected.CreatedAt, actual.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(expected.JobName, actual.JobName);
         Assert.Equal(expected.CanBeRestarted, actual.CanBeRestarted);

@@ -167,7 +167,7 @@ public class JobbyClientIntegrationTests
         await client.ScheduleRecurrentAsync(command, cron);
 
         var actualJobFromDb = await dbContext.Jobs.AsNoTracking()
-                                             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+                                             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
                                              .FirstOrDefaultAsync();
         Assert.NotNull(actualJobFromDb);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, actualJobFromDb.SchedulerType);
@@ -192,7 +192,7 @@ public class JobbyClientIntegrationTests
 
         var actualJobFromDb = dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron);
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron);
         Assert.NotNull(actualJobFromDb);
         Assert.Equal(JobbySchedulerTypes.CronFromPrev, actualJobFromDb.SchedulerType);
 
@@ -221,7 +221,7 @@ public class JobbyClientIntegrationTests
         await client.ScheduleRecurrentAsync(command, cron, opts);
 
         var actualJob = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
             .FirstOrDefaultAsync();
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
@@ -255,7 +255,7 @@ public class JobbyClientIntegrationTests
 
         var actualJob = dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron);
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron);
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
         Assert.Equal(opts.QueueName, actualJob.QueueName);
@@ -288,7 +288,7 @@ public class JobbyClientIntegrationTests
         await client.ScheduleRecurrentAsync(command, cron, opts);
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
             .ToListAsync();
         Assert.Equal(2, actualJobs.Count);
     }
@@ -313,7 +313,7 @@ public class JobbyClientIntegrationTests
 
         var actualJobs = dbContext.Jobs
             .AsNoTracking()
-            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Cron == cron)
+            .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
             .ToList();
         Assert.Equal(2, actualJobs.Count);
     }    

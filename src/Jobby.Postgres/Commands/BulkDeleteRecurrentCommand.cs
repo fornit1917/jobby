@@ -11,7 +11,7 @@ internal class BulkDeleteRecurrentCommand
     public BulkDeleteRecurrentCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
-        _deleteCommandText = $@"DELETE FROM {DbName.Jobs(settings)} WHERE id = ANY($1) AND cron IS NOT NULL";
+        _deleteCommandText = $@"DELETE FROM {DbName.Jobs(settings)} WHERE id = ANY($1) AND schedule IS NOT NULL";
     }
 
     public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds)

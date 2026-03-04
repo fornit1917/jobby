@@ -21,7 +21,7 @@ internal class BulkInsertJobsCommand
                 status,
                 created_at,
                 scheduled_start_at,
-                cron,
+                schedule,
                 next_job_id,
                 can_be_restarted,
                 queue_name,
@@ -35,7 +35,7 @@ internal class BulkInsertJobsCommand
             UPDATE SET
                 id = $1,
                 job_param = $3,
-	            cron = $7,
+	            schedule = $7,
 	            scheduled_start_at = $6,
                 can_be_restarted = $9,
                 queue_name = $10,
@@ -80,7 +80,7 @@ internal class BulkInsertJobsCommand
                     new() { Value = (int)job.Status },                                  // 4
                     new() { Value = job.CreatedAt },                                    // 5
                     new() { Value = job.ScheduledStartAt },                             // 6
-                    new() { Value = (object?)job.Cron ?? DBNull.Value },                // 7
+                    new() { Value = (object?)job.Schedule ?? DBNull.Value },                // 7
                     new() { Value = (object?)job.NextJobId ?? DBNull.Value },           // 8
                     new() { Value = job.CanBeRestarted },                               // 9
                     new() { Value = job.QueueName },                                    // 10

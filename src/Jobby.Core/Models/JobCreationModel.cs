@@ -7,7 +7,7 @@ public class JobCreationModel
     public Guid Id { get; internal set; }
     public string JobName { get; internal set; } = string.Empty;
     public string? JobParam { get; internal set; }
-    public string? Cron { get; internal set; }
+    public string? Schedule { get; internal set; }
     public string? SchedulerType { get; internal set; }
     public bool IsExclusive { get; internal set; }
     public JobStatus Status { get; internal set; }

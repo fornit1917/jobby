@@ -79,7 +79,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     {
         while (!cancellationToken.IsCancellationRequested && _retryQueue.TryPeek(out var queueItem))
         {
-            if (queueItem.Job.Cron != null)
+            if (queueItem.Job.Schedule != null)
             {
                 await RescheduleRecurrentInternal(queueItem.Job, queueItem.Error);
             }
@@ -118,7 +118,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     private Task RescheduleRecurrentInternal(JobExecutionModel job, string? error)
     {
-        ArgumentNullException.ThrowIfNull(job.Cron, nameof(job.Cron));
+        ArgumentNullException.ThrowIfNull(job.Schedule, nameof(job.Schedule));
 
         DateTime nextStartAt;
         var schedulerType = job.SchedulerType ?? JobbySchedulerTypes.CronFromNow;
@@ -130,7 +130,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         }
         else
         {
-            nextStartAt = scheduler.GetNextStartTime(job.Cron, job.ScheduledStartAt); 
+            nextStartAt = scheduler.GetNextStartTime(job.Schedule, job.ScheduledStartAt); 
         }
         
         return _storage.RescheduleProcessingJobAsync(job, nextStartAt, error);

@@ -10,12 +10,12 @@ public static class CronHelper
         var format = GetFormat(cron);
         if (!CronExpression.TryParse(cron, format, out var parsedCron))
         {
-            throw new CronException($"Could not parse cron expression '{cron}'");
+            throw new InvalidScheduleException($"Could not parse cron expression '{cron}'");
         }
         var next = parsedCron.GetNextOccurrence(from);
         if (!next.HasValue)
         {
-            throw new CronException($"Could not calculate next occurence by cron expression '{cron}'");
+            throw new InvalidScheduleException($"Could not calculate next occurence by cron expression '{cron}'");
         }
         return next.Value;
     }

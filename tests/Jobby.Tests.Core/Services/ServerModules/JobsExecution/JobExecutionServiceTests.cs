@@ -132,7 +132,7 @@ public class JobExecutionServiceTests
             Id = Guid.NewGuid(),
             JobName = JobName,
             JobParam = "jobParam",
-            Cron = "*/5 * * * *"
+            Schedule = "*/5 * * * *"
         };
         var cancelationToken = new CancellationTokenSource().Token;
         var retryPolicy = RetryPolicy.NoRetry;
@@ -162,7 +162,7 @@ public class JobExecutionServiceTests
             Id = Guid.NewGuid(),
             JobName = JobName,
             JobParam = "jobParam",
-            Cron = "*/5 * * * *"
+            Schedule = "*/5 * * * *"
         };
         var cancelationToken = new CancellationTokenSource().Token;
         var retryPolicy = RetryPolicy.NoRetry;

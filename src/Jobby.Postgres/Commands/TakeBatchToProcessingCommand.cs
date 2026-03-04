@@ -36,9 +36,9 @@ internal class TakeBatchToProcessingCommand
 	                    started_count = started_count + 1,
                         server_id = $3
                     WHERE id IN (SELECT id FROM ready_jobs)
-                    RETURNING id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at, server_id, scheduler_type
+                    RETURNING id, job_name, job_param, started_count, schedule, next_job_id, scheduled_start_at, server_id, scheduler_type
                 )
-            SELECT id, job_name, job_param, started_count, cron, next_job_id, scheduled_start_at, server_id, scheduler_type
+            SELECT id, job_name, job_param, started_count, schedule, next_job_id, scheduled_start_at, server_id, scheduler_type
             FROM updated
         ";
     }
