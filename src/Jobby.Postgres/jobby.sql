@@ -43,10 +43,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_locked_group_idx
     ON jobby_jobs(serializable_group_id)
     WHERE is_group_locker = TRUE;
 
+CREATE INDEX IF NOT EXISTS jobby_jobs_frozen_group_id_scheduled_start_at_idx
+    ON jobby_jobs(serializable_group_id, scheduled_start_at)
+    WHERE serializable_group_id IS NOT NULL AND status = 6;
+
+-----
+
 CREATE TABLE IF NOT EXISTS jobby_servers (
 	id TEXT NOT NULL PRIMARY KEY,
 	heartbeat_ts timestamptz NOT NULL
 );
+
+-----
+
+CREATE TABLE IF NOT EXISTS jobby_unlocking_groups (
+    group_id TEXT NOT NULL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS jobby_unlocking_groups_created_at_idx
+    ON jobby_unlocking_groups(created_at);
 
 -- Functions
 

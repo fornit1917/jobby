@@ -192,6 +192,80 @@ public class JobbyServerIntegrationTests
         server.SendStopSignal();
     }
 
+    [Fact]
+    public async Task FreezesPermanentlyLockedGroupAndThenUnlocksByRequest()
+    {
+        var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        var jobbyBuilder = ConfigureBuilder(new JobbyServerSettings
+        {
+            PollingIntervalMs = 100,
+            PermanentLockedFreezingIntervalSeconds = 1,
+            PermanentLockedHandleUnlockingRequestsIntervalSeconds = 1,
+        });
+
+        var client = jobbyBuilder.CreateJobbyClient();
+        var server = jobbyBuilder.CreateJobbyServer();
+        server.StartBackgroundService();
+
+        var groupId = Guid.NewGuid().ToString();
+        var failedCommand = new TestJobCommand
+        {
+            ExceptionToThrow = new Exception("test exception"),
+        };
+        var failedJobId = await client.EnqueueCommandAsync(failedCommand, new JobOpts
+        {
+            SerializableGroupId = groupId,
+            LockGroupIfFailed = true,
+            StartTime = DateTime.UtcNow.AddMinutes(-2),
+        });
+        
+        var nextJobCommand = new TestJobCommand();
+        var nextJobId = await  client.EnqueueCommandAsync(nextJobCommand, new JobOpts
+        {
+            SerializableGroupId = groupId,
+            LockGroupIfFailed = true,
+            StartTime = DateTime.UtcNow.AddMinutes(-1),
+        });
+
+        bool isNextJobFrozen = false;
+        for (int i = 0; i < 20; i++)
+        {
+            await Task.Delay(500);
+            isNextJobFrozen = await dbContext.Jobs
+                .AnyAsync(x => x.Id == nextJobId && x.Status == JobStatus.Frozen);
+            if (isNextJobFrozen)
+                break;
+        }
+        
+        Assert.True(isNextJobFrozen);
+        Assert.False(_executedCommands.HasCommandWithId(nextJobCommand.UniqueId));
+
+        var unlockingRequest = new UnlockingGroupDbModel
+        {
+            GroupId = groupId,
+            CreatedAt = DateTime.UtcNow,
+        };
+        dbContext.UnlockingGroups.Add(unlockingRequest);
+        await dbContext.SaveChangesAsync();
+
+        var isNextJobExecuted = false;
+        for (int i = 0; i < 10; i++)
+        {
+            await Task.Delay(1000);
+            isNextJobExecuted = _executedCommands.HasCommandWithId(nextJobCommand.UniqueId);
+            if (isNextJobExecuted)
+                break;
+        }
+        
+        server.SendStopSignal();
+        
+        Assert.True(isNextJobExecuted);
+        var actualFailedJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == failedJobId);
+        Assert.Null(actualFailedJob);
+        var actualUnlockingRequest = dbContext.UnlockingGroups.AsNoTracking().FirstOrDefault(x => x.GroupId == groupId);
+        Assert.Null(actualUnlockingRequest);
+    }
+
     private JobbyBuilder ConfigureBuilder(JobbyServerSettings serverSettings)
     {
         var jobbyBuilder = new JobbyBuilder();

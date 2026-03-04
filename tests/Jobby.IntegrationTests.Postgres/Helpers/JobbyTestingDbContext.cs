@@ -10,4 +10,5 @@ internal class JobbyTestingDbContext : DbContext
 
     public DbSet<JobDbModel> Jobs { get; set; }
     public DbSet<ServerDbModel> Servers { get; set; }
+    public DbSet<UnlockingGroupDbModel>  UnlockingGroups { get; set; }
 }

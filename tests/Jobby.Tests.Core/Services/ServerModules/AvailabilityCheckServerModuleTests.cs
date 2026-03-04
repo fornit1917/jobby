@@ -4,7 +4,7 @@ using Jobby.Core.Services.ServerModules;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace Jobby.Tests.Core.Services.AvailabilityCheck;
+namespace Jobby.Tests.Core.Services.ServerModules;
 
 public class AvailabilityCheckServerModuleTests
 {

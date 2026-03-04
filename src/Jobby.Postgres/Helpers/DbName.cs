@@ -19,6 +19,11 @@ internal static class DbName
         return For("servers", settings);
     }
 
+    public static string UnlockingGroups(PostgresqlStorageSettings settings)
+    {
+        return For("unlocking_groups", settings);
+    }
+
     public static string TakeToProcessing(PostgresqlStorageSettings settings)
     {
         return For("take_to_processing", settings);

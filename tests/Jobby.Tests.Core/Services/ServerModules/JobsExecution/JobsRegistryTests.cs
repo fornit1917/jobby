@@ -3,7 +3,7 @@ using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Services.ServerModules.JobsExecution;
 using Jobby.TestsUtils.Jobs;
 
-namespace Jobby.Tests.Core.Services.JobsExecution;
+namespace Jobby.Tests.Core.Services.ServerModules.JobsExecution;
 
 public class JobsRegistryTests
 {

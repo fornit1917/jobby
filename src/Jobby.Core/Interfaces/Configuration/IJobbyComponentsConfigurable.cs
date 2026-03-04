@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
 
 namespace Jobby.Core.Interfaces.Configuration;
 
@@ -9,6 +10,7 @@ public interface IJobbyComponentsConfigurable
 {
     IJobbyComponentsConfigurable UseStorage(IJobbyStorage storage);
     IJobbyComponentsConfigurable UseStorage(Func<ICommonInfrastructure, IJobbyStorage> createStorage);
+    IJobbyComponentsConfigurable UsePermanentLocksStorage(Func<ICommonInfrastructure, IPermanentLocksStorage> createPermanentLocksStorage);
     IJobbyComponentsConfigurable UseStorageMigrator(Func<ICommonInfrastructure, IJobbyStorageMigrator> createMigrator);
 
     IJobbyComponentsConfigurable UseLoggerFactory(ILoggerFactory loggerFactory);

@@ -6,7 +6,7 @@ using Jobby.Core.Services.ServerModules.JobsExecution;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace Jobby.Tests.Core.Services.JobsExecution;
+namespace Jobby.Tests.Core.Services.ServerModules.JobsExecution;
 
 public class JobExecutionServiceTests
 {

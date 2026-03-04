@@ -3,7 +3,7 @@ using Jobby.Core.Models;
 using Jobby.Core.Services.ServerModules.JobsExecution;
 using Moq;
 
-namespace Jobby.Tests.Core.Services.JobsExecution;
+namespace Jobby.Tests.Core.Services.ServerModules.JobsExecution;
 
 public class BatchingJobCompletionServiceTests
 {

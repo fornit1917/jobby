@@ -7,4 +7,5 @@ public enum JobStatus
     Completed = 3,
     Failed = 4,
     WaitingPrev = 5,
+    Frozen = 6,
 }

@@ -27,12 +27,18 @@ internal static class DbHelper
         var ctx = CreateContext();
         await ctx.Jobs.Where(x => true).ExecuteDeleteAsync();
         await ctx.Servers.Where(x => true).ExecuteDeleteAsync();
+        await ctx.UnlockingGroups.Where(x => true).ExecuteDeleteAsync();
         return ctx;
     }
 
     public static PostgresqlJobbyStorage CreateJobbyStorage()
     {
         return new PostgresqlJobbyStorage(DataSource, new PostgresqlStorageSettings());
+    }
+
+    public static PostgresqlPermanentLocksStorage CreatePermanentLockedGroupsStorage()
+    {
+        return new PostgresqlPermanentLocksStorage(DataSource, new PostgresqlStorageSettings());
     }
 
     public static async Task DropTablesAsync()

@@ -97,6 +97,28 @@ public class JobbyServerSettings
         }
     }
 
+    private readonly int _permanentLockedFreezingIntervalSeconds = 15;
+    public int PermanentLockedFreezingIntervalSeconds
+    {
+        get => _permanentLockedFreezingIntervalSeconds;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(PermanentLockedFreezingIntervalSeconds));
+            _permanentLockedFreezingIntervalSeconds = value;
+        }
+    }
+    
+    private readonly int _permanentLockedHandleUnlockingRequestsIntervalSeconds = 10;
+    public int PermanentLockedHandleUnlockingRequestsIntervalSeconds
+    {
+        get => _permanentLockedHandleUnlockingRequestsIntervalSeconds;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(PermanentLockedFreezingIntervalSeconds));
+            _permanentLockedHandleUnlockingRequestsIntervalSeconds = value;
+        }
+    }    
+
     public IReadOnlyList<QueueSettings> Queues { get; init; } =
     [
         new() { QueueName = QueueSettings.DefaultQueueName }
