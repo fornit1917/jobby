@@ -55,9 +55,15 @@ public class InsertTests
         await storage.InsertJobAsync(secondJob);
         await storage.InsertJobAsync(thirdJob);
 
-        var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == firstJob.Id);
-        var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == secondJob.Id);
-        var thirdActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == thirdJob.Id);
+        var firstActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == firstJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        var secondActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == secondJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        var thirdActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == thirdJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(firstActualJob);
         Assert.NotNull(secondActualJob);
@@ -152,9 +158,13 @@ public class InsertTests
         await storage.InsertJobAsync(job);
         await storage.InsertJobAsync(newJob);
 
-        var actualJobWithOldId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == job.Id);
+        var actualJobWithOldId = await dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == job.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualJobWithOldId);
-        var actualJobWithNewId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == newJob.Id);
+        var actualJobWithNewId = await dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == newJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJobWithNewId);
         AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
     }
@@ -226,11 +236,15 @@ public class InsertTests
         await storage.InsertJobAsync(job);
         await storage.InsertJobAsync(newJob);
 
-        var actualJobWithOldId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == job.Id);
+        var actualJobWithOldId = await dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == job.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJobWithOldId);
         AssertHelper.AssertCreatedJob(job, actualJobWithOldId);
         
-        var actualJobWithNewId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == newJob.Id);
+        var actualJobWithNewId = await dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == newJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJobWithNewId);
         AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
     }

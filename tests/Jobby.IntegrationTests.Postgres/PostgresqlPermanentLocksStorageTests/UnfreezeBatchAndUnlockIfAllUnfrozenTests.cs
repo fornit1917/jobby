@@ -39,7 +39,7 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
             CreatedAt = DateTime.UtcNow,
         };
         await dbContext.AddRangeAsync(locker, frozen);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var unlockingStatus = await storage.UnfreezeBatchAndUnlockIfAllUnfrozen();
@@ -47,10 +47,12 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
         Assert.Null(unlockingStatus);
         var actualLocker = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == locker.Id);
+            .FirstOrDefaultAsync(x => x.Id == locker.Id, 
+                cancellationToken: TestContext.Current.CancellationToken);
         var actualFrozen = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == frozen.Id);
+            .FirstOrDefaultAsync(x => x.Id == frozen.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualLocker);
         Assert.Equal(JobStatus.Failed, actualLocker.Status);
         Assert.NotNull(actualFrozen);
@@ -95,9 +97,9 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
             GroupId = groupId,
             CreatedAt = DateTime.UtcNow.AddSeconds(-10),
         };
-        await dbContext.AddAsync(unlockingRequest);
+        await dbContext.AddAsync(unlockingRequest, TestContext.Current.CancellationToken);
         
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var unlockingStatus = await storage.UnfreezeBatchAndUnlockIfAllUnfrozen();
@@ -108,10 +110,12 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
         
         var actualLocker = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == locker.Id);
+            .FirstOrDefaultAsync(x => x.Id == locker.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         var actualFrozen = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == frozen.Id);
+            .FirstOrDefaultAsync(x => x.Id == frozen.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualLocker);
         Assert.Equal(JobStatus.Failed, actualLocker.Status);
         Assert.NotNull(actualFrozen);
@@ -119,7 +123,8 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
         
         var actualUnlockingRequest = await dbContext.UnlockingGroups
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.GroupId == groupId);
+            .FirstOrDefaultAsync(x => x.GroupId == groupId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualUnlockingRequest);
     }    
 
@@ -142,16 +147,16 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
             JobName = "test",
             CreatedAt = DateTime.UtcNow,
         };
-        await dbContext.AddAsync(locker);
+        await dbContext.AddAsync(locker, TestContext.Current.CancellationToken);
 
         var unlockingRequest = new UnlockingGroupDbModel
         {
             GroupId = groupId,
             CreatedAt = DateTime.UtcNow.AddSeconds(-10),
         };
-        await dbContext.AddAsync(unlockingRequest);
+        await dbContext.AddAsync(unlockingRequest, TestContext.Current.CancellationToken);
         
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var unlockingStatus = await storage.UnfreezeBatchAndUnlockIfAllUnfrozen();
@@ -162,12 +167,14 @@ public class UnfreezeBatchAndUnlockIfAllUnfrozenTests
         
         var actualLocker = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == locker.Id);
+            .FirstOrDefaultAsync(x => x.Id == locker.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualLocker);
         
         var actualUnlockingRequest = await dbContext.UnlockingGroups
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.GroupId == groupId);
+            .FirstOrDefaultAsync(x => x.GroupId == groupId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualUnlockingRequest);
     }
 }

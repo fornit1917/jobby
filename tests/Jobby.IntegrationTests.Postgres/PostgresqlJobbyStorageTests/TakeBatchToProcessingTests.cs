@@ -87,7 +87,7 @@ public class TakeBatchToProcessingTests
         };
 
         dbContext.Jobs.AddRange(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         var result = new List<JobExecutionModel>();
@@ -104,9 +104,13 @@ public class TakeBatchToProcessingTests
         AssertTakenToRunJob(firstExpected, result[0], request.ServerId);
         AssertTakenToRunJob(secondExpected, result[1], request.ServerId);
 
-        var firstActualFromDb = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == firstExpected.Id);
+        var firstActualFromDb = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == firstExpected.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         AssertUpdatedFields(firstExpected, firstActualFromDb);
-        var secondActualFromDb = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == secondExpected.Id);
+        var secondActualFromDb = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == secondExpected.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         AssertUpdatedFields(secondExpected, secondActualFromDb);
     }
 
@@ -206,7 +210,7 @@ public class TakeBatchToProcessingTests
         };
         
         dbContext.Jobs.AddRange(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         var result = new List<JobExecutionModel>();
@@ -266,7 +270,7 @@ public class TakeBatchToProcessingTests
         };
         
         dbContext.Jobs.AddRange(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         var result = new List<JobExecutionModel>();

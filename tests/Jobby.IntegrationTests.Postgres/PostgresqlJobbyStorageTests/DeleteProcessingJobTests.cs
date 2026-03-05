@@ -20,13 +20,16 @@ public class DeleteProcessingJobTests
             ServerId = Guid.NewGuid().ToString(),
         };
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddAsync(job);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddAsync(job, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
-        var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
+        var jobExists = await dbContext.Jobs
+            .AsNoTracking()
+            .Where(x => x.Id == job.Id)
+            .AnyAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(jobExists);
     }
 
@@ -53,15 +56,20 @@ public class DeleteProcessingJobTests
         };
         await using var dbContext = DbHelper.CreateContext();
         await dbContext.AddRangeAsync([job, nextJob]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
-        var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
+        var jobExists = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == job.Id)
+            .AnyAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(jobExists);
 
-        var actualNextJob = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == nextJob.Id).FirstOrDefaultAsync();
+        var actualNextJob = await dbContext.Jobs
+            .AsNoTracking()
+            .Where(x => x.Id == nextJob.Id)
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualNextJob);
         Assert.Equal(JobStatus.Scheduled, actualNextJob.Status);
     }
@@ -89,15 +97,19 @@ public class DeleteProcessingJobTests
         };
         await using var dbContext = DbHelper.CreateContext();
         await dbContext.AddRangeAsync([job, nextJob]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
-        var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
+        var jobExists = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == job.Id)
+            .AnyAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(jobExists);
 
-        var actualNextJob = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == nextJob.Id).FirstOrDefaultAsync();
+        var actualNextJob = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == nextJob.Id)
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualNextJob);
         Assert.Equal(JobStatus.WaitingPrev, actualNextJob.Status);
     }
@@ -125,16 +137,20 @@ public class DeleteProcessingJobTests
         };
         await using var dbContext = DbHelper.CreateContext();
         await dbContext.AddRangeAsync([job, nextJob]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         job.ServerId = "old_server";
         await storage.DeleteProcessingJobAsync(job.ToJobExecutionModel());
 
-        var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
+        var jobExists = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == job.Id)
+            .AnyAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(jobExists);
 
-        var actualNextJob = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == nextJob.Id).FirstOrDefaultAsync();
+        var actualNextJob = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == nextJob.Id)
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualNextJob);
         Assert.Equal(JobStatus.WaitingPrev, actualNextJob.Status);
     }    

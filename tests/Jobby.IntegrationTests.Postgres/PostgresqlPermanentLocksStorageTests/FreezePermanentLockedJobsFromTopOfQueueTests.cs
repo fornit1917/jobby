@@ -48,7 +48,7 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         };
         
         dbContext.AddRange([permanentLocker, permanentLockedJob, permanentLockedJobFromOtherQueue]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var frozenJobs = new List<JobWithGroupModel>();
@@ -61,13 +61,15 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         var actualPermanentLockedJob = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == permanentLockedJob.Id);
+            .FirstOrDefaultAsync(x => x.Id == permanentLockedJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualPermanentLockedJob);
         Assert.Equal(JobStatus.Frozen, actualPermanentLockedJob.Status);
         
         var actualFromOtherQueue = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == permanentLockedJobFromOtherQueue.Id);
+            .FirstOrDefaultAsync(x => x.Id == permanentLockedJobFromOtherQueue.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualFromOtherQueue);
         Assert.Equal(JobStatus.Scheduled, actualFromOtherQueue.Status);
     }
@@ -105,7 +107,7 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         };
         
         dbContext.AddRange([permanentLocker, permanentLockedJob]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var frozenJobs = new List<JobWithGroupModel>();
@@ -118,7 +120,8 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         var actualPermanentLockedJob = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == permanentLockedJob.Id);
+            .FirstOrDefaultAsync(x => x.Id == permanentLockedJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualPermanentLockedJob);
         Assert.Equal(JobStatus.Frozen, actualPermanentLockedJob.Status);
     }
@@ -165,7 +168,7 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         dbContext.AddRange([notPermanentLocker, notPermanentLockedJob]);
         
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var frozenJobs = new List<JobWithGroupModel>();
@@ -175,7 +178,8 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         var actualNotPermanentLockedJob = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == notPermanentLockedJob.Id);
+            .FirstOrDefaultAsync(x => x.Id == notPermanentLockedJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualNotPermanentLockedJob);
         Assert.Equal(JobStatus.Scheduled, actualNotPermanentLockedJob.Status);
     }
@@ -212,7 +216,7 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         dbContext.AddRange([notPermanentLocker, notPermanentLockedJob]);
         
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var frozenJobs = new List<JobWithGroupModel>();
@@ -222,7 +226,8 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         var actualNotPermanentLockedJob = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == notPermanentLockedJob.Id);
+            .FirstOrDefaultAsync(x => x.Id == notPermanentLockedJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualNotPermanentLockedJob);
         Assert.Equal(JobStatus.Scheduled, actualNotPermanentLockedJob.Status);
     }
@@ -258,7 +263,7 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         };
         
         dbContext.AddRange([permanentLocker, jobWithoutGroup]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreatePermanentLockedGroupsStorage();
         var frozenJobs = new List<JobWithGroupModel>();
@@ -268,7 +273,8 @@ public class FreezePermanentLockedJobsFromTopOfQueueTests
         
         var actualJobWithoutGroup = await dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == jobWithoutGroup.Id);
+            .FirstOrDefaultAsync(x => x.Id == jobWithoutGroup.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJobWithoutGroup);
         Assert.Equal(JobStatus.Scheduled, actualJobWithoutGroup.Status);
     }    

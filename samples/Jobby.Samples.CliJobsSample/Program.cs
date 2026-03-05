@@ -23,7 +23,7 @@ internal static class Program
             .Select(q => new QueueSettings { QueueName = q })
             .ToList();
         
-        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
+        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
         using var dataSource = NpgsqlDataSource.Create(connectionString);
 
         var loggerFactory = LoggerFactory.Create(x => x.AddConsole());

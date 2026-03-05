@@ -12,7 +12,7 @@ public static class Program
     
     public static async Task Main(string[] args)
     {
-        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
+        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
         var dataSource = NpgsqlDataSource.Create(connectionString);
 
         Console.WriteLine("Start creating jobs");

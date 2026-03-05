@@ -53,15 +53,15 @@ public class BulkDeleteRecurrentTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteRecurrentAsync([jobs[0].Id, jobs[1].Id, jobs[2].Id]);
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => jobs.Select(j => j.Id).Contains(x.Id))
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         
         Assert.Equal(2, actualJobs.Count);
         Assert.Contains(actualJobs, x => x.Id == jobs[2].Id);

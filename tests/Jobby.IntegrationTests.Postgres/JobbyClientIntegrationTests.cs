@@ -21,13 +21,17 @@ public class JobbyClientIntegrationTests
         var command = new TestJobCommand();
         var jobId = await client.EnqueueCommandAsync(command, DateTime.UtcNow.AddDays(1));
 
-        var actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        var actualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
         Assert.Equal(QueueSettings.DefaultQueueName, actualJob.QueueName);
 
         await client.CancelJobsByIdsAsync(jobId);
-        actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        actualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualJob);
     }
 
@@ -66,7 +70,9 @@ public class JobbyClientIntegrationTests
         };
         var jobId = await client.EnqueueCommandAsync(command, opts);
 
-        var actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        var actualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
         Assert.Equal(opts.QueueName, actualJob.QueueName);
@@ -75,7 +81,9 @@ public class JobbyClientIntegrationTests
         Assert.Equal(opts.StartTime.Value, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
 
         await client.CancelJobsByIdsAsync(jobId);
-        actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        actualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualJob);
     }
 
@@ -124,11 +132,15 @@ public class JobbyClientIntegrationTests
         await client.EnqueueBatchAsync(jobs);
 
         var ids = jobs.Select(x => x.Id).ToArray();
-        var actualJobsFromDb = await dbContext.Jobs.AsNoTracking().Where(x => ids.Contains(x.Id)).ToListAsync();
+        var actualJobsFromDb = await dbContext.Jobs.AsNoTracking()
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(2, actualJobsFromDb.Count);
 
         await client.CancelJobsByIdsAsync(ids);
-        actualJobsFromDb = await dbContext.Jobs.AsNoTracking().Where(x => ids.Contains(x.Id)).ToListAsync();
+        actualJobsFromDb = await dbContext.Jobs.AsNoTracking()
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(actualJobsFromDb);
     }
 
@@ -168,7 +180,7 @@ public class JobbyClientIntegrationTests
 
         var actualJobFromDb = await dbContext.Jobs.AsNoTracking()
                                              .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
-                                             .FirstOrDefaultAsync();
+                                             .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJobFromDb);
         Assert.Equal(JobbySchedulerTypes.CronFromNow, actualJobFromDb.SchedulerType);
 
@@ -176,7 +188,7 @@ public class JobbyClientIntegrationTests
 
         actualJobFromDb = await dbContext.Jobs.AsNoTracking()
                                              .Where(x => x.JobName == TestJobCommand.GetJobName())
-                                             .FirstOrDefaultAsync();
+                                             .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualJobFromDb);
     }
 
@@ -222,7 +234,7 @@ public class JobbyClientIntegrationTests
 
         var actualJob = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJob);
         Assert.Equal(TestJobCommand.GetJobName(), actualJob.JobName);
         Assert.Equal(opts.QueueName, actualJob.QueueName);
@@ -233,7 +245,7 @@ public class JobbyClientIntegrationTests
 
         actualJob = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName())
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualJob);
     }
 
@@ -289,7 +301,7 @@ public class JobbyClientIntegrationTests
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(2, actualJobs.Count);
     }
 

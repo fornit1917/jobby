@@ -54,9 +54,15 @@ public class BulkInsertTests
 
         await storage.BulkInsertJobsAsync([firstJob, secondJob, thirdJob]);
 
-        var firstActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == firstJob.Id);
-        var secondActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == secondJob.Id);
-        var thirdActualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == thirdJob.Id);
+        var firstActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == firstJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        var secondActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == secondJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        var thirdActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == thirdJob.Id, 
+                cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.NotNull(firstActualJob);
         Assert.NotNull(secondActualJob);
