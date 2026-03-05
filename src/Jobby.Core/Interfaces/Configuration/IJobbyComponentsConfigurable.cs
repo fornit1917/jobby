@@ -32,5 +32,11 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable UseMetrics();
     IJobbyComponentsConfigurable UseTracing();
     
-    IJobbyComponentsConfigurable UseScheduler(string schedulerType, IScheduler scheduler);
+    IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler>()
+        where TScheduler : ISchedule
+        where TSchedulerHandler : IScheduleHandler<TScheduler>;
+    IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler, TSchedulerSerializer>()
+        where TScheduler : ISchedule
+        where TSchedulerHandler : IScheduleHandler<TScheduler>
+        where TSchedulerSerializer : IScheduleSerializer<TScheduler>;
 }

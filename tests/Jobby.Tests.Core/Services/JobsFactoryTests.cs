@@ -204,12 +204,12 @@ public class JobsFactoryTests
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
         var schedule = "custom-schedule";
         var schedulerType = "custom-scheduler";
-        var schedulerMock = new Mock<IScheduler>();
+        var schedulerMock = new Mock<ISchedule>();
         var expectedStartTime = DateTime.UtcNow.AddMinutes(123);
         schedulerMock
             .Setup(x => x.GetNextStartTime(schedule, null))
             .Returns(expectedStartTime);
-        var schedulers = new Dictionary<string, IScheduler>
+        var schedulers = new Dictionary<string, ISchedule>
         {
             [schedulerType] = schedulerMock.Object
         };
@@ -356,7 +356,7 @@ public class JobsFactoryTests
         Assert.True(job.CanBeRestarted);
     }
     
-    private JobsFactory GetFactory(string? defaultRecurrentQueue = null, Dictionary<string, IScheduler>? schedulers = null)
+    private JobsFactory GetFactory(string? defaultRecurrentQueue = null, Dictionary<string, ISchedule>? schedulers = null)
     {
         return new JobsFactory(_guidGeneratorMock.Object,
             _serializerMock.Object,

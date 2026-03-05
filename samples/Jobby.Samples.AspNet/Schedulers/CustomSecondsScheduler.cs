@@ -2,7 +2,7 @@
 
 namespace Jobby.Samples.AspNet.Schedulers;
 
-public class CustomSecondsScheduler : IScheduler
+public class CustomSecondsScheduler : ISchedule
 {
     public const string Name = "CUSTOM_SECONDS";
     

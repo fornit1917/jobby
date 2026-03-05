@@ -60,7 +60,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _defaultRecurrentQueue;
-    private readonly Dictionary<string, IScheduler> _schedulersByType = JobbySchedulerTypes.CreateSchedulers();
+    private readonly Dictionary<string, ISchedule> _schedulersByType = JobbySchedulerTypes.CreateSchedulers();
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -333,7 +333,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         return this;
     }
 
-    public IJobbyComponentsConfigurable UseScheduler(string schedulerType, IScheduler scheduler)
+    public IJobbyComponentsConfigurable UseScheduler(string schedulerType, ISchedule scheduler)
     {
         _schedulersByType[schedulerType] = scheduler;
         return this;
@@ -362,5 +362,20 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _permanentLocksStorage = _permanentLocksStorageFactory.Invoke(this);
         }
         return _permanentLocksStorage ?? throw new InvalidBuilderConfigException("PermanentLocksStorage is not specified");
+    }
+
+    public IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler>()
+        where TScheduler : ISchedule
+        where TSchedulerHandler : IScheduleHandler<TScheduler>
+    {
+        throw new NotImplementedException();
+    }
+
+    public IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler, TSchedulerSerializer>()
+        where TScheduler : ISchedule
+        where TSchedulerHandler : IScheduleHandler<TScheduler>
+        where TSchedulerSerializer : IScheduleSerializer<TScheduler>
+    {
+        throw new NotImplementedException();
     }
 }

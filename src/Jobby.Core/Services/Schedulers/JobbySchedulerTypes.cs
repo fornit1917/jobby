@@ -9,7 +9,7 @@ public static class JobbySchedulerTypes
     public const string TimeSpanFromNow = "TIMESPAN_FROM_NOW";
     public const string TimeSpanFromPrev = "TIMESPAN_FROM_PREV";
 
-    public static Dictionary<string, IScheduler> CreateSchedulers()
+    public static Dictionary<string, ISchedule> CreateSchedulers()
     {
         return new()
         {

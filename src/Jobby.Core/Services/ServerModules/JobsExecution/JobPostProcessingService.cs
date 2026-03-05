@@ -12,7 +12,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
-    private readonly IReadOnlyDictionary<string, IScheduler> _schedulersByType;
+    private readonly IReadOnlyDictionary<string, ISchedule> _schedulersByType;
     private readonly ILogger<JobPostProcessingService> _logger;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
@@ -20,7 +20,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        IReadOnlyDictionary<string, IScheduler> schedulersByType,
+        IReadOnlyDictionary<string, ISchedule> schedulersByType,
         ILogger<JobPostProcessingService> logger)
     {
         _storage = storage;

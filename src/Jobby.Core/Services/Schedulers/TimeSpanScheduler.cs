@@ -5,7 +5,7 @@ using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers;
 
-internal class TimeSpanScheduler : IScheduler
+internal class TimeSpanScheduler : ISchedule
 {
     private readonly ITimerService _timerService;
     private readonly bool _calculateNextFromPrev;

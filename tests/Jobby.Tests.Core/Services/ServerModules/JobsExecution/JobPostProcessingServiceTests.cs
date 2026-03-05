@@ -14,7 +14,7 @@ public class JobPostProcessingServiceTests
     private readonly Mock<IJobbyStorage> _storageMock;
     private readonly Mock<IJobCompletionService> _completionServiceMock;
     private readonly Mock<ILogger<JobPostProcessingService>> _loggerMock;
-    private readonly Mock<IScheduler> _schedulerMock;
+    private readonly Mock<ISchedule> _schedulerMock;
 
     private readonly JobPostProcessingService _postProcessingService;
 
@@ -25,8 +25,8 @@ public class JobPostProcessingServiceTests
         _storageMock = new Mock<IJobbyStorage>();
         _completionServiceMock = new Mock<IJobCompletionService>();
         _loggerMock = new Mock<ILogger<JobPostProcessingService>>();
-        _schedulerMock = new Mock<IScheduler>();
-        var schedulers = new Dictionary<string, IScheduler>
+        _schedulerMock = new Mock<ISchedule>();
+        var schedulers = new Dictionary<string, ISchedule>
         {
             [SchedulerType] = _schedulerMock.Object,
         };
