@@ -31,14 +31,15 @@ public class BulkDeleteNotStartedJobsTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteNotStartedJobsAsync(jobs.Select(x => x.Id).ToList());
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(actualJobs);
     }
 
@@ -74,14 +75,15 @@ public class BulkDeleteNotStartedJobsTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteNotStartedJobsAsync(jobs.Select(x => x.Id).ToList());
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id || x.Id == jobs[2].Id).ToListAsync();
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id || x.Id == jobs[2].Id)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(3, actualJobs.Count);
     }    
 }

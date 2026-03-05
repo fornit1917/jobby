@@ -38,10 +38,12 @@ public class JobbyServerIntegrationTests
         var jobsNotCompletedInDb = true;
         for (int i = 0; i < 50; i++)
         {
-            jobsNotCompletedInDb = await dbContext.Jobs.AnyAsync(x => x.Id == jobId1 || x.Id == jobId2);
+            jobsNotCompletedInDb = await dbContext.Jobs
+                .AnyAsync(x => x.Id == jobId1 || x.Id == jobId2,
+                    cancellationToken: TestContext.Current.CancellationToken);
             if (jobsNotCompletedInDb)
             {
-                await Task.Delay(50);
+                await Task.Delay(50, TestContext.Current.CancellationToken);
             }
         }
         Assert.False(jobsNotCompletedInDb);
@@ -78,10 +80,12 @@ public class JobbyServerIntegrationTests
         var jobsNotCompletedInDb = true;
         for (int i = 0; i < 50; i++)
         {
-            jobsNotCompletedInDb = await dbContext.Jobs.AnyAsync(x => x.Id == jobId1 || x.Id == jobId2);
+            jobsNotCompletedInDb = await dbContext.Jobs
+                .AnyAsync(x => x.Id == jobId1 || x.Id == jobId2,
+                    cancellationToken: TestContext.Current.CancellationToken);
             if (jobsNotCompletedInDb)
             {
-                await Task.Delay(50);
+                await Task.Delay(50, TestContext.Current.CancellationToken);
             }
         }
         Assert.False(jobsNotCompletedInDb);
@@ -112,16 +116,19 @@ public class JobbyServerIntegrationTests
         for (int i = 0; i < 50; i++)
         {
             var jobNotCompletedInDb = await dbContext.Jobs
-                .AnyAsync(x => (x.Id == jobId1 || x.Id == jobId2) && x.Status != JobStatus.Completed);
+                .AnyAsync(x => (x.Id == jobId1 || x.Id == jobId2) && x.Status != JobStatus.Completed,
+                    cancellationToken: TestContext.Current.CancellationToken);
             if (jobNotCompletedInDb)
             {
-                await Task.Delay(50);
+                await Task.Delay(50, TestContext.Current.CancellationToken);
             }
         }
-        var actualJob1 = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId1);
+        var actualJob1 = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId1, cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJob1);
         Assert.Equal(JobStatus.Completed, actualJob1.Status);
-        var actualJob2 = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId2);
+        var actualJob2 = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId2, cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJob2);
         Assert.Equal(JobStatus.Completed, actualJob1.Status);
         Assert.True(_executedCommands.HasCommandWithId(command1.UniqueId));
@@ -149,10 +156,12 @@ public class JobbyServerIntegrationTests
         var jobNotCompletedInDb = true;
         for (int i = 0; i < 50; i++)
         {
-            jobNotCompletedInDb = await dbContext.Jobs.AnyAsync(x => x.Id == jobId);
+            jobNotCompletedInDb = await dbContext.Jobs
+                .AnyAsync(x => x.Id == jobId,
+                    cancellationToken: TestContext.Current.CancellationToken);
             if (jobNotCompletedInDb)
             {
-                await Task.Delay(50);
+                await Task.Delay(50, TestContext.Current.CancellationToken);
             }
         }
         Assert.False(jobNotCompletedInDb);
@@ -179,13 +188,17 @@ public class JobbyServerIntegrationTests
 
         for (int i = 0; i < 50; i++)
         {
-            var jobNotCompletedInDb = await dbContext.Jobs.AnyAsync(x => x.Id == jobId && x.Status != JobStatus.Completed);
+            var jobNotCompletedInDb = await dbContext.Jobs
+                .AnyAsync(x => x.Id == jobId && x.Status != JobStatus.Completed,
+                    cancellationToken: TestContext.Current.CancellationToken);
             if (jobNotCompletedInDb)
             {
-                await Task.Delay(50);
+                await Task.Delay(50, TestContext.Current.CancellationToken);
             }
         }
-        var actualJob = await dbContext.Jobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == jobId);
+        var actualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == jobId,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJob);
         Assert.Equal(JobStatus.Completed, actualJob.Status);
         Assert.True(_executedCommands.HasCommandWithId(command.UniqueId));
@@ -230,9 +243,10 @@ public class JobbyServerIntegrationTests
         bool isNextJobFrozen = false;
         for (int i = 0; i < 20; i++)
         {
-            await Task.Delay(500);
+            await Task.Delay(500, TestContext.Current.CancellationToken);
             isNextJobFrozen = await dbContext.Jobs
-                .AnyAsync(x => x.Id == nextJobId && x.Status == JobStatus.Frozen);
+                .AnyAsync(x => x.Id == nextJobId && x.Status == JobStatus.Frozen,
+                    cancellationToken: TestContext.Current.CancellationToken);
             if (isNextJobFrozen)
                 break;
         }
@@ -246,12 +260,12 @@ public class JobbyServerIntegrationTests
             CreatedAt = DateTime.UtcNow,
         };
         dbContext.UnlockingGroups.Add(unlockingRequest);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var isNextJobExecuted = false;
         for (int i = 0; i < 10; i++)
         {
-            await Task.Delay(1000);
+            await Task.Delay(1000, TestContext.Current.CancellationToken);
             isNextJobExecuted = _executedCommands.HasCommandWithId(nextJobCommand.UniqueId);
             if (isNextJobExecuted)
                 break;

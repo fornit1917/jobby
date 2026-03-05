@@ -103,7 +103,7 @@ public class PermanentLockCheckServerModuleTests
         serverModule.Start();
         for (int i = 0; i < 20; i++)
         {
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             if (freezingCalled)
                 break;
         }
@@ -130,7 +130,7 @@ public class PermanentLockCheckServerModuleTests
         serverModule.Start();
         for (int i = 0; i < 20; i++)
         {
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
             if (handleUnlockingCalled)
                 break;
         }

@@ -158,7 +158,7 @@ internal class PostgresqlPermanentLocksStorage : IPermanentLocksStorage
         await using var lockCmd = new NpgsqlCommand(_globalLockCommand, conn, tx);
         await lockCmd.ExecuteNonQueryAsync();
 
-        GroupUnlockingStatusModel unlockingStatus = null;
+        GroupUnlockingStatusModel? unlockingStatus = null;
         await using var unlockCmd = new NpgsqlCommand(_unlockCommand, conn, tx);
         await using (var reader = await unlockCmd.ExecuteReaderAsync())
         {

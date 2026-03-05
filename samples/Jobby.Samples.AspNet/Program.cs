@@ -34,7 +34,7 @@ public static class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
+        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
         builder.Services.AddSingleton<NpgsqlDataSource>(NpgsqlDataSource.Create(connectionString));
 
         builder.Services.AddDbContext<JobbySampleDbContext>((sp, opts) =>

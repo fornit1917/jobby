@@ -42,7 +42,7 @@ public class AvailabilityCheckServerModuleTests
         {
             if (heartbeatSent && usedLastHeartbeatForDeleteServers.HasValue)
                 break;
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
         availabilityCheckServerModule.SendStopSignal();
         

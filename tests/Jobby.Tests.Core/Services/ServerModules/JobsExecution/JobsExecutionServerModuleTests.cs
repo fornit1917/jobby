@@ -120,7 +120,7 @@ public class JobsExecutionServerModuleTests
         {
             if (executed)
                 break;
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
         jobsExecutionServerModule.SendStopSignal();
         
@@ -149,7 +149,7 @@ public class JobsExecutionServerModuleTests
         {
             if (postprocessingRetried)
                 break;
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
         jobsExecutionServerModule.SendStopSignal();
         
@@ -190,7 +190,7 @@ public class JobsExecutionServerModuleTests
         {
             if (calledTwoTimes)
                 break;
-            await Task.Delay(10);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
         }
         jobsExecutionServerModule.SendStopSignal();
         

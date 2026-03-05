@@ -21,13 +21,15 @@ public class DeleteExclusiveByNameTests
             Status = JobStatus.Scheduled,
         };
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddAsync(job);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddAsync(job, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.DeleteExclusiveByNameAsync(job.JobName);
 
-        var jobExists = await dbContext.Jobs.AsNoTracking().Where(x => x.Id == job.Id).AnyAsync();
+        var jobExists = await dbContext.Jobs.AsNoTracking()
+            .Where(x => x.Id == job.Id)
+            .AnyAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(jobExists);
     }
 

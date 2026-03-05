@@ -34,14 +34,15 @@ public class BulkDeleteProcessingJobsTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(actualJobs);
     }
 
@@ -95,19 +96,24 @@ public class BulkDeleteProcessingJobsTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs.Concat(nextJobs));
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobs), TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Empty(actualJobs);
 
-        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[0].Id);
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == nextJobs[0].Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.Scheduled, firstActualNextJob.Status);
-        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == nextJobs[1].Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.Scheduled, secondActualNextJob.Status);
     }
 
@@ -161,22 +167,27 @@ public class BulkDeleteProcessingJobsTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs.Concat(nextJobs));
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobs), TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch(serverId));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(2, actualJobs.Count);
         Assert.Contains(actualJobs, x => x.Id == jobs[0].Id && x.Status == JobStatus.Completed);
         Assert.Contains(actualJobs, x => x.Id == jobs[1].Id && x.Status == JobStatus.Completed);
 
-        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[0].Id);
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == nextJobs[0].Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.WaitingPrev, firstActualNextJob.Status);
-        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == nextJobs[1].Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.WaitingPrev, secondActualNextJob.Status);
     }
 
@@ -229,22 +240,27 @@ public class BulkDeleteProcessingJobsTests
         };
 
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddRangeAsync(jobs.Concat(nextJobs));
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddRangeAsync(jobs.Concat(nextJobs), TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.BulkDeleteProcessingJobsAsync(jobs.ToCompleteJobsBatch("old_server"));
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
-            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id).ToListAsync();
+            .Where(x => x.Id == jobs[0].Id || x.Id == jobs[1].Id)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(2, actualJobs.Count);
         Assert.Contains(actualJobs, x => x.Id == jobs[0].Id && x.Status == JobStatus.Processing);
         Assert.Contains(actualJobs, x => x.Id == jobs[1].Id && x.Status == JobStatus.Processing);
 
-        var firstActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[0].Id);
+        var firstActualNextJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == nextJobs[0].Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.WaitingPrev, firstActualNextJob.Status);
-        var secondActualNextJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == nextJobs[1].Id);
+        var secondActualNextJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == nextJobs[1].Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.WaitingPrev, secondActualNextJob.Status);
     }
 }
