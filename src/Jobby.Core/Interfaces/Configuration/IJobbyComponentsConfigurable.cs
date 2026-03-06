@@ -38,5 +38,5 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler, TSchedulerSerializer>()
         where TScheduler : ISchedule
         where TSchedulerHandler : IScheduleHandler<TScheduler>
-        where TSchedulerSerializer : IScheduleSerializer<TScheduler>;
+        where TSchedulerSerializer : IJobParamSerializer<TScheduler>;
 }

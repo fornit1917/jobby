@@ -60,7 +60,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _defaultRecurrentQueue;
-    private readonly Dictionary<string, ISchedule> _schedulersByType = JobbySchedulerTypes.CreateSchedulers();
+    private readonly SchedulersBuilder SchedulersBuilder = new SchedulersBuilder();
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -101,8 +101,10 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         var postProcessingService = new JobPostProcessingService(storage,
             completionService,
-            _schedulersByType.ToFrozenDictionary(),
-            LoggerFactory.CreateLogger<JobPostProcessingService>());
+            SchedulersBuilder.Build(),
+            Serializer,
+            LoggerFactory.CreateLogger<JobPostProcessingService>()
+        );
 
         var executionService = new JobExecutionService(_scopeFactory,
             _jobsRegistry,
@@ -152,7 +154,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     {
         _jobsFactory ??= new JobsFactory(GuidGenerator,
             Serializer,
-            _schedulersByType.ToFrozenDictionary(),
+            SchedulersBuilder.Build(),
             _defaultRecurrentQueue);
         
         return _jobsFactory;

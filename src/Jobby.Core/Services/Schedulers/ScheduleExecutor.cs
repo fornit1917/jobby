@@ -1,24 +1,26 @@
-﻿using Jobby.Core.Interfaces.Schedulers;
+﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Models;
 using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers;
-internal class ScheduleExecutor<TSchedule, TScheduleHandler, TScheduleSerializer> : IScheduleExecutor
+internal class ScheduleExecutor<TSchedule> : IScheduleExecutor
     where TSchedule : ISchedule
-    where TScheduleHandler : IScheduleHandler<TSchedule>
-    where TScheduleSerializer : IScheduleSerializer<TSchedule>
 {
-    private readonly IScheduleSerializer<TSchedule> _scheduleSerializer;
     private readonly IScheduleHandler<TSchedule> _scheduleHandler;
+    private readonly IJobParamSerializer<TSchedule>? _scheduleSerializer;
 
-    public ScheduleExecutor(IScheduleSerializer<TSchedule> scheduleSerializer, IScheduleHandler<TSchedule> scheduleHandler)
+    public ScheduleExecutor(IScheduleHandler<TSchedule> scheduleHandler, IJobParamSerializer<TSchedule>? scheduleSerializer = null)
     {
-        _scheduleSerializer = scheduleSerializer ?? throw new ArgumentNullException(nameof(scheduleSerializer));
         _scheduleHandler = scheduleHandler ?? throw new ArgumentNullException(nameof(scheduleHandler));
+        _scheduleSerializer = scheduleSerializer);
     }
 
-    public bool TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, out DateTime nextStartTime)
+    public bool TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, IJobParamSerializer defaultSerailizer, out DateTime nextStartTime)
     {
-        if (!_scheduleSerializer.TryDeserialize(schedule, out var scheduleOptions))
+        var serializer = _scheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(defaultSerailizer);
+
+        if (!serializer.TryDeserializeJobParam(schedule, out var scheduleOptions))
         {
             nextStartTime = default;
             return false;
