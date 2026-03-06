@@ -1,5 +1,9 @@
-﻿using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Helpers;
+using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models;
+using Jobby.Core.Services.Schedulers.Cron;
+using Jobby.Core.Services.Schedulers.CronSimple;
 
 namespace Jobby.Core.Services;
 
@@ -85,39 +89,49 @@ internal class JobbyClient : IJobbyClient
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
-    
+
     public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
         string cron,
+        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
-        var job = _jobFactory.CreateRecurrent(command, cron, opts);
+        var cronExpression = CronHelper.Parse(cron);
+
+        var job = _jobFactory.CreateRecurrent(command, new CronSimpleSchedule(cronExpression), opts);
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
 
-    public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
-        string schedule,
-        string schedulerType,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    public async Task<Guid> ScheduleRecurrentAsync<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+        RecurrentJobOpts opts = default)
+        where TCommand : IJobCommand
+        where TSchedule : ISchedule
     {
-        var job = _jobFactory.CreateRecurrent(command, schedule, schedulerType, opts);
+        var job = _jobFactory.CreateRecurrent(command, schedule, opts);
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
 
     public Guid ScheduleRecurrent<TCommand>(TCommand command,
         string cron,
+        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
-        var job = _jobFactory.CreateRecurrent(command, cron, opts);
+        if (!CronHelper.TryParse(cron, out var cronExpression))
+            throw new ArgumentException($"{nameof(cron)} has invalid cron format: {cron}");
+
+        var job = _jobFactory.CreateRecurrent(command, new CronSchedule(cronExpression, calculateNextFromPrev), opts);
         _storage.InsertJob(job);
         return job.Id;
     }
     
-    public Guid ScheduleRecurrent<TCommand>(TCommand command, string schedule, string schedulerType,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    public Guid ScheduleRecurrent<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+        RecurrentJobOpts opts = default)
+        where TCommand : IJobCommand
+        where TSchedule : ISchedule
     {
-        var job = _jobFactory.CreateRecurrent(command, schedule, schedulerType, opts);
+        var job = _jobFactory.CreateRecurrent(command, schedule, opts);
         _storage.InsertJob(job);
-        return job.Id;    }
+        return job.Id;
+    }
 }

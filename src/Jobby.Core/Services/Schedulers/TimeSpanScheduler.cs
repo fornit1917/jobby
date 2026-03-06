@@ -4,7 +4,7 @@ using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers;
-
+/*
 internal class TimeSpanScheduler : ISchedule
 {
     private readonly ITimerService _timerService;
@@ -32,3 +32,4 @@ internal class TimeSpanScheduler : ISchedule
         return from.Add(span);
     }
 }
+*/

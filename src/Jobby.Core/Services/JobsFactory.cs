@@ -62,23 +62,25 @@ internal class JobsFactory : IJobsFactory
         return Create(command, new JobOpts { StartTime = startTime });
     }
 
-    public JobCreationModel CreateRecurrent<TCommand>(TCommand command,
-        string cron,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
-    {
-        return CreateRecurrent(command, cron, JobbySchedulerTypes.CronFromNow, opts);
-    }
 
-    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, 
-        string schedule,
-        string schedulerType,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    public JobCreationModel CreateRecurrent<TCommand, TSchedule>(TCommand command,
+        TSchedule schedule,
+        RecurrentJobOpts opts = default
+    )
+        where TCommand : IJobCommand
+        where TSchedule : ISchedule
     {
+        var schedulerType = TSchedule.GetSchedulerType();
+
         if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
-        {
             throw new UnknownSchedulerTypeException($"Unknown scheduler type: {schedulerType}");
-        }
-        
+
+        if (scheduler is not ScheduleExecutor<TSchedule> { } schedulerExecutor)
+            throw new Exception($"Invalid scheduler executor for scheduler type {schedulerType}. Expected {typeof(ScheduleExecutor<TSchedule>)} but found {scheduler.GetType()}");
+
+        var serializer = schedulerExecutor.ScheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(_serializer);
+        var scheduleParam = serializer.SerializeJobParam(schedule);
+
         var jobName = TCommand.GetJobName();
         var defaultOpts = default(RecurrentJobOpts);
         if (command is IHasDefaultJobOptions hasDefaultOpts)
@@ -91,14 +93,14 @@ internal class JobsFactory : IJobsFactory
             Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
             JobName = jobName,
-            Schedule = schedule,
+            Schedule = scheduleParam,
             SchedulerType = schedulerType,
             IsExclusive = opts.IsExclusive ?? defaultOpts.IsExclusive ?? true,
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = opts.StartTime 
                                ?? defaultOpts.StartTime
-                               ?? scheduler.GetNextStartTime(schedule, previousScheduledStartTime: null),
+                               ?? schedulerExecutor.ScheduleHandler.GetFirstStartTime(schedule, TimerService.Instance.GetUtcNow()),
             CanBeRestarted = opts.CanBeRestartedIfServerGoesDown
                              ??  defaultOpts.CanBeRestartedIfServerGoesDown
                              ?? true,

@@ -1,23 +1,28 @@
-﻿using Cronos;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Cronos;
+
 using Jobby.Core.Exceptions;
 
 namespace Jobby.Core.Helpers;
 
 public static class CronHelper
 {
-    public static DateTime GetNext(string cron, DateTime from)
+    public static DateTime GetNext(this CronExpression cronExpression, DateTime from)
+        => cronExpression.GetNextOccurrence(from) ??
+        throw new InvalidScheduleException($"Could not calculate next occurence by cron expression '{cronExpression}' from {from}");
+
+    public static CronExpression Parse(string cron)
+    {
+        return TryParse(cron, out var cronExpression) ?
+            cronExpression :
+            throw new ArgumentException($"{nameof(cron)} has invalid cron format: {cron}");
+    }
+
+    public static bool TryParse(string cron, [NotNullWhen(true)] out CronExpression? cronExpression)
     {
         var format = GetFormat(cron);
-        if (!CronExpression.TryParse(cron, format, out var parsedCron))
-        {
-            throw new InvalidScheduleException($"Could not parse cron expression '{cron}'");
-        }
-        var next = parsedCron.GetNextOccurrence(from);
-        if (!next.HasValue)
-        {
-            throw new InvalidScheduleException($"Could not calculate next occurence by cron expression '{cron}'");
-        }
-        return next.Value;
+        return CronExpression.TryParse(cron, format, out cronExpression);
     }
 
     private static CronFormat GetFormat(string cron)

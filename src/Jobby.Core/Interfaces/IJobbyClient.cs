@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Models;
+﻿using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Models;
 
 namespace Jobby.Core.Interfaces;
 
@@ -17,22 +18,24 @@ public interface IJobbyClient
 
     Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
         string cron,
+        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand;
-    
-    Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command, 
-        string schedule, 
-        string schedulerType, 
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand;
-    
+
+    Task<Guid> ScheduleRecurrentAsync<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+        RecurrentJobOpts opts = default)
+        where TCommand : IJobCommand
+        where TSchedule : ISchedule;
+
     Guid ScheduleRecurrent<TCommand>(TCommand command, 
-        string cron, 
+        string cron,
+        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand;
     
-    Guid ScheduleRecurrent<TCommand>(TCommand command, 
-        string schedule, 
-        string schedulerType, 
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand;
-    
+    Guid ScheduleRecurrent<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+        RecurrentJobOpts opts = default)
+        where TCommand : IJobCommand
+        where TSchedule : ISchedule;    
+
     Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;
     void CancelRecurrent<TCommand>() where TCommand : IJobCommand;
     

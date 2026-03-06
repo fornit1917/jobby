@@ -1,10 +1,12 @@
 ﻿using System.Collections.Concurrent;
+
+using Microsoft.Extensions.Logging;
+
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
-using Jobby.Core.Services.Schedulers;
-using Microsoft.Extensions.Logging;
+using Jobby.Core.Services.Schedulers.CronSimple;
 
 namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
@@ -124,7 +126,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         ArgumentNullException.ThrowIfNull(job.Schedule, nameof(job.Schedule));
 
         DateTime nextStartAt;
-        var schedulerType = job.SchedulerType ?? JobbySchedulerTypes.CronFromNow;
+        var schedulerType = job.SchedulerType ?? DefaultScheduler.SCHEDULER_TYPE;
 
         var utcNow = TimerService.Instance.GetUtcNow();
         if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))

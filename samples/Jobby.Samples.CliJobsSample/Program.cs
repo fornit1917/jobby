@@ -148,7 +148,7 @@ internal static class Program
 
     private static void CreateRecurrent(IJobbyClient jobbyClient)
     {
-        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand(), "*/3 * * * * *", new RecurrentJobOpts
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand(), "*/3 * * * * *", opts: new RecurrentJobOpts
         {
             QueueName = "q1",
         });
@@ -182,13 +182,13 @@ internal static class Program
 
     private static void CreateRecurrentNotExclusive(IJobbyClient jobbyClient)
     {
-        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand { Value = "1" }, "*/2 * * * * *", new()
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand { Value = "1" }, "*/2 * * * * *", opts: new()
         {
             QueueName = "q1",
             IsExclusive = false
         });
         
-        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand() { Value = "2" }, "*/3 * * * * *", new()
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand() { Value = "2" }, "*/3 * * * * *", opts: new()
         {
             QueueName = "q1",
             IsExclusive = false

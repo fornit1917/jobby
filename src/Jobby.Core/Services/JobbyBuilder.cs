@@ -1,17 +1,16 @@
-﻿using Jobby.Core.Exceptions;
+﻿using System.Collections.Frozen;
+using System.Reflection;
+using System.Text.Json;
+
+using Microsoft.Extensions.Logging;
+
+using Jobby.Core.Exceptions;
 using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Configuration;
 using Jobby.Core.Models;
 using Jobby.Core.Services.HandlerPipeline;
 using Jobby.Core.Services.Observability;
-using Microsoft.Extensions.Logging;
-using System.Collections.Frozen;
-using System.Reflection;
-using System.Text.Json;
-using Jobby.Core.Interfaces.Queues;
-using Jobby.Core.Interfaces.Schedulers;
-using Jobby.Core.Interfaces.ServerModules;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
 using Jobby.Core.Services.Queues;
@@ -60,8 +59,14 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _defaultRecurrentQueue;
-    private readonly SchedulersBuilder SchedulersBuilder = new SchedulersBuilder();
-    
+    private SchedulersBuilder _schedulers { get; } = new SchedulersBuilder();
+
+    public IJobbyComponentsConfigurable UseSchedulers(Action<SchedulersBuilder> cfg)
+    {
+        cfg.Invoke(_schedulers);
+        return this;
+    }
+
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
     public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorsByJobName
@@ -101,7 +106,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         var postProcessingService = new JobPostProcessingService(storage,
             completionService,
-            SchedulersBuilder.Build(),
+            _schedulers.Build(),
             Serializer,
             LoggerFactory.CreateLogger<JobPostProcessingService>()
         );
@@ -154,7 +159,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     {
         _jobsFactory ??= new JobsFactory(GuidGenerator,
             Serializer,
-            SchedulersBuilder.Build(),
+            _schedulers.Build(),
             _defaultRecurrentQueue);
         
         return _jobsFactory;
@@ -335,12 +340,6 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         return this;
     }
 
-    public IJobbyComponentsConfigurable UseScheduler(string schedulerType, ISchedule scheduler)
-    {
-        _schedulersByType[schedulerType] = scheduler;
-        return this;
-    }
-
     public IJobbyJobsConfigurable UseQueueForAllRecurrent(string queueName)
     {
         _defaultRecurrentQueue = queueName;
@@ -364,20 +363,5 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _permanentLocksStorage = _permanentLocksStorageFactory.Invoke(this);
         }
         return _permanentLocksStorage ?? throw new InvalidBuilderConfigException("PermanentLocksStorage is not specified");
-    }
-
-    public IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler>()
-        where TScheduler : ISchedule
-        where TSchedulerHandler : IScheduleHandler<TScheduler>
-    {
-        throw new NotImplementedException();
-    }
-
-    public IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler, TSchedulerSerializer>()
-        where TScheduler : ISchedule
-        where TSchedulerHandler : IScheduleHandler<TScheduler>
-        where TSchedulerSerializer : IScheduleSerializer<TScheduler>
-    {
-        throw new NotImplementedException();
     }
 }

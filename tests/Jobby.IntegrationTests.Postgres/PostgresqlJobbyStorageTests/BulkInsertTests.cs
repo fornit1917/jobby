@@ -1,9 +1,10 @@
-﻿using Jobby.Core.Interfaces;
+﻿using Microsoft.EntityFrameworkCore;
+
 using Jobby.Core.Models;
-using Jobby.Core.Services;
 using Jobby.IntegrationTests.Postgres.Helpers;
 using Jobby.TestsUtils.Jobs;
-using Microsoft.EntityFrameworkCore;
+
+using static Jobby.IntegrationTests.Postgres.Helpers.Factories;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
@@ -19,7 +20,7 @@ public class BulkInsertTests
 
         var factory = CreateJobsFactory();
         
-        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"), new RecurrentJobOpts
         {
             IsExclusive = isExclusiveRecurrent,
             CanBeRestartedIfServerGoesDown = true,
@@ -75,7 +76,7 @@ public class BulkInsertTests
 
         var factory = CreateJobsFactory();
         
-        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"), new RecurrentJobOpts
         {
             IsExclusive = isExclusiveRecurrent,
             CanBeRestartedIfServerGoesDown = true,
@@ -120,9 +121,16 @@ public class BulkInsertTests
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
         AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
     }
-
+    /*
     private IJobsFactory CreateJobsFactory()
     {
         return new JobbyBuilder().CreateJobsFactory();
     }
+
+    private static CronSimpleSchedule CRON_SIMPLE_SCHEDULE(string cron)
+    {
+        var cronExpression = CronHelper.Parse(cron);
+        return new CronSimpleSchedule(cronExpression);
+    }
+    */
 }

@@ -73,10 +73,10 @@ public class JobsController
     }
 
     [HttpPost("schedule-recurrent-with-custom-scheduler")]
-    public async Task<string> ScheduleRecurrentWithCustomScheduler([FromBody] string secondsInterval)
+    public async Task<string> ScheduleRecurrentWithCustomScheduler([FromBody] int secondsInterval)
     {
         var command = new CustomSchedulerRecurrentJobCommand();
-        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, secondsInterval, CustomSecondsScheduler.Name, new RecurrentJobOpts()
+        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, new CustomSecondsScheduler { Seconds = secondsInterval }, new RecurrentJobOpts()
         {
             StartTime = DateTime.UtcNow,
         });

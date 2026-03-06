@@ -1,9 +1,9 @@
-﻿using Jobby.Core.Interfaces;
-using Jobby.Core.Models;
-using Jobby.Core.Services;
+﻿using Jobby.Core.Models;
 using Jobby.IntegrationTests.Postgres.Helpers;
 using Jobby.TestsUtils.Jobs;
 using Microsoft.EntityFrameworkCore;
+
+using static Jobby.IntegrationTests.Postgres.Helpers.Factories;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
@@ -19,7 +19,7 @@ public class InsertTests
 
         var factory = CreateJobsFactory();
         
-        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"), new RecurrentJobOpts
         {
             IsExclusive = isExclusiveRecurrent,
             CanBeRestartedIfServerGoesDown = true,
@@ -76,7 +76,7 @@ public class InsertTests
         
         var factory = CreateJobsFactory();
         
-        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"), new RecurrentJobOpts
         {
             IsExclusive = isExclusiveRecurrent,
             CanBeRestartedIfServerGoesDown = true,
@@ -130,7 +130,7 @@ public class InsertTests
         await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
         var factory = CreateJobsFactory();
 
-        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 CanBeRestartedIfServerGoesDown = true,
@@ -139,7 +139,7 @@ public class InsertTests
                 SerializableGroupId = "old_gid"
             });
         
-        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 CanBeRestartedIfServerGoesDown = false,
@@ -166,7 +166,7 @@ public class InsertTests
         
         var factory = CreateJobsFactory();
 
-        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 CanBeRestartedIfServerGoesDown = true,
@@ -175,7 +175,7 @@ public class InsertTests
                 SerializableGroupId = "old_gid"
             });
         
-        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 CanBeRestartedIfServerGoesDown = false,
@@ -202,7 +202,7 @@ public class InsertTests
         
         var factory = CreateJobsFactory();
 
-        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 IsExclusive = false,
@@ -212,7 +212,7 @@ public class InsertTests
                 SerializableGroupId = "old_gid"
             });
         
-        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 IsExclusive = false,
@@ -242,7 +242,7 @@ public class InsertTests
         
         var factory = CreateJobsFactory();
 
-        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 IsExclusive = false,
@@ -252,7 +252,7 @@ public class InsertTests
                 SerializableGroupId = "old_gid"
             });
         
-        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, CRON_SIMPLE_SCHEDULE("*/10 * * * *"),
             new RecurrentJobOpts
             {
                 IsExclusive = false,
@@ -273,10 +273,5 @@ public class InsertTests
         var actualJobWithNewId = dbContext.Jobs.FirstOrDefault(x => x.Id == newJob.Id);
         Assert.NotNull(actualJobWithNewId);
         AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
-    }
-    
-    private IJobsFactory CreateJobsFactory()
-    {
-        return new JobbyBuilder().CreateJobsFactory();
     }
 }

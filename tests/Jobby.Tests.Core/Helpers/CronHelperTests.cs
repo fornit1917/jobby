@@ -13,7 +13,7 @@ public class CronHelperTests
         var from = DateTime.UtcNow;
         var expectedResult = CronExpression.Parse(cron, CronFormat.Standard).GetNextOccurrence(from);
 
-        var actualResult = CronHelper.GetNext(cron, from);
+        var actualResult = CronHelper.Parse(cron).GetNext(from);
 
         Assert.Equal(expectedResult, actualResult);
     }
@@ -25,7 +25,7 @@ public class CronHelperTests
         var from = DateTime.UtcNow;
         var expectedResult = CronExpression.Parse(cron, CronFormat.IncludeSeconds).GetNextOccurrence(from);
 
-        var actualResult = CronHelper.GetNext(cron, from);
+        var actualResult = CronHelper.Parse(cron).GetNext(from);
 
         Assert.Equal(expectedResult, actualResult);
     }

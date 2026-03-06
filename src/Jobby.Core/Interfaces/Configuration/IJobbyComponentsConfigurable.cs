@@ -1,8 +1,10 @@
-﻿using Jobby.Core.Models;
+﻿using System.Text.Json;
+
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using Jobby.Core.Interfaces.Schedulers;
+
+using Jobby.Core.Models;
 using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
+using Jobby.Core.Services.Schedulers;
 
 namespace Jobby.Core.Interfaces.Configuration;
 
@@ -32,11 +34,5 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable UseMetrics();
     IJobbyComponentsConfigurable UseTracing();
     
-    IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler>()
-        where TScheduler : ISchedule
-        where TSchedulerHandler : IScheduleHandler<TScheduler>;
-    IJobbyComponentsConfigurable UseScheduler<TScheduler, TSchedulerHandler, TSchedulerSerializer>()
-        where TScheduler : ISchedule
-        where TSchedulerHandler : IScheduleHandler<TScheduler>
-        where TSchedulerSerializer : IJobParamSerializer<TScheduler>;
+    IJobbyComponentsConfigurable UseSchedulers(Action<SchedulersBuilder> cfg);
 }

@@ -4,6 +4,8 @@ using Jobby.Core.Services;
 using Jobby.TestsUtils.Jobs;
 using Moq;
 
+using static Jobby.Tests.Core.Helpers.Factories;
+
 namespace Jobby.Tests.Core.Services;
 
 public class JobbyClientTests
@@ -164,7 +166,7 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, default)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), default)).Returns(job);
 
         _client.ScheduleRecurrent(command, cron);
 
@@ -177,7 +179,7 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, default)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), default)).Returns(job);
 
         await _client.ScheduleRecurrentAsync(command, cron);
 
@@ -191,9 +193,9 @@ public class JobbyClientTests
         var cron = "*/3 * * * * *";
         var opts = new RecurrentJobOpts { QueueName = "q" };
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, opts)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts)).Returns(job);
 
-        _client.ScheduleRecurrent(command, cron, opts);
+        _client.ScheduleRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts);
 
         _storageMock.Verify(x => x.InsertJob(job));
     }
@@ -205,9 +207,9 @@ public class JobbyClientTests
         var cron = "*/3 * * * * *";
         var opts = new RecurrentJobOpts { QueueName = "q" };
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, cron, opts)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts)).Returns(job);
 
-        await _client.ScheduleRecurrentAsync(command, cron, opts);
+        await _client.ScheduleRecurrentAsync(command, CRON_SIMPLE_SCHEDULE(cron), opts);
 
         _storageMock.Verify(x => x.InsertJobAsync(job));
     }

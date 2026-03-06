@@ -2,10 +2,12 @@
 using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Jobby.Core.Services.Schedulers;
+using Jobby.Core.Services.Schedulers.CronSimple;
 using Jobby.IntegrationTests.Postgres.Helpers;
 using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.TestsUtils.Jobs;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace Jobby.IntegrationTests.Postgres;
 
@@ -164,13 +166,14 @@ public class JobbyClientIntegrationTests
 
         var command = new TestJobCommand();
         var cron = "0 3 1 1 *";
+
         await client.ScheduleRecurrentAsync(command, cron);
 
         var actualJobFromDb = await dbContext.Jobs.AsNoTracking()
                                              .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
                                              .FirstOrDefaultAsync();
         Assert.NotNull(actualJobFromDb);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, actualJobFromDb.SchedulerType);
+        Assert.Equal(DefaultScheduler.SCHEDULER_TYPE, actualJobFromDb.SchedulerType);
 
         await client.CancelRecurrentAsync<TestJobCommand>();
 
@@ -181,20 +184,23 @@ public class JobbyClientIntegrationTests
     }
 
     [Fact]
-    public void DefaultOpts_SchedulesRecurrentAndCancelsBySyncMethods()
+    public async Task DefaultOpts_SchedulesRecurrentAndCancelsBySyncMethods()
     {
         var dbContext = DbHelper.CreateContextAndClearDb();
         var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
         var cron = "0 3 1 1 *";
-        client.ScheduleRecurrent(command, cron, JobbySchedulerTypes.CronFromPrev);
+        client.ScheduleRecurrent(command, cron);
+
+        var x = await dbContext.Jobs
+            .AsNoTracking().ToListAsync();
 
         var actualJobFromDb = dbContext.Jobs
             .AsNoTracking()
             .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron);
         Assert.NotNull(actualJobFromDb);
-        Assert.Equal(JobbySchedulerTypes.CronFromPrev, actualJobFromDb.SchedulerType);
+        Assert.Equal(DefaultScheduler.SCHEDULER_TYPE, actualJobFromDb.SchedulerType);
 
         client.CancelRecurrent<TestJobCommand>();
 
@@ -218,7 +224,7 @@ public class JobbyClientIntegrationTests
             StartTime = DateTime.UtcNow.AddDays(3),
             SerializableGroupId = "gid"
         };
-        await client.ScheduleRecurrentAsync(command, cron, opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts: opts);
 
         var actualJob = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
@@ -251,7 +257,7 @@ public class JobbyClientIntegrationTests
             StartTime = DateTime.UtcNow.AddDays(3),
             SerializableGroupId = "gid"
         };
-        client.ScheduleRecurrent(command, cron, opts);
+        client.ScheduleRecurrent(command, cron, opts: opts);
 
         var actualJob = dbContext.Jobs
             .AsNoTracking()
@@ -284,8 +290,8 @@ public class JobbyClientIntegrationTests
             SerializableGroupId = "gid",
             IsExclusive = false,
         };
-        await client.ScheduleRecurrentAsync(command, cron, opts);
-        await client.ScheduleRecurrentAsync(command, cron, opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts: opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts: opts);
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
@@ -308,8 +314,8 @@ public class JobbyClientIntegrationTests
             SerializableGroupId = "gid",
             IsExclusive = false,
         };
-        client.ScheduleRecurrent(command, cron, opts);
-        client.ScheduleRecurrent(command, cron, opts);
+        client.ScheduleRecurrent(command, cron, opts: opts);
+        client.ScheduleRecurrent(command, cron, opts: opts);
 
         var actualJobs = dbContext.Jobs
             .AsNoTracking()
