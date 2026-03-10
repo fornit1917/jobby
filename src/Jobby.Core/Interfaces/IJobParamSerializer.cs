@@ -4,12 +4,6 @@ namespace Jobby.Core.Interfaces;
 
 public interface IJobParamSerializer
 {
-    string SerializeJobParam<T>(T param);
+    string SerializeJobParam<T>(T command) where T : IJobCommand;
     object? DeserializeJobParam(string? json, Type jobParamType);
-}
-
-public interface IJobParamSerializer<T>
-{
-    string SerializeJobParam(T param);
-    bool TryDeserializeJobParam(string value, [NotNullWhen(true)] out T? param);
 }
