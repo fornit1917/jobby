@@ -226,7 +226,7 @@ public class JobbyClientIntegrationTests
             StartTime = DateTime.UtcNow.AddDays(3),
             SerializableGroupId = "gid"
         };
-        await client.ScheduleRecurrentAsync(command, cron, opts: opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts);
 
         var actualJob = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
@@ -259,7 +259,7 @@ public class JobbyClientIntegrationTests
             StartTime = DateTime.UtcNow.AddDays(3),
             SerializableGroupId = "gid"
         };
-        client.ScheduleRecurrent(command, cron, opts: opts);
+        client.ScheduleRecurrent(command, cron, opts);
 
         var actualJob = dbContext.Jobs
             .AsNoTracking()
@@ -292,8 +292,8 @@ public class JobbyClientIntegrationTests
             SerializableGroupId = "gid",
             IsExclusive = false,
         };
-        await client.ScheduleRecurrentAsync(command, cron, opts: opts);
-        await client.ScheduleRecurrentAsync(command, cron, opts: opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts);
+        await client.ScheduleRecurrentAsync(command, cron, opts);
 
         var actualJobs = await dbContext.Jobs.AsNoTracking()
             .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
@@ -316,8 +316,8 @@ public class JobbyClientIntegrationTests
             SerializableGroupId = "gid",
             IsExclusive = false,
         };
-        client.ScheduleRecurrent(command, cron, opts: opts);
-        client.ScheduleRecurrent(command, cron, opts: opts);
+        client.ScheduleRecurrent(command, cron, opts);
+        client.ScheduleRecurrent(command, cron, opts);
 
         var actualJobs = dbContext.Jobs
             .AsNoTracking()

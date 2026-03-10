@@ -91,7 +91,6 @@ internal class JobbyClient : IJobbyClient
 
     public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
         string cron,
-        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
         var cronExpression = CronHelper.Parse(cron);
