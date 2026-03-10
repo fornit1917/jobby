@@ -43,10 +43,6 @@ public class JobPostProcessingServiceTests
         _schedulerExecutorProviderMock.Setup(x => x.TryGetExecutor(SchedulerType, out schedulerExecutor))
             .Returns(true);
 
-        var schedulers = new Dictionary<string, ISchedulerExecutor>
-        {
-            [SchedulerType] = _schedulerMock.Object,
-        };
         _postProcessingService = new JobPostProcessingService(
             _storageMock.Object,
             _completionServiceMock.Object,

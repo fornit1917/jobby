@@ -9,17 +9,17 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
-    private readonly SchedulersRegistry _schedulersRegistry;
+    private readonly ISchedulerStorageOptionsProvider _schedulerStorageOptionsProvider;
     private readonly string _defaultQueueForRecurrent;
 
     public JobsFactory(IGuidGenerator guidGenerator,
         IJobParamSerializer serializer,
-        SchedulersRegistry schedulersRegistry,
+        ISchedulerStorageOptionsProvider schedulerStorageOptionsProvider,
         string? defaultQueueForRecurrent)
     {
         _guidGenerator = guidGenerator;
         _serializer = serializer;
-        _schedulersRegistry = schedulersRegistry;
+        _schedulerStorageOptionsProvider = schedulerStorageOptionsProvider;
         _defaultQueueForRecurrent = defaultQueueForRecurrent ?? QueueSettings.DefaultQueueName;
     }
 
@@ -69,7 +69,7 @@ internal class JobsFactory : IJobsFactory
         where TCommand : IJobCommand
         where TScheduler : IScheduler
     {
-        var (schedulerType, schedulerOptions) = _schedulersRegistry.GetStorageOptions<TScheduler>(scheduler);
+        var (schedulerType, schedulerOptions) = _schedulerStorageOptionsProvider.GetStorageOptions<TScheduler>(scheduler);
 
         var jobName = TCommand.GetJobName();
         var defaultOpts = default(RecurrentJobOpts);

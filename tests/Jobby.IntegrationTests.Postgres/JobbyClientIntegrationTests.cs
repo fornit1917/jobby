@@ -14,6 +14,8 @@ namespace Jobby.IntegrationTests.Postgres;
 [Collection(PostgresqlTestsCollection.Name)]
 public class JobbyClientIntegrationTests
 {
+    private const string DAFAULT_SCHEDULER_TYPE = "__JOBBY_CRON_SIMPLE";
+
     [Fact]
     public async Task DefaultOpts_EnqueuesAndCancelsCommandByAsyncMethods()
     {
@@ -173,7 +175,7 @@ public class JobbyClientIntegrationTests
                                              .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
                                              .FirstOrDefaultAsync();
         Assert.NotNull(actualJobFromDb);
-        Assert.Equal(DefaultScheduler.SCHEDULER_TYPE, actualJobFromDb.SchedulerType);
+        Assert.Equal(DAFAULT_SCHEDULER_TYPE, actualJobFromDb.SchedulerType);
 
         await client.CancelRecurrentAsync<TestJobCommand>();
 
@@ -200,7 +202,7 @@ public class JobbyClientIntegrationTests
             .AsNoTracking()
             .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron);
         Assert.NotNull(actualJobFromDb);
-        Assert.Equal(DefaultScheduler.SCHEDULER_TYPE, actualJobFromDb.SchedulerType);
+        Assert.Equal(DAFAULT_SCHEDULER_TYPE, actualJobFromDb.SchedulerType);
 
         client.CancelRecurrent<TestJobCommand>();
 

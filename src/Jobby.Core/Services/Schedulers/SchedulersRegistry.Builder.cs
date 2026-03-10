@@ -9,6 +9,7 @@ internal partial class SchedulersRegistry
 {
     public class Builder
     {
+        private readonly string? _defaultSchedulerType;
         private readonly Dictionary<string, ISchedulerExecutor> _schedulersByType = new();
         private readonly Dictionary<Type, ISchedulerStorage> _schedulersBySchedulerType = new();
 
@@ -16,14 +17,20 @@ internal partial class SchedulersRegistry
         {
             const string DEFAULT_SCHEDULERS_PREFIX = "__JOBBY_";
 
-            AddScheduler(new CronSimpleStorage(), DEFAULT_SCHEDULERS_PREFIX);
+            AddScheduler(new CronSimpleStorage(), DEFAULT_SCHEDULERS_PREFIX, out _defaultSchedulerType);
             AddScheduler(new CronStorage(), DEFAULT_SCHEDULERS_PREFIX);
         }
 
         public Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null)
             where TScheduler : IScheduler
         {
-            var schedulerType = prefix is null ?
+            return AddScheduler<TScheduler>(schedulerStorage, prefix, out var _);
+        }
+
+        private Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix, out string schedulerType)
+            where TScheduler : IScheduler
+        {
+            schedulerType = prefix is null ?
                 schedulerStorage.DefaultSchedulerType :
                 $"{prefix}{schedulerStorage.DefaultSchedulerType}";
 
@@ -42,6 +49,7 @@ internal partial class SchedulersRegistry
         {
             if (result is null)
                 result = new SchedulersRegistry(
+                    _defaultSchedulerType ?? throw new Exception("Default scheduler type was not specified"),
                     _schedulersByType.ToFrozenDictionary(),
                     _schedulersBySchedulerType.ToFrozenDictionary()
                 );

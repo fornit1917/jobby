@@ -1,11 +1,12 @@
-﻿using Jobby.Core.Interfaces;
+﻿using System.Collections.Concurrent;
+
+using Microsoft.Extensions.Logging;
+
+using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
-using Jobby.Core.Services.Schedulers;
 using Jobby.Core.Services.Schedulers.CronSimple;
-using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
@@ -125,14 +126,13 @@ internal class JobPostProcessingService : IJobPostProcessingService
         ArgumentNullException.ThrowIfNull(job.Schedule, nameof(job.Schedule));
 
         DateTime nextStartAt;
-        var schedulerType = job.SchedulerType ?? DefaultScheduler.SCHEDULER_TYPE;
 
         var utcNow = _timerService.GetUtcNow();
-        if (!_schedulerExecutorProvider.TryGetExecutor(schedulerType, out var scheduler))
+        if (!_schedulerExecutorProvider.TryGetExecutor(job.SchedulerType, out var scheduler))
         {
             nextStartAt = utcNow.Add(TimeSpan.FromMinutes(1));
             _logger.LogError("Recurrent job {JobName} with id={JobId} has invalid SchedulerType: {SchedulerType}", 
-                job.JobName, job.Id, schedulerType);
+                job.JobName, job.Id, job.SchedulerType ?? "<NULL>");
         }
         else
         {
@@ -144,7 +144,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
             {
                 nextStartAt = utcNow.Add(TimeSpan.FromMinutes(1));
                 _logger.LogError("Recurrent job {JobName} with id={JobId} and SchedulerType={SchedulerType} has invalid schedule: {schedule}",
-                    job.JobName, job.Id, schedulerType, job.Schedule);
+                    job.JobName, job.Id, job.SchedulerType ?? "<NULL>", job.Schedule);
             }
         }
         

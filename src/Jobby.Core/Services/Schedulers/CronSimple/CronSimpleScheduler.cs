@@ -5,11 +5,6 @@ using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers.CronSimple;
 
-public static class DefaultScheduler
-{
-    public const string SCHEDULER_TYPE = "__JOBBY_CRON_SIMPLE";
-}
-
 internal class CronSimpleScheduler : IScheduler
 {
     public readonly CronExpression CronExpression;
