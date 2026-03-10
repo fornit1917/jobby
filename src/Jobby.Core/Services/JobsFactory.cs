@@ -1,5 +1,4 @@
-﻿using Jobby.Core.Exceptions;
-using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models;
 using Jobby.Core.Services.Schedulers;
@@ -10,17 +9,17 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
-    private readonly IReadOnlyDictionary<string, ISchedulerExecutor> _schedulersByType;
+    private readonly SchedulersRegistry _schedulersRegistry;
     private readonly string _defaultQueueForRecurrent;
 
     public JobsFactory(IGuidGenerator guidGenerator,
         IJobParamSerializer serializer,
-        IReadOnlyDictionary<string, ISchedulerExecutor> schedulersByType,
+        SchedulersRegistry schedulersRegistry,
         string? defaultQueueForRecurrent)
     {
         _guidGenerator = guidGenerator;
         _serializer = serializer;
-        _schedulersByType = schedulersByType;
+        _schedulersRegistry = schedulersRegistry;
         _defaultQueueForRecurrent = defaultQueueForRecurrent ?? QueueSettings.DefaultQueueName;
     }
 
@@ -63,23 +62,14 @@ internal class JobsFactory : IJobsFactory
     }
 
 
-    public JobCreationModel CreateRecurrent<TCommand, TSchedule>(TCommand command,
-        TSchedule schedule,
+    public JobCreationModel CreateRecurrent<TCommand, TScheduler>(TCommand command,
+        TScheduler scheduler,
         RecurrentJobOpts opts = default
     )
         where TCommand : IJobCommand
-        where TSchedule : ISchedule
+        where TScheduler : IScheduler
     {
-        var schedulerType = TSchedule.GetSchedulerType();
-
-        if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
-            throw new UnknownSchedulerTypeException($"Unknown scheduler type: {schedulerType}");
-
-        if (scheduler is not ScheduleExecutor<TSchedule> { } schedulerExecutor)
-            throw new Exception($"Invalid scheduler executor for scheduler type {schedulerType}. Expected {typeof(ScheduleExecutor<TSchedule>)} but found {scheduler.GetType()}");
-
-        var serializer = schedulerExecutor._scheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(_serializer);
-        var scheduleParam = serializer.SerializeJobParam(schedule);
+        var (schedulerType, schedulerOptions) = _schedulersRegistry.GetStorageOptions<TScheduler>(scheduler);
 
         var jobName = TCommand.GetJobName();
         var defaultOpts = default(RecurrentJobOpts);
@@ -93,14 +83,14 @@ internal class JobsFactory : IJobsFactory
             Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
             JobName = jobName,
-            Schedule = scheduleParam,
+            Schedule = schedulerOptions,
             SchedulerType = schedulerType,
             IsExclusive = opts.IsExclusive ?? defaultOpts.IsExclusive ?? true,
             CreatedAt = DateTime.UtcNow,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = opts.StartTime 
                                ?? defaultOpts.StartTime
-                               ?? schedulerExecutor.ScheduleHandler.GetFirstStartTime(schedule, TimerService.Instance.GetUtcNow()),
+                               ?? scheduler.GetFirstStartTime(TimerService.Instance.GetUtcNow()),
             CanBeRestarted = opts.CanBeRestartedIfServerGoesDown
                              ??  defaultOpts.CanBeRestartedIfServerGoesDown
                              ?? true,

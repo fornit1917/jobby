@@ -97,15 +97,15 @@ internal class JobbyClient : IJobbyClient
     {
         var cronExpression = CronHelper.Parse(cron);
 
-        var job = _jobFactory.CreateRecurrent(command, new CronSimpleSchedule(cronExpression), opts);
+        var job = _jobFactory.CreateRecurrent(command, new CronSimpleScheduler(cronExpression), opts);
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
 
-    public async Task<Guid> ScheduleRecurrentAsync<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+    public async Task<Guid> ScheduleRecurrentAsync<TCommand, TScheduler>(TCommand command, TScheduler schedule,
         RecurrentJobOpts opts = default)
         where TCommand : IJobCommand
-        where TSchedule : ISchedule
+        where TScheduler : IScheduler
     {
         var job = _jobFactory.CreateRecurrent(command, schedule, opts);
         await _storage.InsertJobAsync(job);
@@ -125,10 +125,10 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
     
-    public Guid ScheduleRecurrent<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+    public Guid ScheduleRecurrent<TCommand, TScheduler>(TCommand command, TScheduler schedule,
         RecurrentJobOpts opts = default)
         where TCommand : IJobCommand
-        where TSchedule : ISchedule
+        where TScheduler : IScheduler
     {
         var job = _jobFactory.CreateRecurrent(command, schedule, opts);
         _storage.InsertJob(job);

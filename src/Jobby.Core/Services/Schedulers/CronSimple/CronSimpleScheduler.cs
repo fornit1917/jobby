@@ -1,6 +1,7 @@
 ﻿using Cronos;
-
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers.CronSimple;
 
@@ -9,14 +10,15 @@ public static class DefaultScheduler
     public const string SCHEDULER_TYPE = "__JOBBY_CRON_SIMPLE";
 }
 
-internal class CronSimpleSchedule : ISchedule
+internal class CronSimpleScheduler : IScheduler
 {
     public readonly CronExpression CronExpression;
 
-    public CronSimpleSchedule(CronExpression cronExpression)
+    public CronSimpleScheduler(CronExpression cronExpression)
     {
         CronExpression = cronExpression ?? throw new ArgumentNullException(nameof(cronExpression));
     }
 
-    static string ISchedule.GetSchedulerType() => DefaultScheduler.SCHEDULER_TYPE;
+    public DateTime GetFirstStartTime(DateTime utcNow) => CronExpression.GetNext(utcNow);
+    public DateTime GetNextStartTime(in SchedulerExecutionContext ctx) => CronExpression.GetNext(ctx.UtcNow);
 }

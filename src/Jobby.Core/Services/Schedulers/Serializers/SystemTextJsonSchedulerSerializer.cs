@@ -4,7 +4,7 @@ using System.Text.Json;
 using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers.Serializers;
-internal class SystemTextJsonSchedulerSerializer<TScheduler> : IScheduleSerializer<TScheduler>
+public class SystemTextJsonSchedulerSerializer<TScheduler> : IScheduleSerializer<TScheduler>
 {
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 

@@ -2,9 +2,9 @@
 
 using Microsoft.Extensions.Logging;
 
-using Jobby.Core.Models;
+using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
-using Jobby.Core.Services.Schedulers;
+using Jobby.Core.Models;
 
 namespace Jobby.Core.Interfaces.Configuration;
 
@@ -33,6 +33,7 @@ public interface IJobbyComponentsConfigurable
 
     IJobbyComponentsConfigurable UseMetrics();
     IJobbyComponentsConfigurable UseTracing();
-    
-    IJobbyComponentsConfigurable UseSchedulers(Action<SchedulersBuilder> cfg);
+
+    IJobbyComponentsConfigurable UseScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null)
+        where TScheduler : IScheduler;
 }

@@ -1,14 +1,13 @@
-﻿using Jobby.Core.Interfaces.Schedulers;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
+
+using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers.Serializers;
-internal abstract class DtoSchedulerSerializer<TScheduler, TSchedulerDto> : IScheduleSerializer<TScheduler>
+public abstract class DtoSchedulerSerializer<TScheduler, TSchedulerDto> : IScheduleSerializer<TScheduler>
 {
     private readonly IScheduleSerializer<TSchedulerDto> _dtoSerializer;
 
-    public DtoSchedulerSerializer(IScheduleSerializer<TSchedulerDto> dtoSerializer = null)
+    public DtoSchedulerSerializer(IScheduleSerializer<TSchedulerDto>? dtoSerializer = null)
     {
         _dtoSerializer = dtoSerializer ?? new SystemTextJsonSchedulerSerializer<TSchedulerDto>();
     }

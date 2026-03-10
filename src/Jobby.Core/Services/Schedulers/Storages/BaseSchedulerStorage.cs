@@ -4,7 +4,7 @@ using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Services.Schedulers.Serializers;
 
 namespace Jobby.Core.Services.Schedulers.Storages;
-internal abstract class BaseSchedulerStorage<TScheduler> : ISchedulerStorage<TScheduler>
+public abstract class BaseSchedulerStorage<TScheduler> : ISchedulerStorage<TScheduler>
     where TScheduler : IScheduler
 {
     public abstract string DefaultSchedulerType { get; }

@@ -21,20 +21,20 @@ public interface IJobbyClient
         bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand;
 
-    Task<Guid> ScheduleRecurrentAsync<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+    Task<Guid> ScheduleRecurrentAsync<TCommand, TScheduler>(TCommand command, TScheduler schedule,
         RecurrentJobOpts opts = default)
         where TCommand : IJobCommand
-        where TSchedule : ISchedule;
+        where TScheduler : IScheduler;
 
     Guid ScheduleRecurrent<TCommand>(TCommand command, 
         string cron,
         bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand;
     
-    Guid ScheduleRecurrent<TCommand, TSchedule>(TCommand command, TSchedule schedule,
+    Guid ScheduleRecurrent<TCommand, TScheduler>(TCommand command, TScheduler schedule,
         RecurrentJobOpts opts = default)
         where TCommand : IJobCommand
-        where TSchedule : ISchedule;    
+        where TScheduler : IScheduler;    
 
     Task CancelRecurrentAsync<TCommand>() where TCommand : IJobCommand;
     void CancelRecurrent<TCommand>() where TCommand : IJobCommand;

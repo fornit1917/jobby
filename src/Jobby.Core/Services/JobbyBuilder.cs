@@ -18,6 +18,7 @@ using Jobby.Core.Services.Schedulers;
 using Jobby.Core.Services.ServerModules;
 using Jobby.Core.Services.ServerModules.JobsExecution;
 using Jobby.Core.Services.ServerModules.PermanentLocksCheck;
+using Jobby.Core.Interfaces.Schedulers;
 
 namespace Jobby.Core.Services;
 
@@ -59,11 +60,11 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _defaultRecurrentQueue;
-    private SchedulersBuilder _schedulers { get; } = new SchedulersBuilder();
+    private SchedulersRegistry.Builder _schedulers { get; } = new ();
 
-    public IJobbyComponentsConfigurable UseSchedulers(Action<SchedulersBuilder> cfg)
+    public IJobbyComponentsConfigurable UseScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null) where TScheduler : IScheduler
     {
-        cfg.Invoke(_schedulers);
+        _schedulers.AddScheduler(schedulerStorage, prefix);
         return this;
     }
 
@@ -107,7 +108,6 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         var postProcessingService = new JobPostProcessingService(storage,
             completionService,
             _schedulers.Build(),
-            Serializer,
             LoggerFactory.CreateLogger<JobPostProcessingService>()
         );
 

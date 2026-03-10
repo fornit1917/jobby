@@ -1,26 +1,22 @@
 ﻿using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models.Schedulers;
+using Jobby.Core.Services.Schedulers.Storages;
 
 namespace Jobby.Samples.AspNet.Schedulers;
 
-public class CustomSecondsScheduler : ISchedule
+public class CustomSecondsScheduler : IScheduler
 {
-    public static string GetSchedulerType() => "CUSTOM_SECONDS";
-    public int Seconds { get; init; }
+    public uint Seconds { get; init; }
+
+    public DateTime GetFirstStartTime(DateTime utcNow) => utcNow;
+
+    public DateTime GetNextStartTime(in SchedulerExecutionContext ctx)
+    {
+        return ctx.PreviousScheduledStartTime.AddSeconds(Seconds > 0 ? Seconds : 1);
+    }
 }
 
-public class CustomSecondsSchedulerHandler : IScheduleHandler<CustomSecondsScheduler>
+public class CustomSecondsStorage : BaseSchedulerStorage<CustomSecondsScheduler>
 {
-    public DateTime GetFirstStartTime(CustomSecondsScheduler schedule, DateTime utcNow) => utcNow;
-
-    public DateTime GetNextStartTime(string schedule, DateTime? previousScheduledStartTime)
-    {
-        var seconds = int.Parse(schedule);
-        return previousScheduledStartTime?.AddSeconds(seconds) ?? DateTime.UtcNow;
-    }
-
-    public DateTime GetNextStartTime(CustomSecondsScheduler schedule, in SchedulerExecutionContext ctx)
-    {
-        return ctx.PreviousScheduledStartTime.AddSeconds(schedule.Seconds > 0 ? schedule.Seconds : 1);
-    }
+    public override string DefaultSchedulerType => "CUSTOM_SECONDS";
 }

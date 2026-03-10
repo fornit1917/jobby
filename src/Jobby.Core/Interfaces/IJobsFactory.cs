@@ -9,12 +9,12 @@ public interface IJobsFactory
     JobCreationModel Create<TCommand>(TCommand command, JobOpts opts = default) where TCommand : IJobCommand;
     JobCreationModel Create<TCommand>(TCommand command, DateTime startTime) where TCommand : IJobCommand;
        
-    JobCreationModel CreateRecurrent<TCommand, TSchedule>(TCommand command,
-        TSchedule schedule,
+    JobCreationModel CreateRecurrent<TCommand, TScheduler>(TCommand command,
+        TScheduler schedule,
         RecurrentJobOpts opts = default
     )
         where TCommand : IJobCommand
-        where TSchedule : ISchedule;
+        where TScheduler : IScheduler;
 
     JobsSequenceBuilder CreateSequenceBuilder();
     JobsSequenceBuilder CreateSequenceBuilder(int capacity);

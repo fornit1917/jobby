@@ -1,12 +1,11 @@
-﻿using System.Collections.Concurrent;
-
-using Microsoft.Extensions.Logging;
-
-using Jobby.Core.Interfaces;
+﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
+using Jobby.Core.Services.Schedulers;
 using Jobby.Core.Services.Schedulers.CronSimple;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
@@ -14,8 +13,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
-    private readonly IReadOnlyDictionary<string, ISchedulerExecutor> _schedulersByType;
-    private readonly IJobParamSerializer _jobParamSerializer;
+    private readonly ISchedulerExecutorProvider _schedulerExecutorProvider;
     private readonly ILogger<JobPostProcessingService> _logger;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
@@ -23,14 +21,12 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        IReadOnlyDictionary<string, ISchedulerExecutor> schedulersByType,
-        IJobParamSerializer jobParamSerializer,
+        ISchedulerExecutorProvider schedulerExecutorProvider,
         ILogger<JobPostProcessingService> logger)
     {
         _storage = storage;
         _jobCompletingService = jobCompletingService;
-        _schedulersByType = schedulersByType;
-        _jobParamSerializer = jobParamSerializer;
+        _schedulerExecutorProvider = schedulerExecutorProvider;
         _logger = logger;
         _retryQueue = new ConcurrentQueue<RetryQueueItem>();
     }
@@ -129,7 +125,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         var schedulerType = job.SchedulerType ?? DefaultScheduler.SCHEDULER_TYPE;
 
         var utcNow = TimerService.Instance.GetUtcNow();
-        if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
+        if (!_schedulerExecutorProvider.TryGetExecutor(schedulerType, out var scheduler))
         {
             nextStartAt = utcNow.Add(TimeSpan.FromMinutes(1));
             _logger.LogError("Recurrent job {JobName} with id={JobId} has invalid SchedulerType: {SchedulerType}", 
@@ -140,7 +136,6 @@ internal class JobPostProcessingService : IJobPostProcessingService
             if (!scheduler.TryGetNextStartTime(
                 job.Schedule,
                 new Models.Schedulers.SchedulerExecutionContext(utcNow, job.ScheduledStartAt),
-                _jobParamSerializer,
                 out nextStartAt
             ))
             {

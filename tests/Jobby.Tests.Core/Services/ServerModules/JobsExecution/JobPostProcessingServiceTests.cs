@@ -14,8 +14,8 @@ public class JobPostProcessingServiceTests
     private readonly Mock<IJobbyStorage> _storageMock;
     private readonly Mock<IJobCompletionService> _completionServiceMock;
     private readonly Mock<ILogger<JobPostProcessingService>> _loggerMock;
-    private readonly Mock<IJobParamSerializer> _jobParamSerializerMock;
     private readonly Mock<ISchedulerExecutor> _schedulerMock;
+    private readonly Mock<ISchedulerExecutorProvider> _schedulerExecutorProviderMock;
 
     private readonly JobPostProcessingService _postProcessingService;
 
@@ -27,7 +27,12 @@ public class JobPostProcessingServiceTests
         _completionServiceMock = new Mock<IJobCompletionService>();
         _loggerMock = new Mock<ILogger<JobPostProcessingService>>();
         _schedulerMock = new Mock<ISchedulerExecutor>();
-        _jobParamSerializerMock = new Mock<IJobParamSerializer>();
+        _schedulerExecutorProviderMock = new Mock<ISchedulerExecutorProvider>();
+
+        var schedulerExecutor = _schedulerMock.Object;
+        _schedulerExecutorProviderMock.Setup(x => x.TryGetExecutor(SchedulerType, out schedulerExecutor))
+            .Returns(true);
+
         var schedulers = new Dictionary<string, ISchedulerExecutor>
         {
             [SchedulerType] = _schedulerMock.Object,
@@ -35,8 +40,7 @@ public class JobPostProcessingServiceTests
         _postProcessingService = new JobPostProcessingService(
             _storageMock.Object,
             _completionServiceMock.Object,
-            schedulers,
-            _jobParamSerializerMock.Object,
+            _schedulerExecutorProviderMock.Object,
             _loggerMock.Object);
     }
 

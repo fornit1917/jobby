@@ -1,10 +1,11 @@
-﻿using Jobby.Core.Exceptions;
-using Jobby.Core.Interfaces;
+﻿using System.Collections.Frozen;
+using System.Diagnostics.CodeAnalysis;
+
+using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces.Schedulers;
-using System.Collections.Frozen;
 
 namespace Jobby.Core.Services.Schedulers;
-internal partial class SchedulersRegistry
+internal partial class SchedulersRegistry : ISchedulerExecutorProvider
 {
     private readonly FrozenDictionary<string, ISchedulerExecutor> _schedulersByType;
     private readonly FrozenDictionary<Type, ISchedulerStorage> _schedulersBySchedulerType;
@@ -16,13 +17,8 @@ internal partial class SchedulersRegistry
     }
 
 
-    public ISchedulerExecutor GetExecutor(string schedulerType)
-    {
-        if (!_schedulersByType.TryGetValue(schedulerType, out var schedulerExecutor))
-            throw new UnknownSchedulerTypeException($"Unknown scheduler type: {schedulerType}");
-
-        return schedulerExecutor;
-    }
+    public bool TryGetExecutor(string schedulerType, [NotNullWhen(true)] out ISchedulerExecutor? schedulerExecutor)
+        => _schedulersByType.TryGetValue(schedulerType, out schedulerExecutor);
 
     public (string schedulerType, string schedulerOptions) GetStorageOptions<TScheduler>(TScheduler scheduler) where TScheduler : IScheduler
     {

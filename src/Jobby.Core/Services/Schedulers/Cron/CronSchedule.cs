@@ -1,9 +1,11 @@
 ﻿using Cronos;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces.Schedulers;
+using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers.Cron;
 
-internal class CronSchedule : ISchedule
+internal class CronSchedule : IScheduler
 {
     public readonly CronExpression CronExpression;
     public readonly bool CalculateNextFromPrev;
@@ -14,5 +16,14 @@ internal class CronSchedule : ISchedule
         CalculateNextFromPrev = calculateNextFromPrev;
     }
 
-    static string ISchedule.GetSchedulerType() => "__JOBBY_CRON";
+    public DateTime GetFirstStartTime(DateTime utcNow) => CronExpression.GetNext(utcNow);
+
+    public DateTime GetNextStartTime(in SchedulerExecutionContext ctx)
+    {
+        var from = CalculateNextFromPrev
+            ? ctx.PreviousScheduledStartTime
+            : ctx.UtcNow;
+
+        return CronExpression.GetNext(from);
+    }
 }

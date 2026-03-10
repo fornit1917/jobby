@@ -14,14 +14,11 @@ internal partial class SchedulersRegistry
 
         public Builder()
         {
-            AddScheduler<CronSimpleSchedule, CronSimpleScheduleHandler, CronSimpleScheduleSerializer>();
-            AddScheduler<CronSchedule, CronScheduleHandler, CronScheduleSerializer>();
-        }
+            const string DEFAULT_SCHEDULERS_PREFIX = "__JOBBY_";
 
-        public Builder AddScheduler<TScheduler, TSchedulerStorage>(string? prefix = null)
-            where TScheduler : IScheduler
-            where TSchedulerStorage : ISchedulerStorage<TScheduler>, new()
-            => AddScheduler<TScheduler>(new TSchedulerStorage(), prefix);
+            AddScheduler(new CronSimpleStorage(), DEFAULT_SCHEDULERS_PREFIX);
+            AddScheduler(new CronStorage(), DEFAULT_SCHEDULERS_PREFIX);
+        }
 
         public Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null)
             where TScheduler : IScheduler
@@ -39,9 +36,17 @@ internal partial class SchedulersRegistry
             return this;
         }
 
-        internal SchedulersRegistry Build() => new SchedulersRegistry(
-            _schedulersByType.ToFrozenDictionary(),
-            _schedulersBySchedulerType.ToFrozenDictionary()
-        );
+        private SchedulersRegistry? result;
+
+        internal SchedulersRegistry Build()
+        {
+            if (result is null)
+                result = new SchedulersRegistry(
+                    _schedulersByType.ToFrozenDictionary(),
+                    _schedulersBySchedulerType.ToFrozenDictionary()
+                );
+
+            return result;
+        }
     }
 }
