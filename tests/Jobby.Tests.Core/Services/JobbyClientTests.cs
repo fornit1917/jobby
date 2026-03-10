@@ -168,7 +168,6 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        //_factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), default)).Returns(job);
         _factoryMock.Setup(x => x.CreateRecurrent(
             command,
             It.Is<CronSimpleScheduler>(CRON_SIMPLE_SCHEDULER(cron), new CronSimpleSchedulerComparer()),

@@ -121,16 +121,4 @@ public class BulkInsertTests
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
         AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
     }
-    /*
-    private IJobsFactory CreateJobsFactory()
-    {
-        return new JobbyBuilder().CreateJobsFactory();
-    }
-
-    private static CronSimpleSchedule CRON_SIMPLE_SCHEDULE(string cron)
-    {
-        var cronExpression = CronHelper.Parse(cron);
-        return new CronSimpleSchedule(cronExpression);
-    }
-    */
 }

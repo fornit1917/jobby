@@ -1,20 +1,28 @@
 ﻿using Cronos;
+
 using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers.Cron;
 
-internal class CronSchedule : IScheduler
+internal class CronScheduler : IScheduler
 {
     public readonly CronExpression CronExpression;
     public readonly bool CalculateNextFromPrev;
 
-    public CronSchedule(CronExpression cronExpression, bool calculateNextFromPrev)
+    public CronScheduler(string cronExpression, bool calculateNextFromPrev)
+    {
+        CronExpression = CronHelper.Parse(cronExpression ?? throw new ArgumentNullException(nameof(cronExpression)));
+        CalculateNextFromPrev = calculateNextFromPrev;
+    }
+
+    public CronScheduler(CronExpression cronExpression, bool calculateNextFromPrev)
     {
         CronExpression = cronExpression ?? throw new ArgumentNullException(nameof(cronExpression));
         CalculateNextFromPrev = calculateNextFromPrev;
     }
+
 
     public DateTime GetFirstStartTime(DateTime utcNow) => CronExpression.GetNext(utcNow);
 
