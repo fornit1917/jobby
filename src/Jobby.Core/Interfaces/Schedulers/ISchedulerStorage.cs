@@ -2,11 +2,12 @@
 
 public interface ISchedulerStorage
 {
-    string DefaultSchedulerType { get; }
+    string SchedulerType { get; }
 }
 
-public interface ISchedulerStorage<TScheduler> : ISchedulerStorage
+public interface ISchedulerStorage<TScheduler>
     where TScheduler : IScheduler
 {
+    string DefaultSchedulerType { get; }
     IScheduleSerializer<TScheduler> Serializer { get; }
 }

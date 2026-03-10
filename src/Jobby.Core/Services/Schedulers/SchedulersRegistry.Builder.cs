@@ -37,7 +37,7 @@ internal partial class SchedulersRegistry
             if (!_schedulersByType.TryAdd(schedulerType, new ScheduleExecutor<TScheduler>(schedulerStorage.Serializer)))
                 throw new InvalidJobsConfigException($"Scheduler for {schedulerType} has already been added");
 
-            if (!_schedulersBySchedulerType.TryAdd(typeof(TScheduler), schedulerStorage))
+            if (!_schedulersBySchedulerType.TryAdd(typeof(TScheduler), new SchedulerStorage<TScheduler>(schedulerType, schedulerStorage.Serializer)))
                 throw new InvalidJobsConfigException($"Scheduler for type {typeof(TScheduler)} has already been added");
 
             return this;

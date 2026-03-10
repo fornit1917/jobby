@@ -13,7 +13,7 @@ namespace Jobby.Tests.Core.Services;
 
 public class JobsFactoryTests
 {
-    private const string CRON_SIMPLE_SCHEDULER_TYPE = "CRON_SIMPLE";
+    private const string DEFAULT_SCHEDULER_TYPE = "__JOBBY_CRON_SIMPLE";
 
     private const string SerializedCommand = "serializedParam";
     private static readonly Guid JobId = Guid.NewGuid();
@@ -191,7 +191,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(CRON_SIMPLE_SCHEDULER_TYPE, job.SchedulerType);
+        Assert.Equal(DEFAULT_SCHEDULER_TYPE, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
 
@@ -224,7 +224,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(CRON_SIMPLE_SCHEDULER_TYPE, job.SchedulerType);
+        Assert.Equal(DEFAULT_SCHEDULER_TYPE, job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
@@ -256,7 +256,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(CRON_SIMPLE_SCHEDULER_TYPE, job.SchedulerType);
+        Assert.Equal(DEFAULT_SCHEDULER_TYPE, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(defaultOpts.StartTime.Value, job.ScheduledStartAt);
@@ -292,7 +292,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(CRON_SIMPLE_SCHEDULER_TYPE, job.SchedulerType);
+        Assert.Equal(DEFAULT_SCHEDULER_TYPE, job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
@@ -318,7 +318,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(CRON_SIMPLE_SCHEDULER_TYPE, job.SchedulerType);
+        Assert.Equal(DEFAULT_SCHEDULER_TYPE, job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         var expectedStartTime = CronHelper.Parse(cron).GetNext(job.CreatedAt);

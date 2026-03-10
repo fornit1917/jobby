@@ -30,11 +30,17 @@ internal partial class SchedulersRegistry : ISchedulerExecutorProvider, ISchedul
         if (!_schedulersBySchedulerType.TryGetValue(schedulerType, out var schedulerStorage))
             throw new UnknownSchedulerTypeException($"Unknown scheduler type: {schedulerType}");
 
-        if (schedulerStorage is not ISchedulerStorage<TScheduler> { } specificSchedulerStorage)
+        if (schedulerStorage is not SchedulerStorage<TScheduler> { } specificSchedulerStorage)
             throw new Exception($"Invalid scheduler executor for scheduler type {schedulerType}. Expected {typeof(ISchedulerStorage<TScheduler>)} but found {scheduler.GetType()}");
 
         var schedulerOptions = specificSchedulerStorage.Serializer.Serealize(scheduler);
 
-        return (schedulerStorage.DefaultSchedulerType, schedulerOptions);
+        return (schedulerStorage.SchedulerType, schedulerOptions);
     }
+
+    private record SchedulerStorage<TScheduler>(
+        string SchedulerType,
+        IScheduleSerializer<TScheduler> Serializer
+    ) : ISchedulerStorage
+        where TScheduler : IScheduler;
 }
