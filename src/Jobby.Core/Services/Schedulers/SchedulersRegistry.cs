@@ -1,15 +1,15 @@
-﻿using System.Collections.Frozen;
-
-using Jobby.Core.Exceptions;
+﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
+using System.Collections.Frozen;
 
 namespace Jobby.Core.Services.Schedulers;
-internal class SchedulersRegistry
+internal partial class SchedulersRegistry
 {
     private readonly FrozenDictionary<string, ISchedulerExecutor> _schedulersByType;
-    private readonly FrozenDictionary<Type, ISchedulerExecutor> _schedulersBySchedulerType;
+    private readonly FrozenDictionary<Type, ISchedulerStorage> _schedulersBySchedulerType;
 
-    private SchedulersRegistry(FrozenDictionary<string, ISchedulerExecutor> schedulersByKey, FrozenDictionary<Type, ISchedulerExecutor> schedulersByType)
+    private SchedulersRegistry(FrozenDictionary<string, ISchedulerExecutor> schedulersByKey, FrozenDictionary<Type, ISchedulerStorage> schedulersByType)
     {
         _schedulersByType = schedulersByKey ?? throw new ArgumentNullException(nameof(schedulersByKey));
         _schedulersBySchedulerType = schedulersByType ?? throw new ArgumentNullException(nameof(schedulersByType));

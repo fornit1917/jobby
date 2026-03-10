@@ -78,7 +78,7 @@ internal class JobsFactory : IJobsFactory
         if (scheduler is not ScheduleExecutor<TSchedule> { } schedulerExecutor)
             throw new Exception($"Invalid scheduler executor for scheduler type {schedulerType}. Expected {typeof(ScheduleExecutor<TSchedule>)} but found {scheduler.GetType()}");
 
-        var serializer = schedulerExecutor.ScheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(_serializer);
+        var serializer = schedulerExecutor._scheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(_serializer);
         var scheduleParam = serializer.SerializeJobParam(schedule);
 
         var jobName = TCommand.GetJobName();

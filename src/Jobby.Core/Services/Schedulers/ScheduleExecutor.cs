@@ -1,32 +1,26 @@
-﻿using Jobby.Core.Interfaces;
-using Jobby.Core.Interfaces.Schedulers;
-using Jobby.Core.Models;
+﻿using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers;
 internal class ScheduleExecutor<TSchedule> : ISchedulerExecutor
-    where TSchedule : ISchedule
+    where TSchedule : IScheduler
 {
-    public readonly IScheduleHandler<TSchedule> ScheduleHandler;
-    public readonly IJobParamSerializer<TSchedule>? ScheduleSerializer;
+    private readonly IScheduleSerializer<TSchedule> _scheduleSerializer;
 
-    public ScheduleExecutor(IScheduleHandler<TSchedule> scheduleHandler, IJobParamSerializer<TSchedule>? scheduleSerializer = null)
+    public ScheduleExecutor(IScheduleSerializer<TSchedule> scheduleSerializer)
     {
-        ScheduleHandler = scheduleHandler ?? throw new ArgumentNullException(nameof(scheduleHandler));
-        ScheduleSerializer = scheduleSerializer;
+        _scheduleSerializer = scheduleSerializer;
     }
 
-    bool ISchedulerExecutor.TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, IJobParamSerializer defaultSerailizer, out DateTime nextStartTime)
+    bool ISchedulerExecutor.TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, out DateTime nextStartTime)
     {
-        var serializer = ScheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(defaultSerailizer);
-
-        if (!serializer.TryDeserializeJobParam(schedule, out var scheduleOptions))
+        if (!_scheduleSerializer.TryDeserialize(schedule, out var scheduleOptions))
         {
             nextStartTime = default;
             return false;
         }
 
-        nextStartTime = ScheduleHandler.GetNextStartTime(scheduleOptions, ctx);
+        nextStartTime = scheduleOptions.GetNextStartTime(ctx);
         return true;
     }
 }
