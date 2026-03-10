@@ -1,9 +1,11 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
+using Jobby.Core.Services.Schedulers.CronSimple;
 using Jobby.TestsUtils.Jobs;
 using Moq;
-
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using static Jobby.Tests.Core.Helpers.Factories;
 
 namespace Jobby.Tests.Core.Services;
@@ -166,7 +168,12 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), default)).Returns(job);
+        //_factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), default)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(
+            command,
+            It.Is<CronSimpleScheduler>(CRON_SIMPLE_SCHEDULER(cron), new CronSimpleSchedulerComparer()),
+            default
+        )).Returns(job);
 
         _client.ScheduleRecurrent(command, cron);
 
@@ -179,7 +186,11 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var cron = "*/3 * * * * *";
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), default)).Returns(job);
+        _factoryMock.Setup(x => x.CreateRecurrent(
+            command,
+            It.Is<CronSimpleScheduler>(CRON_SIMPLE_SCHEDULER(cron), new CronSimpleSchedulerComparer()),
+            default
+        )).Returns(job);
 
         await _client.ScheduleRecurrentAsync(command, cron);
 
@@ -193,9 +204,12 @@ public class JobbyClientTests
         var cron = "*/3 * * * * *";
         var opts = new RecurrentJobOpts { QueueName = "q" };
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts)).Returns(job);
 
-        _client.ScheduleRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts);
+        var scheduler = CRON_SIMPLE_SCHEDULER(cron);
+
+        _factoryMock.Setup(x => x.CreateRecurrent(command, scheduler, opts)).Returns(job);
+
+        _client.ScheduleRecurrent(command, scheduler, opts);
 
         _storageMock.Verify(x => x.InsertJob(job));
     }
@@ -207,9 +221,12 @@ public class JobbyClientTests
         var cron = "*/3 * * * * *";
         var opts = new RecurrentJobOpts { QueueName = "q" };
         var job = new JobCreationModel { Id = Guid.NewGuid() };
-        _factoryMock.Setup(x => x.CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts)).Returns(job);
 
-        await _client.ScheduleRecurrentAsync(command, CRON_SIMPLE_SCHEDULE(cron), opts);
+        var scheduler = CRON_SIMPLE_SCHEDULER(cron);
+
+        _factoryMock.Setup(x => x.CreateRecurrent(command, scheduler, opts)).Returns(job);
+
+        await _client.ScheduleRecurrentAsync(command, scheduler, opts);
 
         _storageMock.Verify(x => x.InsertJobAsync(job));
     }
@@ -232,5 +249,15 @@ public class JobbyClientTests
         _client.CancelRecurrentByIds(ids);
         
         _storageMock.Verify(x => x.BulkDeleteRecurrent(ids), Times.Once);
+    }
+
+    private class CronSimpleSchedulerComparer : IEqualityComparer<CronSimpleScheduler>
+    {
+        public bool Equals(CronSimpleScheduler? x, CronSimpleScheduler? y)
+        {
+            return x is not null && y is not null && x.CronExpression.ToString() == y.CronExpression.ToString();
+        }
+
+        public int GetHashCode([DisallowNull] CronSimpleScheduler obj) => obj.CronExpression.GetHashCode();
     }
 }

@@ -184,7 +184,7 @@ public class JobsFactoryTests
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
         var cron = "0 3 1 12 *";
 
-        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron));
+        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULER(cron));
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
@@ -217,7 +217,7 @@ public class JobsFactoryTests
             StartTime = DateTime.UtcNow.AddHours(1),
             IsExclusive = false
         };
-        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts);
+        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULER(cron), opts);
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
@@ -249,7 +249,7 @@ public class JobsFactoryTests
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
         var cron = "0 3 1 12 *";
         
-        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron));
+        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULER(cron));
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobWithDefaultOptsCommand.GetJobName(), job.JobName);
@@ -285,7 +285,7 @@ public class JobsFactoryTests
         {
             StartTime = DateTime.UtcNow.AddHours(1),
         };
-        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron), opts);
+        var job = GetFactory().CreateRecurrent(command, CRON_SIMPLE_SCHEDULER(cron), opts);
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobWithDefaultOptsCommand.GetJobName(), job.JobName);
@@ -311,7 +311,7 @@ public class JobsFactoryTests
         var cron = "0 3 1 12 *";
         var defaultRecurrentQueue = "defaultRecurrentQueue";
 
-        var job = GetFactory(defaultRecurrentQueue).CreateRecurrent(command, CRON_SIMPLE_SCHEDULE(cron));
+        var job = GetFactory(defaultRecurrentQueue).CreateRecurrent(command, CRON_SIMPLE_SCHEDULER(cron));
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);

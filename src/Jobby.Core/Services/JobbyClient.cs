@@ -2,7 +2,6 @@
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models;
-using Jobby.Core.Services.Schedulers.Cron;
 using Jobby.Core.Services.Schedulers.CronSimple;
 
 namespace Jobby.Core.Services;
@@ -114,13 +113,12 @@ internal class JobbyClient : IJobbyClient
 
     public Guid ScheduleRecurrent<TCommand>(TCommand command,
         string cron,
-        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
         if (!CronHelper.TryParse(cron, out var cronExpression))
             throw new ArgumentException($"{nameof(cron)} has invalid cron format: {cron}");
 
-        var job = _jobFactory.CreateRecurrent(command, new CronSchedule(cronExpression, calculateNextFromPrev), opts);
+        var job = _jobFactory.CreateRecurrent(command, new CronSimpleScheduler(cronExpression), opts);
         _storage.InsertJob(job);
         return job.Id;
     }

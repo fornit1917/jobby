@@ -11,7 +11,7 @@ internal static class Factories
         return new JobbyBuilder().CreateJobsFactory();
     }
 
-    public static CronSimpleScheduler CRON_SIMPLE_SCHEDULE(string cron)
+    public static CronSimpleScheduler CRON_SIMPLE_SCHEDULER(string cron)
     {
         var cronExpression = CronHelper.Parse(cron);
         return new CronSimpleScheduler(cronExpression);

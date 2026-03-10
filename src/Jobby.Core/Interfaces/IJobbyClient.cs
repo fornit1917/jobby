@@ -28,7 +28,6 @@ public interface IJobbyClient
 
     Guid ScheduleRecurrent<TCommand>(TCommand command, 
         string cron,
-        bool calculateNextFromPrev = false,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand;
     
     Guid ScheduleRecurrent<TCommand, TScheduler>(TCommand command, TScheduler schedule,
