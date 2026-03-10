@@ -252,9 +252,9 @@ public class JobbyClientTests
 
     private class CronSimpleSchedulerComparer : IEqualityComparer<CronSimpleScheduler>
     {
-        public bool Equals(CronSimpleScheduler? x, CronSimpleScheduler? y)
+        public bool Equals(CronSimpleScheduler? first, CronSimpleScheduler? second)
         {
-            return x is not null && y is not null && x.CronExpression.ToString() == y.CronExpression.ToString();
+            return first is not null && second is not null && first.CronExpression.ToString() == second.CronExpression.ToString();
         }
 
         public int GetHashCode([DisallowNull] CronSimpleScheduler obj) => obj.CronExpression.GetHashCode();
