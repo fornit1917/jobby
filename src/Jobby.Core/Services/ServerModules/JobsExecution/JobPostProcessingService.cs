@@ -14,6 +14,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
     private readonly ISchedulerExecutorProvider _schedulerExecutorProvider;
+    private readonly ITimerService _timerService;
     private readonly ILogger<JobPostProcessingService> _logger;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
@@ -22,11 +23,13 @@ internal class JobPostProcessingService : IJobPostProcessingService
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
         ISchedulerExecutorProvider schedulerExecutorProvider,
+        ITimerService timerService,
         ILogger<JobPostProcessingService> logger)
     {
         _storage = storage;
         _jobCompletingService = jobCompletingService;
         _schedulerExecutorProvider = schedulerExecutorProvider;
+        _timerService = timerService;
         _logger = logger;
         _retryQueue = new ConcurrentQueue<RetryQueueItem>();
     }
@@ -124,7 +127,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         DateTime nextStartAt;
         var schedulerType = job.SchedulerType ?? DefaultScheduler.SCHEDULER_TYPE;
 
-        var utcNow = TimerService.Instance.GetUtcNow();
+        var utcNow = _timerService.GetUtcNow();
         if (!_schedulerExecutorProvider.TryGetExecutor(schedulerType, out var scheduler))
         {
             nextStartAt = utcNow.Add(TimeSpan.FromMinutes(1));

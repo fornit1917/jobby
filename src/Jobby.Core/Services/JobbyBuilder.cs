@@ -108,6 +108,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         var postProcessingService = new JobPostProcessingService(storage,
             completionService,
             _schedulers.Build(),
+            TimerService.Instance,
             LoggerFactory.CreateLogger<JobPostProcessingService>()
         );
 
