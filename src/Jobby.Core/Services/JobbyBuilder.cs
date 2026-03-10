@@ -62,9 +62,9 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private string? _defaultRecurrentQueue;
     private SchedulersRegistry.Builder _schedulers { get; } = new ();
 
-    public IJobbyComponentsConfigurable UseScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null) where TScheduler : IScheduler
+    public IJobbyComponentsConfigurable UseScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? schedulerTypePrefix = null) where TScheduler : IScheduler
     {
-        _schedulers.AddScheduler(schedulerStorage, prefix);
+        _schedulers.AddScheduler(schedulerStorage, schedulerTypePrefix);
         return this;
     }
 

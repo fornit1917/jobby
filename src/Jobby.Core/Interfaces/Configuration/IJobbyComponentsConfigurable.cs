@@ -34,6 +34,6 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable UseMetrics();
     IJobbyComponentsConfigurable UseTracing();
 
-    IJobbyComponentsConfigurable UseScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null)
+    IJobbyComponentsConfigurable UseScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? schedulerTypePrefix = null)
         where TScheduler : IScheduler;
 }

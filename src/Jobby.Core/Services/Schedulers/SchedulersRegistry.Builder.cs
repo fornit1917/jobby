@@ -21,18 +21,18 @@ internal partial class SchedulersRegistry
             AddScheduler(new CronStorage(), DEFAULT_SCHEDULERS_PREFIX);
         }
 
-        public Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix = null)
+        public Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? schedulerTypePrefix = null)
             where TScheduler : IScheduler
         {
-            return AddScheduler<TScheduler>(schedulerStorage, prefix, out var _);
+            return AddScheduler<TScheduler>(schedulerStorage, schedulerTypePrefix, out var _);
         }
 
-        private Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? prefix, out string schedulerType)
+        private Builder AddScheduler<TScheduler>(ISchedulerStorage<TScheduler> schedulerStorage, string? schedulerTypePrefix, out string schedulerType)
             where TScheduler : IScheduler
         {
-            schedulerType = prefix is null ?
+            schedulerType = schedulerTypePrefix is null ?
                 schedulerStorage.DefaultSchedulerType :
-                $"{prefix}{schedulerStorage.DefaultSchedulerType}";
+                $"{schedulerTypePrefix}{schedulerStorage.DefaultSchedulerType}";
 
             if (!_schedulersByType.TryAdd(schedulerType, new ScheduleExecutor<TScheduler>(schedulerStorage.Serializer)))
                 throw new InvalidJobsConfigException($"Scheduler for {schedulerType} has already been added");
