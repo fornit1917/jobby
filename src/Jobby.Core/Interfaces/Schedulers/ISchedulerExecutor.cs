@@ -2,7 +2,7 @@
 
 namespace Jobby.Core.Interfaces.Schedulers;
 
-internal interface IScheduleExecutor
+internal interface ISchedulerExecutor
 {
     bool TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, IJobParamSerializer defaultSerailizer, out DateTime nextStartTime);
 }

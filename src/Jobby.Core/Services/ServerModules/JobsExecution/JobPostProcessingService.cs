@@ -14,7 +14,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
-    private readonly IReadOnlyDictionary<string, IScheduleExecutor> _schedulersByType;
+    private readonly IReadOnlyDictionary<string, ISchedulerExecutor> _schedulersByType;
     private readonly IJobParamSerializer _jobParamSerializer;
     private readonly ILogger<JobPostProcessingService> _logger;
 
@@ -23,7 +23,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        IReadOnlyDictionary<string, IScheduleExecutor> schedulersByType,
+        IReadOnlyDictionary<string, ISchedulerExecutor> schedulersByType,
         IJobParamSerializer jobParamSerializer,
         ILogger<JobPostProcessingService> logger)
     {

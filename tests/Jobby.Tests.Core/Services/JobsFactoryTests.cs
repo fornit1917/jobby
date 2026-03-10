@@ -360,7 +360,7 @@ public class JobsFactoryTests
         Assert.True(job.CanBeRestarted);
     }
     
-    private JobsFactory GetFactory(string? defaultRecurrentQueue = null, IReadOnlyDictionary<string, IScheduleExecutor>? schedulers = null)
+    private JobsFactory GetFactory(string? defaultRecurrentQueue = null, IReadOnlyDictionary<string, ISchedulerExecutor>? schedulers = null)
     {
         var builder = new SchedulersBuilder();
 

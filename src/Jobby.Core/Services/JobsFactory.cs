@@ -10,12 +10,12 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
-    private readonly IReadOnlyDictionary<string, IScheduleExecutor> _schedulersByType;
+    private readonly IReadOnlyDictionary<string, ISchedulerExecutor> _schedulersByType;
     private readonly string _defaultQueueForRecurrent;
 
     public JobsFactory(IGuidGenerator guidGenerator,
         IJobParamSerializer serializer,
-        IReadOnlyDictionary<string, IScheduleExecutor> schedulersByType,
+        IReadOnlyDictionary<string, ISchedulerExecutor> schedulersByType,
         string? defaultQueueForRecurrent)
     {
         _guidGenerator = guidGenerator;

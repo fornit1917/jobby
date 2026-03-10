@@ -9,7 +9,7 @@ using Jobby.Core.Services.Schedulers.CronSimple;
 namespace Jobby.Core.Services.Schedulers;
 public class SchedulersBuilder
 {
-    private readonly Dictionary<string, IScheduleExecutor> _schedulersByTypes = new();
+    private readonly Dictionary<string, ISchedulerExecutor> _schedulersByTypes = new();
 
     public SchedulersBuilder()
     {
@@ -50,8 +50,8 @@ public class SchedulersBuilder
         return this;
     }
 
-    private FrozenDictionary<string, IScheduleExecutor>? _result;
-    internal FrozenDictionary<string, IScheduleExecutor> Build()
+    private FrozenDictionary<string, ISchedulerExecutor>? _result;
+    internal FrozenDictionary<string, ISchedulerExecutor> Build()
     {
         if (_result is null)
             _result = _schedulersByTypes.ToFrozenDictionary();

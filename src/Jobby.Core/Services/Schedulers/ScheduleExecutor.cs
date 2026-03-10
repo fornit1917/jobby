@@ -4,7 +4,7 @@ using Jobby.Core.Models;
 using Jobby.Core.Models.Schedulers;
 
 namespace Jobby.Core.Services.Schedulers;
-internal class ScheduleExecutor<TSchedule> : IScheduleExecutor
+internal class ScheduleExecutor<TSchedule> : ISchedulerExecutor
     where TSchedule : ISchedule
 {
     public readonly IScheduleHandler<TSchedule> ScheduleHandler;
@@ -16,7 +16,7 @@ internal class ScheduleExecutor<TSchedule> : IScheduleExecutor
         ScheduleSerializer = scheduleSerializer;
     }
 
-    bool IScheduleExecutor.TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, IJobParamSerializer defaultSerailizer, out DateTime nextStartTime)
+    bool ISchedulerExecutor.TryGetNextStartTime(string schedule, in SchedulerExecutionContext ctx, IJobParamSerializer defaultSerailizer, out DateTime nextStartTime)
     {
         var serializer = ScheduleSerializer ?? new DefaultJobParamSerializer<TSchedule>(defaultSerailizer);
 
