@@ -11,17 +11,20 @@ internal class JobsFactory : IJobsFactory
 {
     private readonly IGuidGenerator _guidGenerator;
     private readonly IJobParamSerializer _serializer;
-    private readonly IReadOnlyDictionary<string, IScheduler> _schedulersByType;
+    private readonly ISchedulersRegistry _schedulersRegistry;
+    private readonly ITimerService _timerService;
     private readonly string _defaultQueueForRecurrent;
 
     public JobsFactory(IGuidGenerator guidGenerator,
         IJobParamSerializer serializer,
-        IReadOnlyDictionary<string, IScheduler> schedulersByType,
+        ISchedulersRegistry schedulersRegistry,
+        ITimerService timerService,
         string? defaultQueueForRecurrent)
     {
         _guidGenerator = guidGenerator;
         _serializer = serializer;
-        _schedulersByType = schedulersByType;
+        _schedulersRegistry = schedulersRegistry;
+        _timerService = timerService;
         _defaultQueueForRecurrent = defaultQueueForRecurrent ?? QueueSettings.DefaultQueueName;
     }
 
@@ -38,12 +41,12 @@ internal class JobsFactory : IJobsFactory
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = _timerService.GetUtcNow(),
             JobName = jobName,
             JobParam = _serializer.SerializeJobParam(command),
             ScheduledStartAt = opts.StartTime 
                                ?? defaultOpts.StartTime 
-                               ?? DateTime.UtcNow,
+                               ?? _timerService.GetUtcNow(),
             Status = JobStatus.Scheduled,
             CanBeRestarted = opts.CanBeRestartedIfServerGoesDown 
                              ?? defaultOpts.CanBeRestartedIfServerGoesDown 
@@ -67,19 +70,19 @@ internal class JobsFactory : IJobsFactory
         string cron,
         RecurrentJobOpts opts = default) where TCommand : IJobCommand
     {
-        return CreateRecurrent(command, cron, JobbySchedulerTypes.CronFromNow, opts);
+        var cronSchedule = new CronSchedule
+        {
+            CronExpression = cron
+        };
+        return CreateRecurrent(command, cronSchedule, opts);
     }
 
-    public JobCreationModel CreateRecurrent<TCommand>(TCommand command, 
-        string schedule,
-        string schedulerType,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    public JobCreationModel CreateRecurrent<TCommand, TSchedule>(TCommand command, 
+        TSchedule schedule,
+        RecurrentJobOpts opts = default) 
+            where TCommand : IJobCommand
+            where TSchedule : ISchedule
     {
-        if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
-        {
-            throw new UnknownSchedulerTypeException($"Unknown scheduler type: {schedulerType}");
-        }
-        
         var jobName = TCommand.GetJobName();
         var defaultOpts = default(RecurrentJobOpts);
         if (command is IHasDefaultJobOptions hasDefaultOpts)
@@ -87,19 +90,25 @@ internal class JobsFactory : IJobsFactory
             defaultOpts = hasDefaultOpts.GetOptionsForRecurrentJob();
         }
         
+        var scheduler = _schedulersRegistry.GetScheduler<TSchedule>();
+        if (scheduler == null)
+        {
+            throw new InvalidScheduleException($"No scheduler registered for {typeof(TSchedule)}");
+        }
+        
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),
             JobParam = _serializer.SerializeJobParam(command),
             JobName = jobName,
-            Schedule = schedule,
-            SchedulerType = schedulerType,
+            Schedule = scheduler.SerializeSchedule(schedule),
+            SchedulerType = scheduler.GetSchedulerTypeName(),
             IsExclusive = opts.IsExclusive ?? defaultOpts.IsExclusive ?? true,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = _timerService.GetUtcNow(),
             Status = JobStatus.Scheduled,
             ScheduledStartAt = opts.StartTime 
                                ?? defaultOpts.StartTime
-                               ?? scheduler.GetNextStartTime(schedule, previousScheduledStartTime: null),
+                               ?? scheduler.GetFirstStartTime(schedule, _timerService.GetUtcNow()),
             CanBeRestarted = opts.CanBeRestartedIfServerGoesDown
                              ??  defaultOpts.CanBeRestartedIfServerGoesDown
                              ?? true,

@@ -9,9 +9,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Frozen;
 using System.Reflection;
 using System.Text.Json;
-using Jobby.Core.Interfaces.Queues;
 using Jobby.Core.Interfaces.Schedulers;
-using Jobby.Core.Interfaces.ServerModules;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
 using Jobby.Core.Services.Queues;
@@ -60,7 +58,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     private JobbyServerSettings _serverSettings = new();
 
     private string? _defaultRecurrentQueue;
-    private readonly Dictionary<string, IScheduler> _schedulersByType = JobbySchedulerTypes.CreateSchedulers();
+
+    private readonly SchedulersRegistryBuilder _schedulersRegistryBuilder = new SchedulersRegistryBuilder()
+        .AddScheduler(new CronScheduleHandler())
+        .AddScheduler(new TimeSpanScheduleHandler());
+    
+    private SchedulersRegistry? _schedulersRegistry;
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
@@ -93,15 +96,17 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
         var storage = GetStorage();
         var serverId = $"{Environment.MachineName}_{Guid.NewGuid()}";
-        
 
         IJobCompletionService completionService = _serverSettings.CompleteWithBatching
             ? new BatchingJobCompletionService(storage, _serverSettings, serverId)
             : new SimpleJobCompletionService(storage, _serverSettings.DeleteCompleted);
 
+        var schedulersRegistry = GetSchedulersRegistry();
+
         var postProcessingService = new JobPostProcessingService(storage,
             completionService,
-            _schedulersByType.ToFrozenDictionary(),
+            schedulersRegistry,
+            TimerService.Instance,
             LoggerFactory.CreateLogger<JobPostProcessingService>());
 
         var executionService = new JobExecutionService(_scopeFactory,
@@ -152,7 +157,8 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     {
         _jobsFactory ??= new JobsFactory(GuidGenerator,
             Serializer,
-            _schedulersByType.ToFrozenDictionary(),
+            GetSchedulersRegistry(),
+            TimerService.Instance,
             _defaultRecurrentQueue);
         
         return _jobsFactory;
@@ -333,9 +339,11 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         return this;
     }
 
-    public IJobbyComponentsConfigurable UseScheduler(string schedulerType, IScheduler scheduler)
+    public IJobbyComponentsConfigurable UseScheduler<TSchedule>(IScheduleHandler<TSchedule> scheduleHandler)
+        where TSchedule : ISchedule
     {
-        _schedulersByType[schedulerType] = scheduler;
+        _schedulersRegistry = null;
+        _schedulersRegistryBuilder.AddScheduler(scheduleHandler);
         return this;
     }
 
@@ -362,5 +370,14 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             _permanentLocksStorage = _permanentLocksStorageFactory.Invoke(this);
         }
         return _permanentLocksStorage ?? throw new InvalidBuilderConfigException("PermanentLocksStorage is not specified");
+    }
+
+    private ISchedulersRegistry GetSchedulersRegistry()
+    {
+        if (_schedulersRegistry == null)
+        {
+            _schedulersRegistry = _schedulersRegistryBuilder.CreateRegistry();
+        }
+        return _schedulersRegistry;
     }
 }

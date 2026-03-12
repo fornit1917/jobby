@@ -13,13 +13,26 @@ public class JobsFactoryTests
 {
     private const string SerializedCommand = "serializedParam";
     private static readonly Guid JobId = Guid.NewGuid();
+    private const string CustomSchedulerTypeName = "CustomSchedulerType";
+    
     private readonly Mock<IGuidGenerator> _guidGeneratorMock;
-
     private readonly Mock<IJobParamSerializer> _serializerMock;
+    private readonly Mock<IScheduleHandler<CustomSchedule>> _customSchedulerMock;
+    private readonly Mock<ITimerService> _timerServiceMock;
+
+    // ReSharper disable once MemberCanBePrivate.Global
+    public class CustomSchedule : ISchedule
+    {
+        public int Value { get; init; }
+    }
 
     public JobsFactoryTests()
     {
         _serializerMock = new Mock<IJobParamSerializer>();
+        _customSchedulerMock = new Mock<IScheduleHandler<CustomSchedule>>();
+        _customSchedulerMock.Setup(x => x.GetSchedulerTypeName()).Returns(CustomSchedulerTypeName);
+        _timerServiceMock = new Mock<ITimerService>();
+        _timerServiceMock.Setup(x => x.GetUtcNow()).Returns(() => DateTime.UtcNow);
         _guidGeneratorMock = new Mock<IGuidGenerator>();
         _guidGeneratorMock.Setup(x => x.NewGuid()).Returns(JobId);
     }
@@ -187,7 +200,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
+        Assert.Equal("JOBBY_CRON", job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         var expectedStartTime = CronHelper.GetNext(cron, job.CreatedAt);
@@ -202,29 +215,30 @@ public class JobsFactoryTests
     {
         var command = new TestJobCommand();
         _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
-        var schedule = "custom-schedule";
-        var schedulerType = "custom-scheduler";
-        var schedulerMock = new Mock<IScheduler>();
-        var expectedStartTime = DateTime.UtcNow.AddMinutes(123);
-        schedulerMock
-            .Setup(x => x.GetNextStartTime(schedule, null))
+        
+        var schedule = new CustomSchedule { Value = 123 };
+        var now = DateTime.UtcNow;
+        var expectedStartTime = DateTime.UtcNow.AddHours(1);
+        _timerServiceMock.Setup(x => x.GetUtcNow()).Returns(now);
+        _customSchedulerMock
+            .Setup(x => x.GetFirstStartTime(schedule, now))
             .Returns(expectedStartTime);
-        var schedulers = new Dictionary<string, IScheduler>
-        {
-            [schedulerType] = schedulerMock.Object
-        };
+        var expectedSerializedSchedule = "serializedCustomSchedule";
+        _customSchedulerMock
+            .Setup(x => x.SerializeSchedule(schedule))
+            .Returns(expectedSerializedSchedule);
 
-        var job = GetFactory(schedulers: schedulers).CreateRecurrent(command, schedule, schedulerType);
+        var job = GetFactory().CreateRecurrent(command, schedule);
 
         Assert.Equal(JobId,  job.Id);
         Assert.Equal(TestJobCommand.GetJobName(), job.JobName);
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
-        Assert.Equal(schedule, job.Schedule);
-        Assert.Equal(schedulerType, job.SchedulerType);
+        Assert.Equal(expectedSerializedSchedule, job.Schedule);
+        Assert.Equal(CustomSchedulerTypeName, job.SchedulerType);
         Assert.True(job.IsExclusive);
-        Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
-        Assert.Equal(expectedStartTime, job.ScheduledStartAt);
+        Assert.Equal(now, job.CreatedAt, TimeSpan.FromSeconds(1));
+        Assert.Equal(expectedStartTime, job.ScheduledStartAt, TimeSpan.FromSeconds(1));
         Assert.Null(job.NextJobId);
         Assert.Equal(QueueSettings.DefaultQueueName, job.QueueName);
         Assert.True(job.CanBeRestarted);
@@ -252,7 +266,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
+        Assert.Equal("JOBBY_CRON", job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
@@ -284,7 +298,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
+        Assert.Equal("JOBBY_CRON", job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(defaultOpts.StartTime.Value, job.ScheduledStartAt);
@@ -320,7 +334,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
+        Assert.Equal("JOBBY_CRON", job.SchedulerType);
         Assert.False(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         Assert.Equal(opts.StartTime.Value, job.ScheduledStartAt);
@@ -346,7 +360,7 @@ public class JobsFactoryTests
         Assert.Equal(SerializedCommand, job.JobParam);
         Assert.Equal(JobStatus.Scheduled, job.Status);
         Assert.Equal(cron, job.Schedule);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, job.SchedulerType);
+        Assert.Equal("JOBBY_CRON", job.SchedulerType);
         Assert.True(job.IsExclusive);
         Assert.Equal(DateTime.UtcNow, job.CreatedAt, TimeSpan.FromSeconds(1));
         var expectedStartTime = CronHelper.GetNext(cron, job.CreatedAt);
@@ -356,11 +370,18 @@ public class JobsFactoryTests
         Assert.True(job.CanBeRestarted);
     }
     
-    private JobsFactory GetFactory(string? defaultRecurrentQueue = null, Dictionary<string, IScheduler>? schedulers = null)
+    private JobsFactory GetFactory(string? defaultRecurrentQueue = null)
     {
+        var schedulers = new SchedulersRegistryBuilder()
+            .AddScheduler(new CronScheduleHandler())
+            .AddScheduler(new TimeSpanScheduleHandler())
+            .AddScheduler(_customSchedulerMock.Object)
+            .CreateRegistry();
+        
         return new JobsFactory(_guidGeneratorMock.Object,
             _serializerMock.Object,
-            schedulers ?? JobbySchedulerTypes.CreateSchedulers(),
+            schedulers,
+            _timerServiceMock.Object,
             defaultRecurrentQueue);
     }
 }

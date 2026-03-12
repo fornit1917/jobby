@@ -12,7 +12,8 @@ internal class JobPostProcessingService : IJobPostProcessingService
 {
     private readonly IJobbyStorage _storage;
     private readonly IJobCompletionService _jobCompletingService;
-    private readonly IReadOnlyDictionary<string, IScheduler> _schedulersByType;
+    private readonly ISchedulersRegistry _schedulersRegistry;
+    private readonly ITimerService _timerService;
     private readonly ILogger<JobPostProcessingService> _logger;
 
     private readonly record struct RetryQueueItem(JobExecutionModel Job, RetryPolicy? RetryPolicy = null, string? Error = null);
@@ -20,12 +21,14 @@ internal class JobPostProcessingService : IJobPostProcessingService
 
     public JobPostProcessingService(IJobbyStorage storage,
         IJobCompletionService jobCompletingService,
-        IReadOnlyDictionary<string, IScheduler> schedulersByType,
+        ISchedulersRegistry schedulersRegistry,
+        ITimerService timerService,
         ILogger<JobPostProcessingService> logger)
     {
         _storage = storage;
         _jobCompletingService = jobCompletingService;
-        _schedulersByType = schedulersByType;
+        _schedulersRegistry = schedulersRegistry;
+        _timerService = timerService;
         _logger = logger;
         _retryQueue = new ConcurrentQueue<RetryQueueItem>();
     }
@@ -121,17 +124,30 @@ internal class JobPostProcessingService : IJobPostProcessingService
         ArgumentNullException.ThrowIfNull(job.Schedule, nameof(job.Schedule));
 
         DateTime nextStartAt;
-        var schedulerType = job.SchedulerType ?? JobbySchedulerTypes.CronFromNow;
-        if (!_schedulersByType.TryGetValue(schedulerType, out var scheduler))
+
+        try
         {
-            nextStartAt = DateTime.UtcNow.Add(TimeSpan.FromMinutes(1));
-            _logger.LogError("Recurrent job {JobName} with id={JobId} has invalid SchedulerType: {SchedulerType}", 
-                job.JobName, job.Id, schedulerType);
+            var schedulerType = job.SchedulerType ?? CronScheduleHandler.Name;
+            var schedulerFunc = _schedulersRegistry.GetSchedulerAsFunction(schedulerType);
+            if (schedulerFunc == null)
+            {
+                nextStartAt = _timerService.GetUtcNow().Add(TimeSpan.FromMinutes(1));
+                _logger.LogError("Recurrent job {JobName} with id={JobId} has not registered SchedulerType: {SchedulerType}", 
+                    job.JobName, job.Id, schedulerType);
+            }
+            else
+            {
+                var ctx = new ScheduleCalculationContext(_timerService.GetUtcNow(), job.ScheduledStartAt);
+                nextStartAt = schedulerFunc(job.Schedule, ctx);
+            }
         }
-        else
+        catch (Exception e)
         {
-            nextStartAt = scheduler.GetNextStartTime(job.Schedule, job.ScheduledStartAt); 
+            nextStartAt = _timerService.GetUtcNow().Add(TimeSpan.FromMinutes(1));
+            _logger.LogError(e, "Could not calculate next start time for recurrent job {JobName} with id={JobId} by specified schedule", 
+                job.JobName, job.Id);
         }
+        
         
         return _storage.RescheduleProcessingJobAsync(job, nextStartAt, error);
     }

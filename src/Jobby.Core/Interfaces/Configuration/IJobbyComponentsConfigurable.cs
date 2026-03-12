@@ -31,6 +31,6 @@ public interface IJobbyComponentsConfigurable
 
     IJobbyComponentsConfigurable UseMetrics();
     IJobbyComponentsConfigurable UseTracing();
-    
-    IJobbyComponentsConfigurable UseScheduler(string schedulerType, IScheduler scheduler);
+
+    IJobbyComponentsConfigurable UseScheduler<TSchedule>(IScheduleHandler<TSchedule> scheduleHandler) where TSchedule : ISchedule;
 }

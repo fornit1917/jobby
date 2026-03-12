@@ -3,6 +3,7 @@ using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
 using Jobby.Core.Models;
+using Jobby.Core.Services.Schedulers;
 using Jobby.Core.Services.ServerModules.JobsExecution;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,7 +15,9 @@ public class JobPostProcessingServiceTests
     private readonly Mock<IJobbyStorage> _storageMock;
     private readonly Mock<IJobCompletionService> _completionServiceMock;
     private readonly Mock<ILogger<JobPostProcessingService>> _loggerMock;
-    private readonly Mock<IScheduler> _schedulerMock;
+    private readonly Mock<IScheduleHandler<CronSchedule>> _schedulerMock;
+    private readonly Mock<ISchedulersRegistry> _schedulersRegistryMock;
+    private readonly Mock<ITimerService> _timerServiceMock;
 
     private readonly JobPostProcessingService _postProcessingService;
 
@@ -25,15 +28,22 @@ public class JobPostProcessingServiceTests
         _storageMock = new Mock<IJobbyStorage>();
         _completionServiceMock = new Mock<IJobCompletionService>();
         _loggerMock = new Mock<ILogger<JobPostProcessingService>>();
-        _schedulerMock = new Mock<IScheduler>();
-        var schedulers = new Dictionary<string, IScheduler>
-        {
-            [SchedulerType] = _schedulerMock.Object,
-        };
+        _timerServiceMock = new Mock<ITimerService>();
+        _timerServiceMock.Setup(x => x.GetUtcNow()).Returns(() => DateTime.UtcNow);
+        
+        _schedulerMock = new Mock<IScheduleHandler<CronSchedule>>();
+        DateTime SchedulerFunction(string schedule, ScheduleCalculationContext ctx) 
+            => _schedulerMock.Object.GetNextStartTime(new CronSchedule { CronExpression = schedule }, ctx);
+        _schedulersRegistryMock = new Mock<ISchedulersRegistry>();
+        _schedulersRegistryMock
+            .Setup(x => x.GetSchedulerAsFunction(SchedulerType))
+            .Returns((SchedulerFunction)SchedulerFunction);
+        
         _postProcessingService = new JobPostProcessingService(
             _storageMock.Object,
             _completionServiceMock.Object,
-            schedulers,
+            _schedulersRegistryMock.Object,
+            _timerServiceMock.Object,
             _loggerMock.Object);
     }
 
@@ -104,12 +114,21 @@ public class JobPostProcessingServiceTests
             Id = Guid.NewGuid(),
             Schedule = "0 3 1 12 *",
             SchedulerType = SchedulerType,
-            ScheduledStartAt = DateTime.UtcNow,
+            ScheduledStartAt = DateTime.UtcNow.AddHours(-1),
         };
         var error = "error";
+        var utcNow = DateTime.UtcNow;
+        _timerServiceMock.Setup(x =>  x.GetUtcNow()).Returns(utcNow);
         var expectedNextTime = DateTime.UtcNow.AddSeconds(123);
+        var expectedCtx = new ScheduleCalculationContext
+        {
+            UtcNow = utcNow,
+            PrevScheduledTime = job.ScheduledStartAt
+        };
         _schedulerMock
-            .Setup(x => x.GetNextStartTime(job.Schedule, job.ScheduledStartAt))
+            .Setup(x => x.GetNextStartTime(
+                It.Is<CronSchedule>(c => c.CronExpression == job.Schedule), 
+                expectedCtx))
             .Returns(expectedNextTime);
 
         await _postProcessingService.RescheduleRecurrent(job, error);
