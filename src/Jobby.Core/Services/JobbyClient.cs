@@ -1,4 +1,5 @@
 ﻿using Jobby.Core.Interfaces;
+using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models;
 
 namespace Jobby.Core.Services;
@@ -95,12 +96,13 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
 
-    public async Task<Guid> ScheduleRecurrentAsync<TCommand>(TCommand command,
-        string schedule,
-        string schedulerType,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    public async Task<Guid> ScheduleRecurrentAsync<TCommand, TSchedule>(TCommand command,
+        TSchedule schedule,
+        RecurrentJobOpts opts = default)
+            where TCommand : IJobCommand
+            where TSchedule : ISchedule
     {
-        var job = _jobFactory.CreateRecurrent(command, schedule, schedulerType, opts);
+        var job = _jobFactory.CreateRecurrent(command, schedule, opts);
         await _storage.InsertJobAsync(job);
         return job.Id;
     }
@@ -114,10 +116,14 @@ internal class JobbyClient : IJobbyClient
         return job.Id;
     }
     
-    public Guid ScheduleRecurrent<TCommand>(TCommand command, string schedule, string schedulerType,
-        RecurrentJobOpts opts = default) where TCommand : IJobCommand
+    public Guid ScheduleRecurrent<TCommand, TSchedule>(TCommand command, 
+        TSchedule schedule,
+        RecurrentJobOpts opts = default) 
+            where TCommand : IJobCommand
+            where TSchedule : ISchedule
     {
-        var job = _jobFactory.CreateRecurrent(command, schedule, schedulerType, opts);
+        var job = _jobFactory.CreateRecurrent(command, schedule, opts);
         _storage.InsertJob(job);
-        return job.Id;    }
+        return job.Id;    
+    }
 }

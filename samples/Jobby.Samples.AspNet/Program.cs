@@ -70,7 +70,7 @@ public static class Program
                         MaxCount = 3,
                         IntervalsSeconds = [1, 2]
                     })
-                    .UseScheduler(CustomSecondsScheduler.Name, new CustomSecondsScheduler())
+                    .UseScheduler(new SecondsIntervalScheduleHandler())
                     .ConfigurePipeline(pipeline =>
                     {   
                         // Some custom middlewares

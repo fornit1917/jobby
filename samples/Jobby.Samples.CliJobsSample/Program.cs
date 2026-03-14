@@ -8,6 +8,7 @@ using Jobby.Samples.CliJobsSample.Middlewares;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Text.Json;
+using Jobby.Core.Services.Schedulers;
 
 namespace Jobby.Samples.CliJobsSample;
 
@@ -30,7 +31,7 @@ internal static class Program
         var jsonOptions = new JsonSerializerOptions();
         var jobbySettings = new JobbyServerSettings
         {
-            PollingIntervalMs = 1000,
+            PollingIntervalMs = 500,
             PollingIntervalStartMs = 50,
             PollingIntervalFactor = 2,
             DbErrorPauseMs = 5000,
@@ -182,13 +183,15 @@ internal static class Program
 
     private static void CreateRecurrentNotExclusive(IJobbyClient jobbyClient)
     {
-        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand { Value = "1" }, "*/2 * * * * *", new()
+        var everyTwoSeconds = new TimeSpanSchedule { Interval = TimeSpan.FromSeconds(2) };
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand { Value = "1" }, everyTwoSeconds, new()
         {
             QueueName = "q1",
             IsExclusive = false
         });
         
-        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand() { Value = "2" }, "*/3 * * * * *", new()
+        var everyThreeSeconds = new TimeSpanSchedule { Interval = TimeSpan.FromSeconds(3) };
+        jobbyClient.ScheduleRecurrent(new TestCliRecurrentJobCommand() { Value = "2" }, everyThreeSeconds, new()
         {
             QueueName = "q1",
             IsExclusive = false

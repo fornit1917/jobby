@@ -182,7 +182,7 @@ public class JobbyClientIntegrationTests
                                              .Where(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron)
                                              .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualJobFromDb);
-        Assert.Equal(JobbySchedulerTypes.CronFromNow, actualJobFromDb.SchedulerType);
+        Assert.Equal("JOBBY_CRON", actualJobFromDb.SchedulerType);
 
         await client.CancelRecurrentAsync<TestJobCommand>();
 
@@ -199,14 +199,14 @@ public class JobbyClientIntegrationTests
         var client = CreateJobbyClient();
 
         var command = new TestJobCommand();
-        var cron = "0 3 1 1 *";
-        client.ScheduleRecurrent(command, cron, JobbySchedulerTypes.CronFromPrev);
+        var schedule = new TimeSpanSchedule { Interval = TimeSpan.FromHours(1) };
+        client.ScheduleRecurrent(command, schedule);
 
         var actualJobFromDb = dbContext.Jobs
             .AsNoTracking()
-            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName() && x.Schedule == cron);
+            .FirstOrDefault(x => x.JobName == TestJobCommand.GetJobName());
         Assert.NotNull(actualJobFromDb);
-        Assert.Equal(JobbySchedulerTypes.CronFromPrev, actualJobFromDb.SchedulerType);
+        Assert.Equal("JOBBY_INTERVAL", actualJobFromDb.SchedulerType);
 
         client.CancelRecurrent<TestJobCommand>();
 
