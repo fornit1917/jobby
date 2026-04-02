@@ -28,7 +28,7 @@ export default defineConfig({
           { text: 'Scheduled jobs', link: '/docs/jobs-schedule' },
           { text: 'Retry policies', link: '/docs/retry-policies' },
           { text: 'Multi-queues', link: '/docs/multiqueues' },
-          { text: 'Sequential tasks execution', link: '/docs/sequential-execution' },          
+          { text: 'Sequential execution', link: '/docs/sequential-execution' },          
           { text: 'Middlewares', link: '/docs/middlewares' },
           { text: 'Metrics and tracing', link: '/docs/observability' },
           { text: 'Fault tolerance', link: '/docs/fault-tolerance' },          
