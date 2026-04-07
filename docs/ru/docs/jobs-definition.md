@@ -36,6 +36,24 @@ public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
 }
 ```
 
+## Добавление джобов в Jobby
+
+При настройке библиотеки необходимо указать сборки, содержащие код ваших команд и обработчиков:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    // Указываем сборки с командами и обработчиками
+    jobbyBuilder
+        .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
+    
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        // ...
+    });
+});
+```
+
 ## JobExecutionContext
 
 В метод `ExecuteAsync` помимо объекта команды передаётся объекта класса `JobExecutionContext` со следующими полями:

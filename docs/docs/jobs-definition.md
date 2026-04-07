@@ -1,4 +1,4 @@
-# Background Jobs Definition
+# Jobs Definition
 
 ## Command and Handler
 
@@ -33,6 +33,24 @@ public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
         // ctx - contains CancellationToken and additional information
     }
 }
+```
+
+## Adding Jobs to Jobby
+
+When configuring the library, you must specify the assemblies containing your command and handler code:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    // Specify assemblies containing commands and handlers
+    jobbyBuilder
+        .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
+    
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        // ...
+    });
+});
 ```
 
 ## JobExecutionContext
