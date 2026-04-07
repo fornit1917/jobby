@@ -34,11 +34,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{037EFD35-6F28-4316-ACED-DF90DC22559F}"
 	ProjectSection(SolutionItems) = preProject
 		docker-compose.postgresql.yml = docker-compose.postgresql.yml
-		docs\en\overview.md = docs\en\overview.md
-		docs\logo\jobby_logo_1024.png = docs\logo\jobby_logo_1024.png
-		docs\logo\jobby_logo_256.png = docs\logo\jobby_logo_256.png
-		docs\logo\jobby_package_icon.png = docs\logo\jobby_package_icon.png
-		docs\ru\overview.md = docs\ru\overview.md
 		README.md = README.md
 		.github\workflows\dotnet.yml = .github\workflows\dotnet.yml
 		versions.md = versions.md

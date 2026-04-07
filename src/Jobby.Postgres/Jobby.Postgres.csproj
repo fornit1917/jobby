@@ -18,8 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\" />
-    <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\" />
+    <None Include="../../images/jobby_package_icon.png" Pack="true" PackagePath="\"/>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
