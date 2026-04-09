@@ -229,11 +229,10 @@ public class TakeBatchToProcessingTests
     }
     
     [Theory]
-    [InlineData(JobStatus.Processing, 1, false, 0)]
-    [InlineData(JobStatus.Scheduled, 1, true, 1)]
-    [InlineData(JobStatus.Failed, 1, true, 0)]
-    public async Task TakeBatchToProcessingAsync_DoesNotReturnJobFromLockedGroup(JobStatus lockerStatus, 
-        int lockerStartedCount, bool lockerLockIfFailed, int expectedJobsReturned)
+    [InlineData(JobStatus.Processing, false)]
+    [InlineData(JobStatus.Scheduled, true)]
+    [InlineData(JobStatus.Failed, true)]
+    public async Task TakeBatchToProcessingAsync_DoesNotReturnJobFromLockedGroup(JobStatus lockerStatus, bool lockerLockIfFailed)
     {
         await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
         
@@ -246,7 +245,7 @@ public class TakeBatchToProcessingTests
                 JobName = "locker",
                 Schedule = null,
                 JobParam = "param",
-                StartedCount = lockerStartedCount,
+                StartedCount = 1,
                 NextJobId = null,
                 Status = lockerStatus,
                 ScheduledStartAt = DateTime.UtcNow.AddMinutes(-3),
@@ -282,8 +281,7 @@ public class TakeBatchToProcessingTests
         };
         await storage.TakeBatchToProcessingAsync(request, result);
         
-        Assert.Equal(expectedJobsReturned, result.Count);
-        Assert.DoesNotContain(result, x => x.Id == lockedJobId);
+        Assert.Empty(result);
     }    
 
     private void AssertTakenToRunJob(JobDbModel createdJob, JobExecutionModel takenJob, string serverId)
