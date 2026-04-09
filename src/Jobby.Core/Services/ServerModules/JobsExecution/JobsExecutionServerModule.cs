@@ -83,18 +83,34 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
         {
             try
             {
+                await _semaphore.WaitAsync(cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+            }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _semaphore.Release();
+                break;
+            }
+            
+            try
+            {
                 if (!_postProcessingService.IsRetryQueueEmpty)
                 {
                     await _timer.Delay(_settings.DbErrorPauseMs, cancellationToken);
                     if (cancellationToken.IsCancellationRequested)
+                    {
+                        _semaphore.Release();
                         break;
+                    }
                     
                     await _postProcessingService.DoRetriesFromQueue(cancellationToken);
                 }
             }
             catch (Exception ex)
             {
-                _semaphore.Release();
                 _logger.LogError(ex, "Error while retry post-processing for jobs");
                 continue;
             }
@@ -105,11 +121,10 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
                 await _timer.Delay(waitingIntervalMs, cancellationToken);
             }
             if (cancellationToken.IsCancellationRequested)
+            {
+                _semaphore.Release();
                 break;
-            
-            await _semaphore.WaitAsync(cancellationToken);
-            if (cancellationToken.IsCancellationRequested)
-                break;
+            }
 
             var batchSize = _semaphore.CurrentCount + 1;
             if (batchSize > _settings.TakeToProcessingBatchSize)

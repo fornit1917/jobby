@@ -1,72 +1,4 @@
--- Tables
-
-CREATE TABLE IF NOT EXISTS jobby_jobs (
-	id UUID NOT NULL PRIMARY KEY,
-	job_name TEXT NOT NULL,
-	schedule TEXT DEFAULT NULL,
-	job_param TEXT DEFAULT NULL,
-	status int NOT NULL,
-	error TEXT DEFAULT NULL,
-	created_at timestamptz NOT NULL,
-	scheduled_start_at timestamptz NOT NULL,
-	last_started_at timestamptz DEFAULT NULL,
-	last_finished_at timestamptz DEFAULT NULL,
-	started_count int NOT NULL DEFAULT 0,
-	next_job_id UUID DEFAULT NULL,
-	server_id TEXT DEFAULT NULL,
-	can_be_restarted boolean NOT NULL DEFAULT FALSE,
-    queue_name TEXT NOT NULL DEFAULT 'default',
-    serializable_group_id TEXT DEFAULT NULL,
-    lock_group_if_failed BOOLEAN DEFAULT FALSE,
-    is_group_locker BOOLEAN GENERATED ALWAYS AS (
-        serializable_group_id IS NOT NULL
-        AND (
-            status = 2
-            OR (
-                lock_group_if_failed = TRUE
-                AND (status = 4 OR status = 1 AND started_count > 0)
-            )
-        )
-    ) STORED,
-    is_exclusive BOOLEAN NOT NULL DEFAULT FALSE,
-    scheduler_type TEXT DEFAULT NULL
-);
-
-CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
-    ON jobby_jobs(queue_name, status, scheduled_start_at);
-
-CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_exclusive_name_idx
-    ON jobby_jobs(job_name)
-    WHERE is_exclusive = true;
-
-CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_locked_group_idx
-    ON jobby_jobs(serializable_group_id)
-    WHERE is_group_locker = TRUE;
-
-CREATE INDEX IF NOT EXISTS jobby_jobs_frozen_group_id_scheduled_start_at_idx
-    ON jobby_jobs(serializable_group_id, scheduled_start_at)
-    WHERE serializable_group_id IS NOT NULL AND status = 6;
-
------
-
-CREATE TABLE IF NOT EXISTS jobby_servers (
-	id TEXT NOT NULL PRIMARY KEY,
-	heartbeat_ts timestamptz NOT NULL
-);
-
------
-
-CREATE TABLE IF NOT EXISTS jobby_unlocking_groups (
-    group_id TEXT NOT NULL PRIMARY KEY,
-    created_at TIMESTAMPTZ NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS jobby_unlocking_groups_created_at_idx
-    ON jobby_unlocking_groups(created_at);
-
--- Functions
-
-CREATE OR REPLACE FUNCTION jobby_take_to_processing(p_queue TEXT, p_batch_size int, p_server_id TEXT)
+CREATE OR REPLACE FUNCTION ${take_to_processing_function_fullname}(p_queue TEXT, p_batch_size int, p_server_id TEXT)
 RETURNS TABLE (
     id uuid,
     job_name TEXT,
@@ -100,7 +32,7 @@ BEGIN
         FOR candidate_rec IN
             WITH
                 candidates AS (
-                    SELECT c.id, c.serializable_group_id, c.scheduled_start_at FROM jobby_jobs c
+                    SELECT c.id, c.serializable_group_id, c.scheduled_start_at FROM ${jobs_table_fullname} c
                     WHERE
                         c.queue_name = p_queue
                         AND c.status = 1
@@ -109,7 +41,7 @@ BEGIN
                             c.serializable_group_id IS NULL
                             OR (
                                 NOT EXISTS (
-                                    SELECT 1 FROM jobby_jobs jl
+                                    SELECT 1 FROM ${jobs_table_fullname} jl
                                     WHERE
                                         jl.serializable_group_id = c.serializable_group_id
                                         AND jl.is_group_locker = TRUE
@@ -161,7 +93,7 @@ BEGIN
 
             LOOP
                 IF candidate_rec.c_skipped = FALSE THEN
-                    UPDATE jobby_jobs t
+                    UPDATE ${jobs_table_fullname} t
                     SET
                         status = 2,
                         last_started_at = now(),
@@ -170,7 +102,7 @@ BEGIN
                     WHERE
                         t.id = candidate_rec.c_id
                         AND NOT EXISTS (
-                            SELECT 1 FROM jobby_jobs jl
+                            SELECT 1 FROM ${jobs_table_fullname} jl
                             WHERE
                                 jl.serializable_group_id = candidate_rec.c_serializable_group_id
                                 AND jl.is_group_locker = TRUE
