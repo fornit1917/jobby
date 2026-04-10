@@ -1,6 +1,10 @@
 # Versions
 
-## v0.6.1 (2025-01-11)
+## v0.6.2 (2026-04-10)
+
+- Fixed a bug with stuck recurrent jobs
+
+## v0.6.1 (2026-01-11)
 
 - Fixed a bug where the library would throw an error when using custom table names in the database
 
