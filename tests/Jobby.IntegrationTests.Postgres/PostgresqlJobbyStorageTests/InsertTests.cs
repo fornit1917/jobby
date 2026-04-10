@@ -123,16 +123,17 @@ public class InsertTests
             Status = JobStatus.Scheduled,
             JobParam = "param2"
         };
+        var expectedNewJob = WithNewId(newJob, job.Id);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.InsertJobAsync(job);
         await storage.InsertJobAsync(newJob);
 
         var actualJobWithOldId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == job.Id);
-        Assert.Null(actualJobWithOldId);
+        Assert.NotNull(actualJobWithOldId);
         var actualJobWithNewId = await dbContext.Jobs.FirstOrDefaultAsync(x => x.Id == newJob.Id);
-        Assert.NotNull(actualJobWithNewId);
-        AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
+        Assert.Null(actualJobWithNewId);
+        AssertHelper.AssertCreatedJob(expectedNewJob, actualJobWithOldId);
     }
 
     [Fact]
@@ -162,15 +163,31 @@ public class InsertTests
             Status = JobStatus.Scheduled,
             JobParam = "param2"
         };
+        var expectedNewJob = WithNewId(newJob, job.Id);
 
         var storage = DbHelper.CreateJobbyStorage();
         storage.InsertJob(job);
         storage.InsertJob(newJob);
 
         var actualJobWithOldId = dbContext.Jobs.FirstOrDefault(x => x.Id == job.Id);
-        Assert.Null(actualJobWithOldId);
+        Assert.NotNull(actualJobWithOldId);
         var actualJobWithNewId = dbContext.Jobs.FirstOrDefault(x => x.Id == newJob.Id);
-        Assert.NotNull(actualJobWithNewId);
-        AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
-    }    
+        Assert.Null(actualJobWithNewId);
+        AssertHelper.AssertCreatedJob(expectedNewJob, actualJobWithOldId);
+    } 
+    
+    private static JobCreationModel WithNewId(JobCreationModel job, Guid id)
+    {
+        return new JobCreationModel
+        {
+            Id = id,
+            Cron = job.Cron,
+            CreatedAt = job.CreatedAt,
+            JobName = job.JobName,
+            CanBeRestarted = job.CanBeRestarted,
+            ScheduledStartAt = job.ScheduledStartAt,
+            Status = job.Status,
+            JobParam = job.JobParam
+        };
+    }
 }
