@@ -44,14 +44,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _bulkDeleteRecurrentCommand = new BulkDeleteRecurrentCommand(dataSource, settings);
     }
 
-    public Task InsertJobAsync(JobCreationModel job)
+    public Task<Guid> InsertJobAsync(JobCreationModel job)
     {
         return _insertJobCommand.ExecuteAsync(job);
     }
 
-    public void InsertJob(JobCreationModel job)
+    public Guid InsertJob(JobCreationModel job)
     {
-        _insertJobCommand.Execute(job);
+        return _insertJobCommand.Execute(job);
     }
 
     public Task TakeBatchToProcessingAsync(GetJobsRequest request, List<JobExecutionModel> result)

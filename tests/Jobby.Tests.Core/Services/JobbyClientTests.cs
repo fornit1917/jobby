@@ -82,6 +82,7 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         _factoryMock.Setup(x => x.Create(command, default(JobOpts))).Returns(job);
+        _storageMock.Setup(x => x.InsertJob(job)).Returns(job.Id);
 
         var id = _client.EnqueueCommand(command);
 
@@ -96,6 +97,7 @@ public class JobbyClientTests
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         var opts = new JobOpts { QueueName = "q" };
         _factoryMock.Setup(x => x.Create(command, opts)).Returns(job);
+        _storageMock.Setup(x => x.InsertJob(job)).Returns(job.Id);
 
         var id = _client.EnqueueCommand(command, opts);
 
@@ -110,6 +112,7 @@ public class JobbyClientTests
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         var startTime = DateTime.UtcNow;
         _factoryMock.Setup(x => x.Create(command, startTime)).Returns(job);
+        _storageMock.Setup(x => x.InsertJob(job)).Returns(job.Id);
 
         var id = _client.EnqueueCommand(command, startTime);
 
@@ -123,6 +126,7 @@ public class JobbyClientTests
         var command = new TestJobCommand();
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         _factoryMock.Setup(x => x.Create(command, default(JobOpts))).Returns(job);
+        _storageMock.Setup(x => x.InsertJobAsync(job)).ReturnsAsync(job.Id);
 
         var id = await _client.EnqueueCommandAsync(command);
 
@@ -137,6 +141,7 @@ public class JobbyClientTests
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         var opts = new JobOpts { QueueName = "q" };
         _factoryMock.Setup(x => x.Create(command, opts)).Returns(job);
+        _storageMock.Setup(x => x.InsertJobAsync(job)).ReturnsAsync(job.Id);
 
         var id = await _client.EnqueueCommandAsync(command, opts);
 
@@ -151,6 +156,7 @@ public class JobbyClientTests
         var job = new JobCreationModel { Id = Guid.NewGuid() };
         var startTime = DateTime.UtcNow;
         _factoryMock.Setup(x => x.Create(command, startTime)).Returns(job);
+        _storageMock.Setup(x => x.InsertJobAsync(job)).ReturnsAsync(job.Id);
 
         var id = await _client.EnqueueCommandAsync(command, startTime);
 

@@ -40,6 +40,7 @@ internal class InsertJobCommand
                 queue_name = $10,
                 serializable_group_id = $11,
                 scheduler_type = $14
+            RETURNING id
         ";
     }
 
@@ -67,17 +68,19 @@ internal class InsertJobCommand
         };
     }
 
-    public async Task ExecuteAsync(JobCreationModel job)
+    public async Task<Guid> ExecuteAsync(JobCreationModel job)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = CreateCommand(conn, job);
-        await cmd.ExecuteNonQueryAsync();
+        var id = await cmd.ExecuteScalarAsync();
+        return id is Guid guid ? guid : Guid.Empty;
     }
 
-    public void Execute(JobCreationModel job)
+    public Guid Execute(JobCreationModel job)
     {
         using var conn = _dataSource.OpenConnection();
         using var cmd = CreateCommand(conn, job);
-        cmd.ExecuteNonQuery();
+        var id = cmd.ExecuteScalar();
+        return id is Guid guid ? guid : Guid.Empty;
     }
 }

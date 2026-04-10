@@ -51,9 +51,9 @@ public class InsertTests
         var thirdJob = jobs[1];
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.InsertJobAsync(firstJob);
-        await storage.InsertJobAsync(secondJob);
-        await storage.InsertJobAsync(thirdJob);
+        var firstJobId = await storage.InsertJobAsync(firstJob);
+        var secondJobId = await storage.InsertJobAsync(secondJob);
+        var thirdJobId = await storage.InsertJobAsync(thirdJob);
 
         var firstActualJob = await dbContext.Jobs.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == firstJob.Id,
@@ -71,6 +71,9 @@ public class InsertTests
         AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
         AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
+        Assert.Equal(firstActualJob.Id, firstJobId);
+        Assert.Equal(secondActualJob.Id, secondJobId);
+        Assert.Equal(thirdActualJob.Id, thirdJobId);
     }
 
     [Theory]
@@ -114,9 +117,9 @@ public class InsertTests
         var thirdJob = jobs[1];
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.InsertJob(firstJob);
-        storage.InsertJob(secondJob);
-        storage.InsertJob(thirdJob);
+        var firstJobId = storage.InsertJob(firstJob);
+        var secondJobId = storage.InsertJob(secondJob);
+        var thirdJobId = storage.InsertJob(thirdJob);
 
         var firstActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == firstJob.Id);
         var secondActualJob = dbContext.Jobs.AsNoTracking().FirstOrDefault(x => x.Id == secondJob.Id);
@@ -128,6 +131,9 @@ public class InsertTests
         AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
         AssertHelper.AssertCreatedJob(secondJob, secondActualJob);
         AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
+        Assert.Equal(firstActualJob.Id, firstJobId);
+        Assert.Equal(secondActualJob.Id, secondJobId);
+        Assert.Equal(thirdActualJob.Id, thirdJobId);
     }
 
     [Fact]
@@ -155,18 +161,23 @@ public class InsertTests
             });
 
         var storage = DbHelper.CreateJobbyStorage();
-        await storage.InsertJobAsync(job);
-        await storage.InsertJobAsync(newJob);
+        var firstJobId = await storage.InsertJobAsync(job);
+        var secondJobId = await storage.InsertJobAsync(newJob);
 
+        Assert.Equal(firstJobId, secondJobId);
+        Assert.Equal(job.Id, firstJobId);
+        
         var actualJobWithOldId = await dbContext.Jobs
             .FirstOrDefaultAsync(x => x.Id == job.Id,
                 cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Null(actualJobWithOldId);
+        Assert.NotNull(actualJobWithOldId);
+        
         var actualJobWithNewId = await dbContext.Jobs
             .FirstOrDefaultAsync(x => x.Id == newJob.Id,
                 cancellationToken: TestContext.Current.CancellationToken);
-        Assert.NotNull(actualJobWithNewId);
-        AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
+        Assert.Null(actualJobWithNewId);
+        
+        AssertHelper.AssertCreatedJobExceptId(newJob, actualJobWithOldId);
     }
 
     [Fact]
@@ -195,14 +206,17 @@ public class InsertTests
             });
 
         var storage = DbHelper.CreateJobbyStorage();
-        storage.InsertJob(job);
-        storage.InsertJob(newJob);
+        var firstJobId = storage.InsertJob(job);
+        var secondJobId = storage.InsertJob(newJob);
+        
+        Assert.Equal(firstJobId, secondJobId);
+        Assert.Equal(job.Id, firstJobId);
 
         var actualJobWithOldId = dbContext.Jobs.FirstOrDefault(x => x.Id == job.Id);
-        Assert.Null(actualJobWithOldId);
+        Assert.NotNull(actualJobWithOldId);
         var actualJobWithNewId = dbContext.Jobs.FirstOrDefault(x => x.Id == newJob.Id);
-        Assert.NotNull(actualJobWithNewId);
-        AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
+        Assert.Null(actualJobWithNewId);
+        AssertHelper.AssertCreatedJobExceptId(newJob, actualJobWithOldId);
     }
     
     [Fact]

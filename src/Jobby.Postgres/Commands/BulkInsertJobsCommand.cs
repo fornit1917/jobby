@@ -33,7 +33,6 @@ internal class BulkInsertJobsCommand
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (job_name) WHERE is_exclusive=true DO
             UPDATE SET
-                id = $1,
                 job_param = $3,
 	            schedule = $7,
 	            scheduled_start_at = $6,

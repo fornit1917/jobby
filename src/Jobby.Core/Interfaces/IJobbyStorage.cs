@@ -4,9 +4,9 @@ namespace Jobby.Core.Interfaces;
 
 public interface IJobbyStorage
 {
-    Task InsertJobAsync(JobCreationModel job);
+    Task<Guid> InsertJobAsync(JobCreationModel job);
     Task BulkInsertJobsAsync(IReadOnlyList<JobCreationModel> jobs);
-    void InsertJob(JobCreationModel job);
+    Guid InsertJob(JobCreationModel job);
     void BulkInsertJobs(IReadOnlyList<JobCreationModel> jobs);
     
     Task TakeBatchToProcessingAsync(GetJobsRequest request, List<JobExecutionModel> result);
