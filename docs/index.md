@@ -28,4 +28,3 @@ features:
   - title: High-performance
     details: It works several times faster than similar libraries (such as Hangfire or Quartz) and consumes several times fewer resources both on the .NET side and on the DB side.
 ---
-
