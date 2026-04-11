@@ -20,8 +20,9 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     private readonly SendHeartbeatCommand _sendHeartbeatCommand;
     private readonly FindAndDeleteLostServersCommands _findAndDeleteLostServersCommand;
     private readonly FindAndRestartStuckJobsCommand _findAndRestartStuckJobsCommand;
-    private readonly DeleteRecurrentJobByNameCommand _deleteRecurrentJobByNameCommand;
+    private readonly DeleteExclusiveJobByNameCommand _deleteExclusiveJobByNameCommand;
     private readonly BulkDeleteNotStartedJobsCommand _bulkDeleteNotStartedJobsCommand;
+    private readonly BulkDeleteRecurrentCommand _bulkDeleteRecurrentCommand;
 
     public PostgresqlJobbyStorage(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -38,48 +39,49 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _sendHeartbeatCommand = new SendHeartbeatCommand(dataSource, settings);
         _findAndDeleteLostServersCommand = new FindAndDeleteLostServersCommands(settings);
         _findAndRestartStuckJobsCommand = new FindAndRestartStuckJobsCommand(settings);
-        _deleteRecurrentJobByNameCommand = new DeleteRecurrentJobByNameCommand(dataSource, settings);
+        _deleteExclusiveJobByNameCommand = new DeleteExclusiveJobByNameCommand(dataSource, settings);
         _bulkDeleteNotStartedJobsCommand = new BulkDeleteNotStartedJobsCommand(dataSource, settings);
+        _bulkDeleteRecurrentCommand = new BulkDeleteRecurrentCommand(dataSource, settings);
     }
 
-    public Task InsertJobAsync(JobCreationModel job)
+    public Task<Guid> InsertJobAsync(JobCreationModel job)
     {
         return _insertJobCommand.ExecuteAsync(job);
     }
 
-    public void InsertJob(JobCreationModel job)
+    public Guid InsertJob(JobCreationModel job)
     {
-        _insertJobCommand.Execute(job);
+        return _insertJobCommand.Execute(job);
     }
 
-    public Task TakeBatchToProcessingAsync(string serverId, int maxBatchSize, List<JobExecutionModel> result)
+    public Task TakeBatchToProcessingAsync(GetJobsRequest request, List<JobExecutionModel> result)
     {
-        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(serverId, DateTime.UtcNow, maxBatchSize, result);
+        return _takeBatchToProcessingCommand.ExecuteAndWriteToListAsync(request, result);
     }
 
-    public Task UpdateProcessingJobToCompletedAsync(ProcessingJob job, Guid? nextJobId = null)
+    public Task UpdateProcessingJobToCompletedAsync(JobExecutionModel job)
     {
-        return UpdateFromProcessingStatus(job, JobStatus.Completed, error: null, nextJobId);
+        return UpdateFromProcessingStatus(job, JobStatus.Completed, error: null);
     }
 
-    public Task UpdateProcessingJobToFailedAsync(ProcessingJob job, string error)
+    public Task UpdateProcessingJobToFailedAsync(JobExecutionModel job, string error)
     {
         return UpdateFromProcessingStatus(job, JobStatus.Failed, error);
     }
 
-    public Task RescheduleProcessingJobAsync(ProcessingJob job, DateTime sheduledStartTime, string? error = null)
+    public Task RescheduleProcessingJobAsync(JobExecutionModel job, DateTime sheduledStartTime, string? error = null)
     {
         return _rescheduleProcessingJobCommand.ExecuteAsync(job, sheduledStartTime, error);
     }
 
-    private Task UpdateFromProcessingStatus(ProcessingJob job, JobStatus newStatus, string? error = null, Guid? nextJobId = null)
+    private Task UpdateFromProcessingStatus(JobExecutionModel job, JobStatus newStatus, string? error)
     {
-        return _updateFromProcessingStatusCommand.ExecuteAsync(job, newStatus, error, nextJobId);
+        return _updateFromProcessingStatusCommand.ExecuteAsync(job, newStatus, error);
     }
 
-    public Task DeleteProcessingJobAsync(ProcessingJob job, Guid? nextJobId = null)
+    public Task DeleteProcessingJobAsync(JobExecutionModel job)
     {
-        return _deleteProcessingJobCommand.ExecuteAsync(job, nextJobId);
+        return _deleteProcessingJobCommand.ExecuteAsync(job);
     }
 
     public Task BulkInsertJobsAsync(IReadOnlyList<JobCreationModel> jobs)
@@ -92,14 +94,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         _bulkInsertJobsCommand.Execute(jobs);
     }
 
-    public Task BulkDeleteProcessingJobsAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null)
+    public Task BulkDeleteProcessingJobsAsync(CompleteJobsBatch jobs)
     {
-        return _bulkDeleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds);
+        return _bulkDeleteProcessingJobsCommand.ExecuteAsync(jobs);
     }
 
-    public Task BulkUpdateProcessingJobsToCompletedAsync(ProcessingJobsList jobs, IReadOnlyList<Guid> nextJobIds)
+    public Task BulkUpdateProcessingJobsToCompletedAsync(CompleteJobsBatch jobs)
     {
-        return _bulkCompleteProcessingJobsCommand.ExecuteAsync(jobs, nextJobIds);
+        return _bulkCompleteProcessingJobsCommand.ExecuteAsync(jobs);
     }
 
     public Task SendHeartbeatAsync(string serverId)
@@ -125,14 +127,14 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
         await transaction.CommitAsync();
     }
 
-    public Task DeleteRecurrentAsync(string jobName)
+    public Task DeleteExclusiveByNameAsync(string jobName)
     {
-        return _deleteRecurrentJobByNameCommand.ExecuteAsync(jobName);
+        return _deleteExclusiveJobByNameCommand.ExecuteAsync(jobName);
     }
 
-    public void DeleteRecurrent(string jobName)
+    public void DeleteExclusiveByName(string jobName)
     {
-        _deleteRecurrentJobByNameCommand.Execute(jobName);
+        _deleteExclusiveJobByNameCommand.Execute(jobName);
     }
 
     public Task BulkDeleteNotStartedJobsAsync(IReadOnlyList<Guid> jobIds)
@@ -143,5 +145,15 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
     public void BulkDeleteNotStartedJobs(IReadOnlyList<Guid> jobIds)
     {
         _bulkDeleteNotStartedJobsCommand.Execute(jobIds);
+    }
+
+    public Task BulkDeleteRecurrentAsync(IReadOnlyList<Guid> jobIds)
+    {
+        return _bulkDeleteRecurrentCommand.ExecuteAsync(jobIds);
+    }
+    
+    public void BulkDeleteRecurrent(IReadOnlyList<Guid> jobIds)
+    {
+        _bulkDeleteRecurrentCommand.Execute(jobIds);
     }
 }

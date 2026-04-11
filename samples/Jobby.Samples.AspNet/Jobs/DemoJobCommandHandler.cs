@@ -15,8 +15,8 @@ public class DemoJobCommandHandler : IJobCommandHandler<DemoJobCommand>
 
     public async Task ExecuteAsync(DemoJobCommand command, JobExecutionContext ctx)
     {
-        _logger.LogInformation("Job {JobName} started, attempt number is {Attempt}, {Time}", 
-            DemoJobCommand.GetJobName(), ctx.StartedCount, DateTime.UtcNow);
+        _logger.LogInformation("Executing demo job, value is {Value}, attempt number is {Attempt}, {Time}", 
+            command.Value, ctx.StartedCount, DateTime.UtcNow);
         
         if (command.ShouldBeFailed)
             throw new Exception("Job is configured to fail");
@@ -25,7 +25,5 @@ public class DemoJobCommandHandler : IJobCommandHandler<DemoJobCommand>
             throw new ExceptionShouldBeIgnored("Job is configure to throw ignored exception");
 
         await Task.Delay(command.DelayMs);
-
-        _logger.LogInformation("Job {JobName} completed, {Time}", DemoJobCommand.GetJobName(), DateTime.UtcNow);
     }
 }

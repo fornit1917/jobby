@@ -4,7 +4,7 @@ namespace Jobby.Benchmarks;
 
 internal static class DataSourceFactory
 {
-    public const string ConnectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
+    public const string ConnectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
 
     public static NpgsqlDataSource Create(bool enlist=false)
     {

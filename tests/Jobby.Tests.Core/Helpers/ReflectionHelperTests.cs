@@ -37,7 +37,6 @@ public class ReflectionHelperTests
     private class TestJobCommand : IJobCommand
     {
         public static string GetJobName() => "TestJob";
-        public bool CanBeRestarted() => false;
     }
 
     private class TestJobHandler : IJobCommandHandler<TestJobCommand>

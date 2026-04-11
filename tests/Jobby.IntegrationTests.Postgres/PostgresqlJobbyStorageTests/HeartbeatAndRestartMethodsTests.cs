@@ -12,11 +12,13 @@ public class HeartbeatAndRestartMethodsTests
     {
         var serverId = Guid.NewGuid().ToString();
         var storage = DbHelper.CreateJobbyStorage();
-
+        
         await storage.SendHeartbeatAsync(serverId);
 
         await using var dbContext = DbHelper.CreateContext();
-        var actualServer = await dbContext.Servers.AsNoTracking().Where(x => x.Id == serverId).FirstOrDefaultAsync();
+        var actualServer = await dbContext.Servers.AsNoTracking()
+            .Where(x => x.Id == serverId)
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualServer);
         Assert.Equal(DateTime.UtcNow, actualServer.HeartbeatTs, TimeSpan.FromSeconds(3));
     }
@@ -30,21 +32,23 @@ public class HeartbeatAndRestartMethodsTests
             HeartbeatTs = DateTime.UtcNow.AddDays(10)
         };
         await using var dbContext = DbHelper.CreateContext();
-        await dbContext.AddAsync(server);
-        await dbContext.SaveChangesAsync();
+        await dbContext.AddAsync(server, TestContext.Current.CancellationToken);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         await storage.SendHeartbeatAsync(server.Id);
 
-        var actualServer = await dbContext.Servers.AsNoTracking().Where(x => x.Id == server.Id).FirstOrDefaultAsync();
+        var actualServer = await dbContext.Servers.AsNoTracking()
+            .Where(x => x.Id == server.Id)
+            .FirstOrDefaultAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.NotNull(actualServer);
         Assert.Equal(DateTime.UtcNow, actualServer.HeartbeatTs, TimeSpan.FromSeconds(3));
     }
 
     [Fact]
-    public async Task DeleteLostServersAndRestartTheirJobsAsync_DeletesServersAndRestartRestarableJobs()
+    public async Task DeleteLostServersAndRestartTheirJobsAsync_DeletesServersAndRestartRestartableJobs()
     {
-        await using var dbContext = DbHelper.CreateContextAndClearDb();
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
 
         var aliveServer = new ServerDbModel
         {
@@ -78,7 +82,7 @@ public class HeartbeatAndRestartMethodsTests
         };
         await dbContext.Servers.AddRangeAsync([lostServer, aliveServer]);
         await dbContext.Jobs.AddRangeAsync([restartableJob, notRestartableJob]);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         var deletedServerIds = new List<string>();
@@ -97,15 +101,23 @@ public class HeartbeatAndRestartMethodsTests
                                         && x.JobName == notRestartableJob.JobName
                                         && x.ServerId == notRestartableJob.ServerId);
 
-        var lostServerExists = await dbContext.Servers.AsNoTracking().AnyAsync(x => x.Id == lostServer.Id);
+        var lostServerExists = await dbContext.Servers.AsNoTracking()
+            .AnyAsync(x => x.Id == lostServer.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(lostServerExists);
 
-        var aliveServerExists = await dbContext.Servers.AsNoTracking().AnyAsync(x => x.Id == aliveServer.Id);
+        var aliveServerExists = await dbContext.Servers.AsNoTracking()
+            .AnyAsync(x => x.Id == aliveServer.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(aliveServerExists);
 
-        var restartableActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == restartableJob.Id);
+        var restartableActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == restartableJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.Scheduled, restartableActualJob.Status);
-        var notRestartableActualJob = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == notRestartableJob.Id);
+        var notRestartableActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == notRestartableJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(JobStatus.Processing, notRestartableActualJob.Status);
     }
 }

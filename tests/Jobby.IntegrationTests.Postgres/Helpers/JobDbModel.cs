@@ -12,8 +12,8 @@ internal class JobDbModel
     [Column("job_name")]
     public string JobName { get; set; } = string.Empty;
 
-    [Column("cron")]
-    public string? Cron { get; set; }
+    [Column("schedule")]
+    public string? Schedule { get; set; }
 
     [Column("job_param")]
     public string? JobParam { get; set; }
@@ -47,12 +47,33 @@ internal class JobDbModel
 
     [Column("can_be_restarted")]
     public bool CanBeRestarted { get; set; }
+    
+    [Column("queue_name")]
+    public string QueueName { get; set; } = QueueSettings.DefaultQueueName;
+    
+    [Column("serializable_group_id")]
+    public string? SerializableGroupId { get; set; }
+    
+    [Column("lock_group_if_failed")]
+    public bool LockGroupIfFailed { get; set; }
 
-    public ProcessingJob ToProcessingJob()
+    [Column("is_exclusive")]
+    public bool IsExclusive { get; set; }
+
+    [Column("scheduler_type")]
+    public string? SchedulerType { get; set; }
+
+    public JobExecutionModel ToJobExecutionModel()
     {
-        if (ServerId == null)
-            throw new ArgumentException("ServerId is null");
-        
-        return new ProcessingJob(Id, ServerId);
+        return new JobExecutionModel
+        {
+            Id = Id,
+            NextJobId = NextJobId,
+            ServerId = ServerId ?? string.Empty,
+            Schedule = Schedule,
+            JobName = JobName,
+            JobParam = JobParam,
+            StartedCount = StartedCount,
+        };
     }
 }

@@ -18,4 +18,6 @@ public interface IAspNetCoreJobbyConfigurable
         where THandler : IJobCommandHandler<TCommand>;
 
     IAspNetCoreJobbyConfigurable AddJobsFromAssemblies(params Assembly[] assemblies);
+    
+    IAspNetCoreJobbyConfigurable UseQueueForAllRecurrent(string queueName);
 }

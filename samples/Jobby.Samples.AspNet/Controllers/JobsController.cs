@@ -2,6 +2,7 @@
 using Jobby.Core.Models;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
+using Jobby.Samples.AspNet.Schedulers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jobby.Samples.AspNet.Controllers;
@@ -24,7 +25,13 @@ public class JobsController
     [HttpPost("enqueue-job")]
     public async Task<string> EnqueueDemoJob([FromBody] DemoJobCommand command)
     {
-        var jobId = await _jobbyClient.EnqueueCommandAsync(command, command.StartAfter ?? DateTime.UtcNow);
+        var opts = new JobOpts
+        {
+            StartTime = command.StartAfter ?? DateTime.UtcNow,
+            SerializableGroupId = command.SerializableGroupId,
+            LockGroupIfFailed = command.LockGroupIfFailed,
+        };
+        var jobId = await _jobbyClient.EnqueueCommandAsync(command, opts);
         return jobId.ToString();
     }
 
@@ -35,6 +42,19 @@ public class JobsController
         _dbContext.Jobs.Add(job);
         await _dbContext.SaveChangesAsync();
         return job.Id.ToString();
+    }
+
+    [HttpPost("enqueue-batch")]
+    public async Task<List<string>> EnqueueBatch([FromBody] List<DemoJobCommand> commands)
+    {
+        var jobs = new List<JobCreationModel>(commands.Count);
+        foreach (var command in commands)
+        {
+            var job = _jobsFactory.Create(command);
+            jobs.Add(job);
+        }
+        await _jobbyClient.EnqueueBatchAsync(jobs);
+        return jobs.Select(x => x.Id.ToString()).ToList();
     }
 
     [HttpPost("cancel-job/{jobId}")]
@@ -48,8 +68,20 @@ public class JobsController
     public async Task<string> ScheduleRecurrent([FromBody] string cron = "*/5 * * * * *")
     {
         var command = new EmptyRecurrentJobCommand();
-        await _jobbyClient.ScheduleRecurrentAsync(command, cron);
-        return "ok";
+        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, cron);
+        return jobId.ToString();
+    }
+
+    [HttpPost("schedule-recurrent-with-custom-scheduler")]
+    public async Task<string> ScheduleRecurrentWithCustomScheduler([FromBody] uint secondsInterval)
+    {
+        var command = new CustomSchedulerRecurrentJobCommand();
+        var schedule = new SecondsIntervalSchedule(secondsInterval);
+        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, schedule, new RecurrentJobOpts()
+        {
+            StartTime = DateTime.UtcNow,
+        });
+        return jobId.ToString();
     }
 
     [HttpPost("cancel-recurrent")]
@@ -58,12 +90,11 @@ public class JobsController
         await _jobbyClient.CancelRecurrentAsync<EmptyRecurrentJobCommand>();
         return "ok";
     }
-
-    [HttpGet("show-job-model")]
-    public JobCreationModel ShowJobModel(DateTime? startTime = null)
+    
+    [HttpPost("cancel-recurrent-with-custom-scheduler")]
+    public async Task<string> CancelRecurrentWithCustomScheduler()
     {
-        startTime ??= DateTime.UtcNow;
-        var command = new DemoJobCommand();
-        return _jobsFactory.Create(command, startTime.Value);
+        await _jobbyClient.CancelRecurrentAsync<CustomSchedulerRecurrentJobCommand>();
+        return "ok";
     }
 }

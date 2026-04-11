@@ -18,9 +18,12 @@ internal class JobbyHostedService : IHostedService
         return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         _jobbyServer.SendStopSignal();
-        return Task.CompletedTask;
+        while (!cancellationToken.IsCancellationRequested && _jobbyServer.HasInProgressJobs())
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+        }
     }
 }

@@ -3,19 +3,19 @@ using Jobby.Core.Exceptions;
 
 namespace Jobby.Core.Helpers;
 
-internal static class CronHelper
+public static class CronHelper
 {
     public static DateTime GetNext(string cron, DateTime from)
     {
         var format = GetFormat(cron);
         if (!CronExpression.TryParse(cron, format, out var parsedCron))
         {
-            throw new CronException($"Could not parse cron expression '{cron}'");
+            throw new InvalidScheduleException($"Could not parse cron expression '{cron}'");
         }
         var next = parsedCron.GetNextOccurrence(from);
         if (!next.HasValue)
         {
-            throw new CronException($"Could not calculate next occurence by cron expression '{cron}'");
+            throw new InvalidScheduleException($"Could not calculate next occurence by cron expression '{cron}'");
         }
         return next.Value;
     }

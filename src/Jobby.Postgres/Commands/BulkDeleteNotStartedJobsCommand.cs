@@ -14,7 +14,7 @@ internal class BulkDeleteNotStartedJobsCommand
         _dataSource = dataSource;
 
         _deleteCommandText = @$"
-            DELETE FROM {TableName.Jobs(settings)}
+            DELETE FROM {DbName.Jobs(settings)}
             WHERE
                 id = ANY($1)
                 AND (status={(int)JobStatus.Scheduled} OR status={(int)JobStatus.WaitingPrev})
@@ -24,26 +24,16 @@ internal class BulkDeleteNotStartedJobsCommand
     public async Task ExecuteAsync(IReadOnlyList<Guid> jobIds)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
-        await using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn)
-        {
-            Parameters =
-                {
-                    new() { Value = jobIds }
-                }
-        };
+        await using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn);
+        deleteCmd.Parameters.Add(new() { Value = jobIds });
         await deleteCmd.ExecuteNonQueryAsync();
     }
 
     public void Execute(IReadOnlyList<Guid> jobIds)
     {
         using var conn = _dataSource.OpenConnection();
-        using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn)
-        {
-            Parameters =
-                {
-                    new() { Value = jobIds }
-                }
-        };
+        using var deleteCmd = new NpgsqlCommand(_deleteCommandText, conn);
+        deleteCmd.Parameters.Add(new() { Value = jobIds });
         deleteCmd.ExecuteNonQuery();
     }
 }

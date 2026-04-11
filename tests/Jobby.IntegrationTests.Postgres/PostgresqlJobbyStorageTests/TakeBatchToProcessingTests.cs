@@ -7,37 +7,53 @@ namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 [Collection(PostgresqlTestsCollection.Name)]
 public class TakeBatchToProcessingTests
 {
-    [Fact]
-    public async Task TakeBatchToProcessingAsync_ReturnsReadyToRunAndUpdatesStatusAndCount()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TakeBatchToProcessingAsync_ReturnsReadyToRunAndUpdatesStatusAndCount(bool disableSerializableGroups)
     {
-        await using var dbContext = DbHelper.CreateContextAndClearDb();
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
 
         var firstExpected = new JobDbModel
         {
             Id = Guid.NewGuid(),
             JobName = "firstJob",
-            Cron = "*/20 * * * *",
+            Schedule = "*/20 * * * *",
+            SchedulerType = "scheduler-type",
             JobParam = "param1",
             StartedCount = 1,
             NextJobId = Guid.NewGuid(),
             Status = JobStatus.Scheduled,
             ScheduledStartAt = DateTime.UtcNow.AddMinutes(-10),
+            QueueName = QueueSettings.DefaultQueueName,
         };
         var secondExpected = new JobDbModel
         {
             Id = Guid.NewGuid(),
             JobName = "secondJob",
-            Cron = null,
+            Schedule = null,
             JobParam = "param2",
             StartedCount = 0,
             NextJobId = null,
             Status = JobStatus.Scheduled,
             ScheduledStartAt = DateTime.UtcNow.AddMinutes(-5),
+            QueueName = QueueSettings.DefaultQueueName,
         };
         var jobs = new List<JobDbModel>
         {
             firstExpected,
             secondExpected,
+            
+            // should not be returned because the other queue name
+            new JobDbModel()
+            {
+                Id = Guid.NewGuid(),
+                JobName = "JobName",
+                JobParam = "param",
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-100),
+                QueueName = "other"
+            },
 
             // should not be returned because limit is 2
             new JobDbModel
@@ -71,32 +87,213 @@ public class TakeBatchToProcessingTests
         };
 
         dbContext.Jobs.AddRange(jobs);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateJobbyStorage();
         var result = new List<JobExecutionModel>();
-        await storage.TakeBatchToProcessingAsync("serverId", 2, result);
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = 2,
+            ServerId = "serverId",
+            DisableSerializableGroups = disableSerializableGroups
+        };
+        await storage.TakeBatchToProcessingAsync(request, result);
 
         Assert.Equal(2, result.Count);
-        AssertTakenToRunJob(firstExpected, result[0]);
-        AssertTakenToRunJob(secondExpected, result[1]);
+        AssertTakenToRunJob(firstExpected, result[0], request.ServerId);
+        AssertTakenToRunJob(secondExpected, result[1], request.ServerId);
 
-        var firstActualFromDb = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == firstExpected.Id);
+        var firstActualFromDb = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == firstExpected.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         AssertUpdatedFields(firstExpected, firstActualFromDb);
-        var secondActualFromDb = await dbContext.Jobs.AsNoTracking().FirstAsync(x => x.Id == secondExpected.Id);
+        var secondActualFromDb = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == secondExpected.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
         AssertUpdatedFields(secondExpected, secondActualFromDb);
-
-        await dbContext.SaveChangesAsync();
     }
 
-    private void AssertTakenToRunJob(JobDbModel createdJob, JobExecutionModel takenJob)
+    [Fact]
+    public async Task TakeBatchToProcessingAsync_ReturnsBatchWithOneJobFromEachNotLockedGroup()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+
+        var jobWithoutGroup = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "withoutGroup",
+            Schedule = null,
+            JobParam = "param1",
+            StartedCount = 0,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-5),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = null
+        };
+        var firstJobFromFirstGroup = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "1_1",
+            Schedule = null,
+            JobParam = "param2",
+            StartedCount = 0,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-4),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = "g_1"
+        };
+        var firstJobFromSecondGroup = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "2_1",
+            Schedule = null,
+            JobParam = "param3",
+            StartedCount = 0,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-2),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = "g_2"
+        };
+
+        var jobs = new List<JobDbModel>
+        {
+            // failed, but should not lock group because lock_group_if_failed=false
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = "failed1",
+                JobParam = "param",
+                StartedCount = 1,
+                Status = JobStatus.Failed,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-30),
+                QueueName = QueueSettings.DefaultQueueName,
+                SerializableGroupId = firstJobFromFirstGroup.SerializableGroupId,
+                LockGroupIfFailed = false
+            },
+            // scheduled to retry, but should not lock group because lock_group_if_failed=false
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = "failed2",
+                JobParam = "param",
+                StartedCount = 1,
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(30),
+                QueueName = QueueSettings.DefaultQueueName,
+                SerializableGroupId = firstJobFromFirstGroup.SerializableGroupId,
+                LockGroupIfFailed = false
+            },
+            
+            jobWithoutGroup,
+            firstJobFromFirstGroup,
+
+            // should be skipped
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = "1_2",
+                Schedule = null,
+                JobParam = "param2",
+                StartedCount = 0,
+                NextJobId = null,
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-3),
+                QueueName = QueueSettings.DefaultQueueName,
+                SerializableGroupId = firstJobFromFirstGroup.SerializableGroupId
+            },
+            
+            firstJobFromSecondGroup
+        };
+        
+        dbContext.Jobs.AddRange(jobs);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var result = new List<JobExecutionModel>();
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = 3,
+            ServerId = "serverId"
+        };
+        await storage.TakeBatchToProcessingAsync(request, result);
+
+        Assert.Equal(3, result.Count);
+        AssertTakenToRunJob(jobWithoutGroup, result[0], request.ServerId);
+        AssertTakenToRunJob(firstJobFromFirstGroup, result[1], request.ServerId);
+        AssertTakenToRunJob(firstJobFromSecondGroup, result[2], request.ServerId);
+    }
+    
+    [Theory]
+    [InlineData(JobStatus.Processing, false)]
+    [InlineData(JobStatus.Scheduled, true)]
+    [InlineData(JobStatus.Failed, true)]
+    public async Task TakeBatchToProcessingAsync_DoesNotReturnJobFromLockedGroup(JobStatus lockerStatus, bool lockerLockIfFailed)
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        
+        var lockedJobId = Guid.NewGuid();
+        var jobs = new List<JobDbModel>
+        {
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = "locker",
+                Schedule = null,
+                JobParam = "param",
+                StartedCount = 1,
+                NextJobId = null,
+                Status = lockerStatus,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-3),
+                QueueName = QueueSettings.DefaultQueueName,
+                SerializableGroupId = "gid",
+                LockGroupIfFailed = lockerLockIfFailed
+            },
+            new JobDbModel
+            {
+                Id = lockedJobId,
+                JobName = "locked",
+                Schedule = null,
+                JobParam = "param",
+                StartedCount = 0,
+                NextJobId = null,
+                Status = JobStatus.Scheduled,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-3),
+                QueueName = QueueSettings.DefaultQueueName,
+                SerializableGroupId = "gid"
+            },
+        };
+        
+        dbContext.Jobs.AddRange(jobs);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var result = new List<JobExecutionModel>();
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = 10,
+            ServerId = "serverId"
+        };
+        await storage.TakeBatchToProcessingAsync(request, result);
+        
+        Assert.Empty(result);
+    }    
+
+    private void AssertTakenToRunJob(JobDbModel createdJob, JobExecutionModel takenJob, string serverId)
     {
         Assert.Equal(createdJob.Id, takenJob.Id);
         Assert.Equal(createdJob.JobName, takenJob.JobName);
-        Assert.Equal(createdJob.Cron, takenJob.Cron);
+        Assert.Equal(createdJob.Schedule, takenJob.Schedule);
         Assert.Equal(createdJob.JobParam, takenJob.JobParam);
         Assert.Equal(createdJob.StartedCount + 1, takenJob.StartedCount);
         Assert.Equal(createdJob.NextJobId, takenJob.NextJobId);
+        Assert.Equal(createdJob.SchedulerType, takenJob.SchedulerType);
+        Assert.Equal(serverId, takenJob.ServerId);
     }
 
     private void AssertUpdatedFields(JobDbModel createdJob, JobDbModel actualJob)

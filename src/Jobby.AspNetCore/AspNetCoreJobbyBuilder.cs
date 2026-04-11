@@ -25,6 +25,12 @@ internal class AspNetCoreJobbyBuilder : IAspNetCoreJobbyConfigurable
         return this;
     }
 
+    public IAspNetCoreJobbyConfigurable UseQueueForAllRecurrent(string queueName)
+    {
+        JobbyBuilder.UseQueueForAllRecurrent(queueName);
+        return this;
+    }
+
     public IAspNetCoreJobbyConfigurable AddOrReplaceJob<TCommand, THandler>()
         where TCommand : IJobCommand
         where THandler : IJobCommandHandler<TCommand>

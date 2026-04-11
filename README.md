@@ -1,22 +1,23 @@
 # Jobby  
 
-<img width="256" src="./docs/logo/jobby_logo_256.png" alt="Jobby Logo">
+<img width="256" src="./images/jobby_logo_256.png" alt="Jobby Logo">
 
 High-performance and reliable .NET library for background tasks, designed for distributed applications.
 
 - Website (not available yet)
 - [Versions history](https://github.com/fornit1917/jobby/tree/master/versions.md)
 - [Samples](https://github.com/fornit1917/jobby/tree/master/samples)
-- [Usage Guide in Russian](https://github.com/fornit1917/jobby/tree/master/docs/ru/overview.md)
 
 
 ## Key Features  
 
-- Scheduled tasks  
+- Scheduled tasks with cron, intervals and any custom schedulers
 - Queue-based task execution  
 - Transactional creation of multiple tasks  
-- Configurable execution order for multiple tasks  
+- Configurable execution order for multiple tasks
+- Groups of tasks with sequential execution
 - Retry policies for failed tasks
+- Multi-Queues
 - Configurable middlewares pipeline for executing background tasks code
 - OpenTelemetry-compatible metrics and tracing
 - Proper operation in distributed applications
@@ -52,12 +53,7 @@ public class SendEmailCommand : IJobCommand
     public string Email { get; init; }  
 
     // Return a unique name identifying the task  
-    public static string GetJobName() => "SendEmail";  
-
-    // Return a flag indicating whether the task can be automatically restarted  
-    // if the executing server is presumed to have failed.  
-    // Recommended to return true only for idempotent tasks.  
-    public bool CanBeRestarted() => true;  
+    public static string GetJobName() => "SendEmail";
 }  
 
 public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>  
@@ -211,6 +207,27 @@ var jobs = sequenceBuilder.GetJobs();
 await jobbyClient.EnqueueBatchAsync(jobs);  
 ```
 
+#### Groups of tasks with sequential execution
+
+When creating a task, you can specify a group ID, and Jobby will ensure that no more than one task within each group is executed at any given time.
+
+```csharp
+await jobbyClient.EnqueueCommandAsync(command, new JobOpts 
+{
+    SerializableGroupId = "SomeGroupId"
+});
+```
+
+The next task in the group will only start after the current task completes, whether successfully or unsuccessfully. If, in the event of an unsuccessful completion, you need to block the execution of any tasks from the same group, you must set the `LockGroupIfFailed` flag when creating the task:
+
+```csharp
+await jobbyClient.EnqueueCommandAsync(command, new JobOpts 
+{
+    SerializableGroupId = "SomeGroupId",
+    LockGroupIfFailed = true
+});
+```
+
 #### Using EntityFramework  
 
 For EF Core integration:  
@@ -246,7 +263,6 @@ EF Core example: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree
 public class RecurrentJobCommand : IJobCommand  
 {  
     public static string GetJobName() => "SomeRecurrentJob";  
-    public bool CanBeRestarted() => true;  
 }  
 
 public class RecurrentJobHandler : IJobCommandHandler<RecurrentJobCommand>  
@@ -300,6 +316,70 @@ jobbyBuilder
     .UseDefaultRetryPolicy(defaultPolicy)  
     // Custom policy for SendEmailCommand  
     .UseRetryPolicyForJob<SendEmailCommand>(specialRetryPolicy);  
+```
+
+### Multi-Queues  
+
+Jobby allows you to distribute tasks across independent queues. For example, it can be useful to allocate tasks that need to be executed on time (such as recurrent jobs) to a separate queue, or tasks that are very heavy and require reduced parallelism.
+
+By default, all tasks go to the `default` queue.
+
+The queue can be specified when creating a task:
+
+```csharp
+jobbyClient.Enqueue(command, new JobOpts { QueueName = "special_queue"});
+```
+
+Or defined in the command class by implementing the `IHasDefaultJobOptions` interface:
+
+```csharp
+class SomeCommand : IJobCommand, IHasDefaultJobOptions
+{
+    public string GetJobName() => "JobName";
+
+    // Queue for non-recurrent jobs
+    public JobOpts GetOptionsForEnqueuedJob() => new() { QueueName = "special_queue" };
+    
+    // Queue for recurrent jobs
+    public RecurrentJobOptions GetOptionsForRecurrentJob() => new() { QueueName = "special_queue" };
+}
+```
+
+Additionally, when configuring the library, you can specify a default queue for all recurrent jobs:
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    jobbyBuilder
+        .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly)
+        // separate queue for all recurrent tasks
+        .UseQueueForAllRecurrent("recurrent")
+```
+
+By default, JobbyServer only executes tasks from the `default` queue. To run tasks from other queues, you need to specify them during configuration in the `UseServerSettings` method:  
+
+```csharp
+builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
+{
+    // ...
+    jobbyBuilder.ConfigureJobby((sp, jobby) =>
+    {
+        jobby
+            .UseServerSettings(new JobbyServerSettings
+            {
+                // Here you specify the queues  
+                // from which tasks should be executed  
+                Queues = [
+                    new QueueSettings { QueueName = "default" },
+                    new QueueSettings { QueueName = "recurrent" },
+                    new QueueSettings
+                    {
+                        QueueName = "heavy",
+                        // If needed, you can reduce the degree of parallelism for a separate queue  
+                        MaxDegreeOfParallelism = 1,
+                    }
+                ]
+            })
 ```
 
 ### Using Middlewares

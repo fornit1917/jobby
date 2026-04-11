@@ -24,8 +24,11 @@ internal static class DataReaderExtensions
             JobName = reader.GetString(reader.GetOrdinal("job_name")),
             JobParam = reader.GetNullableString("job_param"),
             StartedCount = reader.GetInt32(reader.GetOrdinal("started_count")),
-            Cron = reader.GetNullableString("cron"),
+            Schedule = reader.GetNullableString("schedule"),
             NextJobId = reader.GetNullableGuid("next_job_id"),
+            ServerId =  reader.GetString(reader.GetOrdinal("server_id")),
+            ScheduledStartAt = reader.GetDateTime(reader.GetOrdinal("scheduled_start_at")),
+            SchedulerType = reader.GetNullableString("scheduler_type"),
         };
         return job;
     }

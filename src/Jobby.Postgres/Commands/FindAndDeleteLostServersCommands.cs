@@ -10,9 +10,9 @@ internal class FindAndDeleteLostServersCommands
     public FindAndDeleteLostServersCommands(PostgresqlStorageSettings settings)
     {
         _commandText = $@"
-            DELETE FROM {TableName.Servers(settings)}
+            DELETE FROM {DbName.Servers(settings)}
             WHERE id IN (
-                SELECT id FROM {TableName.Servers(settings)}
+                SELECT id FROM {DbName.Servers(settings)}
                 WHERE heartbeat_ts < $1
                 FOR UPDATE SKIP LOCKED
             )

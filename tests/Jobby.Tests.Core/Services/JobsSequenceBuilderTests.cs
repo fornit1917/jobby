@@ -33,7 +33,7 @@ public class JobsSequenceBuilderTests
         {
             Status = JobStatus.Scheduled
         };
-        _factoryMock.Setup(x => x.Create(command, It.IsAny<DateTime>())).Returns(job);
+        _factoryMock.Setup(x => x.Create(command, default(JobOpts))).Returns(job);
 
         _builder.Add(command);
         var jobs = _builder.GetJobs();
@@ -59,8 +59,8 @@ public class JobsSequenceBuilderTests
             Id = Guid.NewGuid(),
             Status = JobStatus.Scheduled
         };
-        _factoryMock.Setup(x => x.Create(firstCommand, It.IsAny<DateTime>())).Returns(firstJob);
-        _factoryMock.Setup(x => x.Create(secondCommand, It.IsAny<DateTime>())).Returns(secondJob);
+        _factoryMock.Setup(x => x.Create(firstCommand, default(JobOpts))).Returns(firstJob);
+        _factoryMock.Setup(x => x.Create(secondCommand, default(JobOpts))).Returns(secondJob);
 
         _builder.Add(firstCommand);
         _builder.Add(secondCommand);
@@ -84,9 +84,33 @@ public class JobsSequenceBuilderTests
         {
             Status = JobStatus.Scheduled
         };
-        _factoryMock.Setup(x => x.Create(command, startTime)).Returns(job);
+        _factoryMock
+            .Setup(x => x.Create(command, It.Is<JobOpts>(opts => opts.StartTime == startTime)))
+            .Returns(job);
 
         _builder.Add(command, startTime);
+        var jobs = _builder.GetJobs();
+
+        Assert.Single(jobs);
+        Assert.Equal(job, jobs[0]);
+    }
+
+    [Fact]
+    public void Add_CreationOptionsSpecified_GetJobsReturnsExpectedJob()
+    {
+        var command = new TestJobCommand();
+        var creationOptions = new JobOpts
+        {
+            StartTime = DateTime.UtcNow.AddDays(1),
+            QueueName = "custom-queue"
+        };
+        var job = new JobCreationModel();
+        _factoryMock
+            .Setup(x => x.Create(command, creationOptions))
+            .Returns(job);
+        
+        _builder.Add(command, creationOptions);
+        
         var jobs = _builder.GetJobs();
 
         Assert.Single(jobs);

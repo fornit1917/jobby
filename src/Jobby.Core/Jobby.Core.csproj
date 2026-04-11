@@ -7,12 +7,13 @@
         <PackageIcon>jobby_package_icon.png</PackageIcon>
 	</PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="Cronos" Version="0.9.0" />
-      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
-      <PackageReference Include="UUIDNext" Version="4.2.2" />
+      <PackageReference Include="Cronos" Version="0.11.1" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+      <PackageReference Include="Quartz" Version="3.16.1" />
+      <PackageReference Include="UUIDNext" Version="4.2.3" />
     </ItemGroup>
     <ItemGroup>
-       <None Include="../../docs/logo/jobby_package_icon.png" Pack="true" PackagePath="\" />
-       <None Include="../../docs/en/overview.md" Pack="true" PackagePath="\" />
+        <None Include="../../images/jobby_package_icon.png" Pack="true" PackagePath="\"/>
+        <None Include="../../README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 </Project>

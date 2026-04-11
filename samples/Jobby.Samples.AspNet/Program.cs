@@ -6,6 +6,8 @@ using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.Jobs;
 using Jobby.Samples.AspNet.JobsMiddlewares;
+using Jobby.Samples.AspNet.Schedulers;
+using Jobby.Samples.AspNet.Settings;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OpenTelemetry.Metrics;
@@ -20,6 +22,9 @@ public static class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        var appJobbyConfig = new AppJobbySettings();
+        builder.Configuration.Bind("Jobby", appJobbyConfig);
+
         builder.Logging.AddConsole();
 
         // Add services to the container.
@@ -29,7 +34,7 @@ public static class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db";
+        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
         builder.Services.AddSingleton<NpgsqlDataSource>(NpgsqlDataSource.Create(connectionString));
 
         builder.Services.AddDbContext<JobbySampleDbContext>((sp, opts) =>
@@ -39,9 +44,13 @@ public static class Program
         });
 
         builder.Services.AddScoped<JobLoggingMiddleware>();
+        const string recurrentJobsQueueName = "recurrent";
         builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuilder) =>
         {
-            jobbyBuilder.AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly);
+            jobbyBuilder
+                .AddJobsFromAssemblies(typeof(DemoJobCommand).Assembly)
+                .UseQueueForAllRecurrent(recurrentJobsQueueName);
+            
             jobbyBuilder.ConfigureJobby((sp, jobby) =>
             {
                 jobby
@@ -51,20 +60,35 @@ public static class Program
                         PollingIntervalMs = 500,
                         MaxDegreeOfParallelism = 10,
                         TakeToProcessingBatchSize = 10,
+                        Queues = [
+                            new QueueSettings { QueueName = QueueSettings.DefaultQueueName },
+                            new QueueSettings { QueueName = recurrentJobsQueueName }
+                        ]
                     })
                     .UseDefaultRetryPolicy(new RetryPolicy
                     {
                         MaxCount = 3,
                         IntervalsSeconds = [1, 2]
                     })
-                    .UseMetrics() // Enable collecting metrics
-                    .UseTracing() // Enable tracing context for each job run
+                    .UseScheduler(new SecondsIntervalScheduleHandler())
                     .ConfigurePipeline(pipeline =>
                     {   
                         // Some custom middlewares
                         pipeline.Use<JobLoggingMiddleware>(); // will be created by DI Scope
                         pipeline.Use(new IgnoreSomeErrorsMiddleware()); // will be used this instance always
                     });
+                
+                if (appJobbyConfig.UseMetrics)
+                {
+                    // Enable collecting metrics
+                    jobby.UseMetrics();
+                }
+
+                if (appJobbyConfig.UseTracing)
+                {
+                    // Enable tracing context for each job run
+                    jobby.UseTracing();
+                }
             });
         });
 

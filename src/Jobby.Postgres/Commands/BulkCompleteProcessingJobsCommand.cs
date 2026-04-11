@@ -15,7 +15,7 @@ internal class BulkCompleteProcessingJobsCommand
         _dataSource = dataSource;
 
         _completeCommandText = @$"
-            UPDATE {TableName.Jobs(settings)}
+            UPDATE {DbName.Jobs(settings)}
             SET
                 status = {(int)JobStatus.Completed},
                 error = null,
@@ -28,7 +28,7 @@ internal class BulkCompleteProcessingJobsCommand
 
         _completeAndUnlockNextCommandText = @$"
             WITH complete_and_get_next_job_id AS (
-	            UPDATE {TableName.Jobs(settings)} 
+	            UPDATE {DbName.Jobs(settings)} 
 	            SET
 		            status = {(int)JobStatus.Completed},
 		            last_finished_at = $1,
@@ -39,7 +39,7 @@ internal class BulkCompleteProcessingJobsCommand
 		            AND server_id = $3
 	            RETURNING next_job_id 
             )
-            UPDATE {TableName.Jobs(settings)} 
+            UPDATE {DbName.Jobs(settings)} 
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE
@@ -49,35 +49,25 @@ internal class BulkCompleteProcessingJobsCommand
         ";
     }
 
-    public async Task ExecuteAsync(ProcessingJobsList jobs, IReadOnlyList<Guid>? nextJobIds = null)
+    public async Task ExecuteAsync(CompleteJobsBatch jobs)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
-        if (nextJobIds is { Count: > 0 })
+        if (jobs.NextJobIds is { Count: > 0 })
         {
-            await using var completeAndUnlockNextCmd = new NpgsqlCommand(_completeAndUnlockNextCommandText, conn)
-            {
-                Parameters =
-                {
-                    new() { Value = DateTime.UtcNow },
-                    new() { Value = jobs.JobIds },
-                    new() { Value = jobs.ServerId },
-                    new() { Value = nextJobIds }
-                }
-            };
+            await using var completeAndUnlockNextCmd = new NpgsqlCommand(_completeAndUnlockNextCommandText, conn);
+            completeAndUnlockNextCmd.Parameters.Add(new() { Value = DateTime.UtcNow });
+            completeAndUnlockNextCmd.Parameters.Add(new() { Value = jobs.JobIds });
+            completeAndUnlockNextCmd.Parameters.Add(new() { Value = jobs.ServerId });
+            completeAndUnlockNextCmd.Parameters.Add(new() { Value = jobs.NextJobIds });
 
             await completeAndUnlockNextCmd.ExecuteNonQueryAsync();
         }
         else
         {
-            await using var updateCmd = new NpgsqlCommand(_completeCommandText, conn)
-            {
-                Parameters =
-                {
-                    new() { Value = DateTime.UtcNow },
-                    new() { Value = jobs.JobIds },
-                    new() { Value = jobs.ServerId }
-                }
-            };
+            await using var updateCmd = new NpgsqlCommand(_completeCommandText, conn);
+            updateCmd.Parameters.Add(new() { Value = DateTime.UtcNow });
+            updateCmd.Parameters.Add(new() { Value = jobs.JobIds });
+            updateCmd.Parameters.Add(new() { Value = jobs.ServerId });
 
             await updateCmd.ExecuteNonQueryAsync();
         }

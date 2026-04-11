@@ -13,4 +13,6 @@ public interface IJobbyJobsConfigurable
         where THandler : IJobCommandHandler<TCommand>;
 
     IJobbyJobsConfigurable AddJobsFromAssemblies(params Assembly[] assemblies);
+    
+    IJobbyJobsConfigurable UseQueueForAllRecurrent(string queueName);
 }

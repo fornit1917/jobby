@@ -2,7 +2,7 @@
 
 public class JobbyServerSettings
 {
-    private int _pollingIntervalMs = 1000;
+    private readonly int _pollingIntervalMs = 1000;
     public int PollingIntervalMs 
     { 
         get => _pollingIntervalMs;
@@ -13,7 +13,7 @@ public class JobbyServerSettings
         }
     }
 
-    private int _pollingIntervalStartMs = 0;
+    private readonly int _pollingIntervalStartMs = 0;
     public int PollingIntervalStartMs
     {
         get => _pollingIntervalStartMs > 0 ? _pollingIntervalStartMs : _pollingIntervalMs;
@@ -24,7 +24,7 @@ public class JobbyServerSettings
         }
     }
 
-    private int _pollingIntervalFactor = 2;
+    private readonly int _pollingIntervalFactor = 2;
     public int PollingIntervalFactor
     {
         get => _pollingIntervalFactor;
@@ -36,7 +36,7 @@ public class JobbyServerSettings
         }
     }
 
-    private int _dbErrorPauseMs = 5000;
+    private readonly int _dbErrorPauseMs = 5000;
     public int DbErrorPauseMs 
     {
         get => _dbErrorPauseMs; 
@@ -47,7 +47,7 @@ public class JobbyServerSettings
         }
     }
     
-    private int _maxDegreeOfParallelism = Environment.ProcessorCount + 1;
+    private readonly int _maxDegreeOfParallelism = Environment.ProcessorCount + 1;
     public int MaxDegreeOfParallelism 
     { 
         get => _maxDegreeOfParallelism;
@@ -58,7 +58,7 @@ public class JobbyServerSettings
         }
     }
     
-    private int _takeToProcessingBatchSize = Environment.ProcessorCount + 1;
+    private readonly int _takeToProcessingBatchSize = Environment.ProcessorCount + 1;
     public int TakeToProcessingBatchSize 
     {
         get => _takeToProcessingBatchSize;
@@ -72,8 +72,10 @@ public class JobbyServerSettings
     public bool DeleteCompleted { get; init; } = true;
     
     public bool CompleteWithBatching { get; init; } = false;
+    
+    public bool? DisableSerializableGroups { get; init; }
 
-    private int _heartbeatIntervalSeconds = 10;
+    private readonly int _heartbeatIntervalSeconds = 10;
     public int HeartbeatIntervalSeconds
     {
         get => _heartbeatIntervalSeconds;
@@ -84,7 +86,7 @@ public class JobbyServerSettings
         }
     }
 
-    private int _maxNoHeartbeatIntervalSeconds = 300;
+    private readonly int _maxNoHeartbeatIntervalSeconds = 300;
     public int MaxNoHeartbeatIntervalSeconds
     {
         get => _maxNoHeartbeatIntervalSeconds;
@@ -94,6 +96,33 @@ public class JobbyServerSettings
             _maxNoHeartbeatIntervalSeconds = value;
         }
     }
+
+    private readonly int _permanentLockedFreezingIntervalSeconds = 15;
+    public int PermanentLockedFreezingIntervalSeconds
+    {
+        get => _permanentLockedFreezingIntervalSeconds;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(PermanentLockedFreezingIntervalSeconds));
+            _permanentLockedFreezingIntervalSeconds = value;
+        }
+    }
+    
+    private readonly int _permanentLockedHandleUnlockingRequestsIntervalSeconds = 10;
+    public int PermanentLockedHandleUnlockingRequestsIntervalSeconds
+    {
+        get => _permanentLockedHandleUnlockingRequestsIntervalSeconds;
+        init
+        {
+            ThrowIfValueIsNotPositive(value, nameof(PermanentLockedFreezingIntervalSeconds));
+            _permanentLockedHandleUnlockingRequestsIntervalSeconds = value;
+        }
+    }    
+
+    public IReadOnlyList<QueueSettings> Queues { get; init; } =
+    [
+        new() { QueueName = QueueSettings.DefaultQueueName }
+    ];
 
     private static void ThrowIfValueIsNotPositive(int value, string fieldName)
     {

@@ -6,7 +6,7 @@ namespace Jobby.IntegrationTests.Postgres.Helpers;
 
 internal static class DbHelper
 {
-    public static readonly NpgsqlDataSource DataSource = new NpgsqlDataSourceBuilder("Host=localhost;Username=jobby;Password=jobby;Database=jobby_tests_db").Build();
+    public static readonly NpgsqlDataSource DataSource = new NpgsqlDataSourceBuilder("Host=localhost;Username=jobby;Password=jobby;Database=jobby_tests_db;GSS Encryption Mode=Disable").Build();
     private static readonly DbContextOptions Options = new DbContextOptionsBuilder().UseNpgsql(DataSource).Options;
 
     public static JobbyTestingDbContext CreateContext()
@@ -27,6 +27,7 @@ internal static class DbHelper
         var ctx = CreateContext();
         await ctx.Jobs.Where(x => true).ExecuteDeleteAsync();
         await ctx.Servers.Where(x => true).ExecuteDeleteAsync();
+        await ctx.UnlockingGroups.Where(x => true).ExecuteDeleteAsync();
         return ctx;
     }
 
@@ -35,10 +36,8 @@ internal static class DbHelper
         return new PostgresqlJobbyStorage(DataSource, new PostgresqlStorageSettings());
     }
 
-    public static async Task DropTablesAsync()
+    public static PostgresqlPermanentLocksStorage CreatePermanentLockedGroupsStorage()
     {
-        await using var ctx = CreateContext();
-        await ctx.Database.ExecuteSqlRawAsync("DROP TABLE jobby_jobs");
-        await ctx.Database.ExecuteSqlRawAsync("DROP TABLE jobby_servers");
+        return new PostgresqlPermanentLocksStorage(DataSource, new PostgresqlStorageSettings());
     }
 }

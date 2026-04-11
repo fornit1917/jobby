@@ -47,3 +47,7 @@ nupkgs
 BenchmarkDotNet.Artifacts
 
 .env
+
+node_modules/
+
+docs/.vitepress/cache

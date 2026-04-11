@@ -1,5 +1,23 @@
 # Versions
 
+## v1.0.0 (2026-04-11)
+
+- New methods for jobs configuration
+    - Optional `JobOpts` and `RecurrentJobOpts` parameters in job creation methods
+    - Optional `IHasDefaultJobOptions` interface for commands
+- Method `IJobCommand.CanBeRestarted` removed. Use `JobOpts.CanBeRestartedIfServerGoesDown` and `RecurrentJobOpts.CanBeRestartedIfServerGoesDown` instead
+- Multi-Queues
+- Sequentional execution via SerializableGroupId
+- New opportunities for recurrent jobs
+    - Not exclusive recurrent jobs
+    - Intervals scheduler
+    - Ability to implement custom schedulers
+- `JobCreationModel` has been made read-only. Use `IJobsFactory` or `IJobbyClient.Factory` for create objects of `CreationModel`
+- Removed deprecated configuration classes and methods
+    - JobbyServicesBuilder (use JubbyBuilder instead)
+    - IJobbyServicesConfigurable (use IJobbyComponentsConfigurable and IJobbyJobsConfigurable instead)
+    - IServiceCollection.AddJobby (use IServiceCollection.AddJobbyServerAndClient instead)
+
 ## v0.6.2 (2026-04-10)
 
 - Fixed a bug with stuck recurrent jobs

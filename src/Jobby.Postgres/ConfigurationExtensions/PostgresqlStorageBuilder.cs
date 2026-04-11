@@ -45,6 +45,15 @@ internal class PostgresqlStorageBuilder : IPostgresqlStorageConfigurable
         return new PostgresqlJobbyStorage(_dataSource, _settings);
     }
 
+    internal PostgresqlPermanentLocksStorage BuildPermanentLocksStorage()
+    {
+        if (_dataSource == null) 
+        {
+            throw new InvalidBuilderConfigException("DataSource is not configured for PostgresStorage. UseDataSource method should be called");
+        }
+        return new PostgresqlPermanentLocksStorage(_dataSource, _settings);
+    }
+
     internal PostgresqlJobbyStorageMigrator BuildMigrator(ICommonInfrastructure commonInfra)
     {
         if (_dataSource == null) 

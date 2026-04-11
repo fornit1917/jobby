@@ -12,7 +12,7 @@ internal class FindAndRestartStuckJobsCommand
     {
         _commandText = $@"
             WITH restarted AS (
-                UPDATE {TableName.Jobs(settings)}  
+                UPDATE {DbName.Jobs(settings)}  
                 SET 
                     status = {(int)JobStatus.Scheduled},
                     started_count = started_count - 1
@@ -29,7 +29,7 @@ internal class FindAndRestartStuckJobsCommand
             UNION 
 
             SELECT id, job_name, server_id, can_be_restarted
-            FROM {TableName.Jobs(settings)}
+            FROM {DbName.Jobs(settings)}
             WHERE 
                 status = {(int)JobStatus.Processing}
                 AND can_be_restarted = FALSE
