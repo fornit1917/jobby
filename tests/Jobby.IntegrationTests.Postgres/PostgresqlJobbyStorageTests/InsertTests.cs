@@ -183,7 +183,7 @@ public class InsertTests
     [Fact]
     public void Insert_RecurrentExclusiveExisting_UpdatesRecurrent()
     {
-        using var dbContext = DbHelper.CreateContext();
+        using var dbContext = DbHelper.CreateContextAndClearDb();
         
         var factory = CreateJobsFactory();
 
@@ -196,7 +196,7 @@ public class InsertTests
                 SerializableGroupId = "old_gid"
             });
         
-        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *",
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/5 * * * *",
             new RecurrentJobOpts
             {
                 CanBeRestartedIfServerGoesDown = false,
