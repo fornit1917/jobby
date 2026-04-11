@@ -24,11 +24,17 @@ var jobs = sequenceBuilder.GetJobs();
 await jobbyClient.EnqueueBatchAsync(jobs);
 ```
 
+Tasks created via JobsSequenceBuilder are guaranteed to be executed in the specified order, even if they were created in different queues.
+
+If one of the tasks fails, subsequent tasks will not be started.
+
 ## Sequential Execution Groups
 
 Jobby allows you to specify a group identifier in the `SerializableGroupId` parameter when creating a task. Jobby will execute tasks with the same identifier strictly one at a time, in ascending order of their scheduled start time. Jobby guarantees that at most one task from each group will execute simultaneously.
 
 Unlike the first approach, this method can be applied even when tasks within the same group are created at different times and in different transactions.
+
+This approach guarantees that tasks within the same group will be executed strictly one at a time, but the order of their execution by ascending scheduled start time is guaranteed only if all tasks in the group are created in the same queue.
 
 ### Group Identifier for a Task
 

@@ -202,3 +202,33 @@ await jobbyClient.ScheduleRecurrentAsync(command2, "*/5 * * * *", new RecurrentJ
     IsExclusive = false
 });
 ```
+
+## Отмена задачи по расписанию
+
+Созданная задача по расписанию может быть отменена в любой момент, после чего её запуск прекратится.
+
+Для отмены эксклюзивной задачи по расписанию достаточно указать класс команды в методе **CancelRecurrentAsync**. Важно: данный метод применим только для
+эксклюзивных задач по раписанию. Пример
+
+```csharp
+// Создать эксклюзивную задачу по расписанию
+var command = new RecurrentJobCommand();
+await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * * *");
+
+// Отменить эксклюзивную задачу по расписанию
+await jobbyClient.CancelRecurrentAsync<RecurrentJobCommand>();
+```
+
+Для отмены не эксклюзивной задачи по расписанию необходимо получить id её экземпляра при создании и затем использовать его для отмены с помощью метода
+**CancelRecurrentByIds**:
+
+```csharp
+// Создать не эксклюзивную задачу по расписанию
+var jobId = await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * *", new RecurrentJobOpts
+{
+    IsExclusive = false
+});
+
+// Отменить не эксклюзивную задачу по расписанию
+await jobbyClient.CancelRecurrentByIds(jobId);
+```

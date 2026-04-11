@@ -166,3 +166,18 @@ await _dbContext.SaveChangesAsync();
 ```
 
 Пример использования EF доступен здесь: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
+
+## Отмена задачи
+
+Задачу, добавленную в очередь, можно отменить, если она ещё не была запущена.
+
+```csharp
+var startTime = DateTime.UtcNow.AddHours(1);
+
+// Создать задачу
+// и получить id её экземпляра
+var jobId = await jobbyClient.EnqueueCommandAsync(command, startTime);
+
+// Отменить задачу по id экземпляра
+await jobbyClient.CancelJobsByIdsAsync(jobId);
+```

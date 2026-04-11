@@ -121,7 +121,7 @@ jobbyServer.StartBackgroundService();
 
 In this mode you own the setup lifecycle yourself: provide an execution scope factory, run migrations, create the client and server, and start or stop the background service explicitly.
 
-## Common Settings
+## Settings
 
 Most applications only need to adjust a few things.
 
@@ -146,12 +146,15 @@ Use this when you want Jobby tables to be easier to identify or separated from t
 
 ### Server Settings
 
-`JobbyServerSettings` controls how aggressively jobs are pulled and executed.
+`JobbyServerSettings` contains parameters that specify the server's operating mode, for example:
 
-- `MaxDegreeOfParallelism`: how many jobs can run at the same time. Increase it for more throughput; lower it if your jobs are heavy or depend on limited resources.
-- `TakeToProcessingBatchSize`: how many jobs Jobby reads from the queue at once. Larger values can improve throughput; smaller values reduce burstiness.
-- `PollingIntervalMs`: how often the server checks for new work. Lower values reduce latency but increase database polling.
-
+- **`MaxDegreeOfParallelism`**: how many tasks can run simultaneously. Increase for higher throughput, decrease for heavy tasks or limited resources. The default value is `Environment.ProcessorCount + 1`.
+- **`TakeToProcessingBatchSize`**: how many tasks Jobby fetches from the queue at once. Larger values increase throughput, smaller values make the load smoother. The default value is `Environment.ProcessorCount + 1`.
+- **`PollingIntervalMs`**: how often the server checks for new tasks when the last request returned no tasks ready to run. Lower values reduce latency but increase the frequency of database requests. The default value is 1000 ms.
+- **`PollingIntervalStartMs`** and **`PollingIntervalFactor`**: used when you want the database polling interval to gradually increase to `PollingIntervalMs` starting from a lower value. Initially, the pause `PollingIntervalStartMs` will be used, and with each subsequent request that returns an empty task list, the value is multiplied by `PollingIntervalFactor` until it reaches `PollingIntervalMs`.
+- **`DbErrorPauseMs`**: the pause that Jobby will take after an unsuccessful database request before retrying. The default value is 5000 ms.
+- **`DeleteCompleted`**: if `true`, successfully completed tasks are immediately deleted from the database. If `false`, tasks are not deleted but are transitioned to the Completed status. The default value is `true`.
+- **`CompleteWithBatching`**: if `true`, Jobby will delete/update multiple concurrently completed tasks with a single SQL query. The default value is `false`. **Useful to set to `true` during high task throughput and/or high `MaxDegreeOfParallelism` values, as this will increase performance and significantly save database resources, including connections**.
 ### Retry Policy
 
 `RetryPolicy` controls what happens after a failed execution.

@@ -193,3 +193,31 @@ await jobbyClient.ScheduleRecurrentAsync(command2, "*/5 * * * *", new RecurrentJ
     IsExclusive = false
 });
 ```
+
+## Scheduled Jobs Cancellation
+
+A scheduled task can be cancelled at any time, after which its execution will stop.
+
+To cancel an exclusive scheduled task, simply specify the command class in the **CancelRecurrentAsync** method. Important: This method only applies to exclusive scheduled tasks. Example:
+
+```csharp
+// Create an exclusive scheduled task
+var command = new RecurrentJobCommand();
+await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * * *");
+
+// Cancel the exclusive scheduled task
+await jobbyClient.CancelRecurrentAsync<RecurrentJobCommand>();
+```
+
+To cancel a non-exclusive scheduled task, you need to obtain its instance ID when creating it and then use that ID for cancellation via the **CancelRecurrentByIds** method:
+
+```csharp
+// Create a non-exclusive scheduled task
+var jobId = await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * *", new RecurrentJobOpts
+{
+    IsExclusive = false
+});
+
+// Cancel the non-exclusive scheduled task
+await jobbyClient.CancelRecurrentByIds(jobId);
+```

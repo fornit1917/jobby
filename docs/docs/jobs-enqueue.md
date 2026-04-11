@@ -159,3 +159,18 @@ await _dbContext.SaveChangesAsync();
 ```
 
 An example of using EF is available here: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet).
+
+## Job Cancellation
+
+A task added to the queue can be cancelled if it hasn't been started yet.
+
+```csharp
+var startTime = DateTime.UtcNow.AddHours(1);
+
+// Create a task
+// and get its instance id
+var jobId = await jobbyClient.EnqueueCommandAsync(command, startTime);
+
+// Cancel the task by instance id
+await jobbyClient.CancelJobsByIdsAsync(jobId);
+```
