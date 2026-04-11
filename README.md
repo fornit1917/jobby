@@ -7,12 +7,11 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Website (not available yet)
 - [Versions history](https://github.com/fornit1917/jobby/tree/master/versions.md)
 - [Samples](https://github.com/fornit1917/jobby/tree/master/samples)
-- [Usage Guide in Russian](https://github.com/fornit1917/jobby/tree/master/docs/ru/overview.md)
 
 
 ## Key Features  
 
-- Scheduled tasks  
+- Scheduled tasks with cron, intervals and any custom schedulers
 - Queue-based task execution  
 - Transactional creation of multiple tasks  
 - Configurable execution order for multiple tasks
