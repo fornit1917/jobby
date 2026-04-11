@@ -4,6 +4,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Jobby",
   description: "High-performance and reliable .NET library for background jobs",
+  base: "/jobby/",
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
