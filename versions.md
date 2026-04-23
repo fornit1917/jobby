@@ -1,5 +1,9 @@
 # Versions
 
+## v1.0.1 (2026-04-23)
+
+- Removed mistakenly added dependency on Quartz
+
 ## v1.0.0 (2026-04-11)
 
 - New methods for jobs configuration
