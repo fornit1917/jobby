@@ -38,7 +38,7 @@ internal class InsertJobCommand
                 job_param = $3,
 	            schedule = $7,
 	            scheduled_start_at = case
-                    when {jobsTableName}.job_param <> $3 or {jobsTableName}.schedule <> $7 or {jobsTableName}.scheduler_type <> $14
+                    when {jobsTableName}.schedule <> $7 or {jobsTableName}.scheduler_type <> $14
                         then $6
                         else {jobsTableName}.scheduled_start_at
                     end,

@@ -177,7 +177,8 @@ public class InsertTests
                 cancellationToken: TestContext.Current.CancellationToken);
         Assert.Null(actualJobWithNewId);
         
-        AssertHelper.AssertCreatedJobExceptId(newJob, actualJobWithOldId);
+        AssertHelper.AssertCreatedJobExceptIdAndStartTime(newJob, actualJobWithOldId);
+        Assert.Equal(actualJobWithOldId.ScheduledStartAt, job.ScheduledStartAt, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
