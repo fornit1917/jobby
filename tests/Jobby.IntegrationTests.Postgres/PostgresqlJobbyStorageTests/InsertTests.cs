@@ -181,6 +181,55 @@ public class InsertTests
     }
 
     [Fact]
+    public async Task InsertAsync_RecurrentExclusiveExisting_WithSameOptions_UpdatesRecurrent()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        var factory = CreateJobsFactory();
+
+        var uniqueId = Guid.NewGuid();
+
+        var firstStartTime = DateTime.UtcNow.AddDays(100);
+        var secondStartTime = DateTime.UtcNow.AddDays(200);
+
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = uniqueId }, "*/10 * * * *",
+            new RecurrentJobOpts
+            {
+                CanBeRestartedIfServerGoesDown = true,
+                StartTime = firstStartTime,
+                QueueName = "q",
+                SerializableGroupId = "gid"
+            });
+
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = uniqueId }, "*/10 * * * *",
+            new RecurrentJobOpts
+            {
+                CanBeRestartedIfServerGoesDown = true,
+                StartTime = secondStartTime,
+                QueueName = "q",
+                SerializableGroupId = "gid"
+            });
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var firstJobId = await storage.InsertJobAsync(job);
+        var secondJobId = await storage.InsertJobAsync(newJob);
+
+        Assert.Equal(firstJobId, secondJobId);
+        Assert.Equal(job.Id, firstJobId);
+
+        var actualJobWithOldId = await dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == job.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        Assert.NotNull(actualJobWithOldId);
+
+        var actualJobWithNewId = await dbContext.Jobs
+            .FirstOrDefaultAsync(x => x.Id == newJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Null(actualJobWithNewId);
+
+        AssertHelper.AssertCreatedJobExceptId(job, actualJobWithOldId);
+    }
+
+    [Fact]
     public void Insert_RecurrentExclusiveExisting_UpdatesRecurrent()
     {
         using var dbContext = DbHelper.CreateContextAndClearDb();
