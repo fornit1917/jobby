@@ -12,9 +12,11 @@ internal class InsertJobCommand
     public InsertJobCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
-        
+
+        var jobsTableName = DbName.Jobs(settings);
+
         _commandText = @$"
-            INSERT INTO {DbName.Jobs(settings)} (
+            INSERT INTO {jobsTableName} (
                 id,
                 job_name,
                 job_param,
@@ -35,7 +37,11 @@ internal class InsertJobCommand
             UPDATE SET
                 job_param = $3,
 	            schedule = $7,
-	            scheduled_start_at = $6,
+	            scheduled_start_at = case
+                    when {jobsTableName}.schedule <> $7 or {jobsTableName}.scheduler_type <> $14
+                        then $6
+                        else {jobsTableName}.scheduled_start_at
+                    end,
                 can_be_restarted = $9,
                 queue_name = $10,
                 serializable_group_id = $11,
