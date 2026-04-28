@@ -179,6 +179,7 @@ public class InsertTests
         
         AssertHelper.AssertCreatedJobExceptIdAndStartTime(newJob, actualJobWithOldId);
         Assert.Equal(actualJobWithOldId.ScheduledStartAt, job.ScheduledStartAt, TimeSpan.FromSeconds(1));
+        Assert.Equal(actualJobWithOldId.Id, job.Id);
     }
 
     [Fact]

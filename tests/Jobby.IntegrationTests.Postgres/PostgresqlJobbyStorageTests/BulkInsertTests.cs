@@ -127,6 +127,58 @@ public class BulkInsertTests
         AssertHelper.AssertCreatedJob(thirdJob, thirdActualJob);
     }
 
+    [Fact]
+    public async Task BulkInsertAsync_RepeatInsert_WithNewTime_ShouldNotChangeScheduledStartTime()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+
+        var factory = CreateJobsFactory();
+
+        var firstJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
+        {
+            IsExclusive = true,
+            CanBeRestartedIfServerGoesDown = true,
+            QueueName = "q1",
+            SerializableGroupId = "gid1",
+            StartTime = DateTime.UtcNow.AddDays(100)
+        });
+
+        var secondJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = Guid.NewGuid() }, "*/10 * * * *", new RecurrentJobOpts
+        {
+            IsExclusive = true,
+            CanBeRestartedIfServerGoesDown = true,
+            QueueName = "q2",
+            SerializableGroupId = "gid2",
+            StartTime = DateTime.UtcNow.AddDays(200)
+        });
+
+        var storage = DbHelper.CreateJobbyStorage();
+
+        await storage.BulkInsertJobsAsync([firstJob]);
+
+        var firstActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == firstJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(firstActualJob);
+        AssertHelper.AssertCreatedJob(firstJob, firstActualJob);
+
+        await storage.BulkInsertJobsAsync([secondJob]);
+
+        firstActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == firstJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+        var secondActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == secondJob.Id,
+                cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Null(secondActualJob);
+        Assert.NotNull(firstActualJob);
+        AssertHelper.AssertCreatedJobExceptIdAndStartTime(secondJob, firstActualJob);
+        Assert.Equal(firstActualJob.ScheduledStartAt, firstJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+        Assert.Equal(firstActualJob.Id, firstJob.Id);
+    }
+
     private IJobsFactory CreateJobsFactory()
     {
         return new JobbyBuilder().CreateJobsFactory();
