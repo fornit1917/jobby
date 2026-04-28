@@ -1,5 +1,9 @@
 # Versions
 
+## v1.0.2 (2026-04-28)
+
+- Do not recalculate the start time when re-creating an existing exclusive recurring job if the schedule has not changed
+
 ## v1.0.1 (2026-04-23)
 
 - Removed mistakenly added dependency on Quartz
