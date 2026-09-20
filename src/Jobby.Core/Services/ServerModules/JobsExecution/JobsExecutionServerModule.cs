@@ -141,7 +141,7 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
             {
                 _semaphore.Release();
                 _logger.LogError(ex, "Error receiving next jobs from queue");
-                await Task.Delay(_settings.DbErrorPauseMs, cancellationToken);
+                await _timer.Delay(_settings.DbErrorPauseMs, cancellationToken);
                 continue;
             }
 
