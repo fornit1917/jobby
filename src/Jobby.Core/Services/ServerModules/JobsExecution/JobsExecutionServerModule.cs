@@ -81,9 +81,11 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var semaphoreCaptured = false;
             try
             {
                 await _semaphore.WaitAsync(cancellationToken);
+                semaphoreCaptured = true;
             }
             catch (TaskCanceledException)
             {
@@ -91,7 +93,10 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
 
             if (cancellationToken.IsCancellationRequested)
             {
-                _semaphore.Release();
+                if (semaphoreCaptured)
+                {
+                    _semaphore.Release();    
+                }
                 break;
             }
             
