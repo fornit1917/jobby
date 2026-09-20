@@ -81,9 +81,11 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            var semaphoreCaptured = false;
             try
             {
                 await _semaphore.WaitAsync(cancellationToken);
+                semaphoreCaptured = true;
             }
             catch (TaskCanceledException)
             {
@@ -91,7 +93,10 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
 
             if (cancellationToken.IsCancellationRequested)
             {
-                _semaphore.Release();
+                if (semaphoreCaptured)
+                {
+                    _semaphore.Release();    
+                }
                 break;
             }
             
@@ -112,6 +117,7 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while retry post-processing for jobs");
+                _semaphore.Release();
                 continue;
             }
 
@@ -140,7 +146,7 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
             {
                 _semaphore.Release();
                 _logger.LogError(ex, "Error receiving next jobs from queue");
-                await Task.Delay(_settings.DbErrorPauseMs, cancellationToken);
+                await _timer.Delay(_settings.DbErrorPauseMs, cancellationToken);
                 continue;
             }
 
@@ -153,7 +159,12 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
                 var actualBatchSize = jobs.Count;
                 for (int i = 1; i < actualBatchSize; i++)
                 {
-                    await _semaphore.WaitAsync(cancellationToken);
+                    // In this case, the semaphore definitely has enough free slots.
+                    // All calls to the wait method will complete immediately.
+                    // Therefore, we do not need to pass the cancellation token. 
+                    
+                    // ReSharper disable once MethodSupportsCancellation
+                    await _semaphore.WaitAsync();
                 }
                 Run(jobs, cancellationToken);
             }

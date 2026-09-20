@@ -38,7 +38,7 @@ internal class BatchingJobCompletionService : IJobCompletionService
         var queueItem = new QueueItem
         {
             Job = job,
-            Tcs = new TaskCompletionSource()
+            Tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
         };
         
         while (true)

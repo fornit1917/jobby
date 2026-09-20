@@ -123,6 +123,43 @@ public class JobExecutionServiceTests
         _postProcessingServiceMock.Verify(x => x.HandleFailed(job, retryPolicy, ex.ToString()));
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
+    
+    [Fact]
+    public async Task ExecuteJob_NotRecurrent_ServerStoppedAndOperationCancelledThrownByJob_DoesNotMarkAsCompletedOrFailed()
+    {
+        var job = new JobExecutionModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = JobName,
+            StartedCount = 1,
+            JobParam = "jobParam"
+        };
+        var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
+        var retryPolicy = RetryPolicy.NoRetry;
+        SetupRetryPolicyMock(job, retryPolicy);
+
+        var expectedCtx = new JobExecutionContext
+        {
+            CancellationToken = cancellationToken,
+            IsLastAttempt = true,
+            JobName = job.JobName,
+            IsRecurrent = job.IsRecurrent,
+            StartedCount = job.StartedCount,
+        };
+        var ex = new OperationCanceledException("cancelled");
+        _jobExecutorMock
+            .Setup(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object))
+            .ThrowsAsync(ex);
+
+        await cancellationTokenSource.CancelAsync();
+        await _executionService.ExecuteJob(job, cancellationToken);
+
+        _jobExecutorMock
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object), Times.Once);
+        _postProcessingServiceMock.Verify(x => x.HandleFailed(It.IsAny<JobExecutionModel>(), It.IsAny<RetryPolicy>(), It.IsAny<string>()), Times.Never);
+        _postProcessingServiceMock.Verify(x => x.HandleCompleted(It.IsAny<JobExecutionModel>()), Times.Never);
+    }    
 
     [Fact]
     public async Task ExecuteJob_Recurrent_Ok_ExecutesAndReschedules()

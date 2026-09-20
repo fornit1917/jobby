@@ -39,6 +39,7 @@ internal class JobExecutionService : IJobExecutionService
         using var scope = _scopeFactory.CreateJobExecutionScope();
         var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
         string? error = null;
+        var completed = false;
         try
         {
             var jobExecutor = _jobsRegistry.GetJobExecutor(job.JobName);
@@ -57,6 +58,18 @@ internal class JobExecutionService : IJobExecutionService
             };
 
             await jobExecutor.Execute(job, ctx, scope, _serializer, _pipelineBuilder);
+            completed = true;
+        }
+        catch (OperationCanceledException e) when (cancellationToken.IsCancellationRequested)
+        {
+            // In this case job will be restarted on another instance by heartbeat process if can_be_restarted=true
+            // So we just write a log and keep Processing status
+            
+            _logger.LogWarning(e, 
+                "Job execution was interrupted due to a server shutdown, jobName = {JobName}, id = {JobId}. The job will be restarted on another instance if permitted.",
+                job.JobName, job.Id);
+            
+            // todo: reschedule job if can_be_restarted=true right here
         }
         catch (Exception e)
         {
@@ -70,9 +83,9 @@ internal class JobExecutionService : IJobExecutionService
         }
         else
         {
-            if (error is null)
+            if (error is null && completed)
                 await _postProcessingService.HandleCompleted(job);
-            else
+            else if (error is not null)
                 await _postProcessingService.HandleFailed(job, retryPolicy, error);
         }
     }

@@ -1,5 +1,13 @@
 # Versions
 
+## v1.0.3 (2026-09-20)
+
+- Fixed hanging retries of failed tasks in serializable groups
+- Fixed semaphore slot leak when the database is unavailable
+- On server shutdown, a task that threw OperationCancelledException is no longer marked as failed and can be picked up by another instance for retry
+- Fixed a possible error during graceful server shutdown
+- Improved database query performance in the heartbeat mechanism
+
 ## v1.0.2 (2026-04-28)
 
 - Do not recalculate the start time when re-creating an existing exclusive recurring job if the schedule has not changed
