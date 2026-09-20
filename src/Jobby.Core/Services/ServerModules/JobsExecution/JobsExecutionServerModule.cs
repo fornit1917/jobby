@@ -112,6 +112,7 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error while retry post-processing for jobs");
+                _semaphore.Release();
                 continue;
             }
 
@@ -153,7 +154,12 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
                 var actualBatchSize = jobs.Count;
                 for (int i = 1; i < actualBatchSize; i++)
                 {
-                    await _semaphore.WaitAsync(cancellationToken);
+                    // In this case, the semaphore definitely has enough free slots.
+                    // All calls to the wait method will complete immediately.
+                    // Therefore, we do not need to pass the cancellation token. 
+                    
+                    // ReSharper disable once MethodSupportsCancellation
+                    await _semaphore.WaitAsync();
                 }
                 Run(jobs, cancellationToken);
             }
