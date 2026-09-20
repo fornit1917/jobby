@@ -4,7 +4,7 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services.ServerModules.JobsExecution;
 
-public class TakeToProcessingJobsQueueReader : IQueueItemsReader<JobExecutionModel>
+internal class TakeToProcessingJobsQueueReader : IQueueItemsReader<JobExecutionModel>
 {
     private readonly IJobbyStorage _storage;
 
