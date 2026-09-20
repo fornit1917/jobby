@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
 CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
     ON jobby_jobs(queue_name, status, scheduled_start_at);
 
+CREATE INDEX IF NOT EXISTS jobby_jobs_server_id_idx
+    ON jobby_jobs(server_id)
+    WHERE status = 2;
+
 CREATE UNIQUE INDEX IF NOT EXISTS jobby_jobs_exclusive_name_idx
     ON jobby_jobs(job_name)
     WHERE is_exclusive = true;
