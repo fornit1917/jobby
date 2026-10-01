@@ -42,7 +42,7 @@ internal class JobExecutionService : IJobExecutionService
         
         try
         {
-            using var scope = _scopeFactory.CreateJobExecutionScope();
+            await using var scope = _scopeFactory.CreateJobExecutionScope();
             
             var jobExecutor = _jobsRegistry.GetJobExecutor(job.JobName);
             if (jobExecutor == null)
