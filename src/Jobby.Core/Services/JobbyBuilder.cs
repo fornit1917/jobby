@@ -290,7 +290,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             {
                 if (!handlerImplTypesByCommandType.TryAdd(commandFromHandler, t))
                 {
-                    var error = $"Each job command must have single handler, but command {commandFromHandler} has two handlers: {handlerImplTypesByCommandType[t]} and {t}";
+                    var error = $"Each job command must have single handler, but command {commandFromHandler} has two handlers: {handlerImplTypesByCommandType[commandFromHandler]} and {t}";
                     throw new InvalidJobsConfigException(error);
                 }
             }
