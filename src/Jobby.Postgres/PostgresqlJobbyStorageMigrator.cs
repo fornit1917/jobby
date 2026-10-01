@@ -25,7 +25,7 @@ internal class PostgresqlJobbyStorageMigrator : IJobbyStorageMigrator
 
     public void Migrate()
     {
-        var conn = _dataSource.OpenConnection();
+        using var conn = _dataSource.OpenConnection();
         var evolve = new Evolve(conn, msg => _logger.LogInformation(msg))
         {
             MetadataTableSchema = _settings.SchemaName,
