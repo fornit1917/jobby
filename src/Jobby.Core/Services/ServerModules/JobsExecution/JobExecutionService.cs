@@ -36,12 +36,14 @@ internal class JobExecutionService : IJobExecutionService
 
     public async Task ExecuteJob(JobExecutionModel job, CancellationToken cancellationToken)
     {
-        using var scope = _scopeFactory.CreateJobExecutionScope();
         var retryPolicy = _retryPolicyService.GetRetryPolicy(job);
         string? error = null;
         var completed = false;
+        
         try
         {
+            using var scope = _scopeFactory.CreateJobExecutionScope();
+            
             var jobExecutor = _jobsRegistry.GetJobExecutor(job.JobName);
             if (jobExecutor == null)
             {
