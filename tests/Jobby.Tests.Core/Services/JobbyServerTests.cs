@@ -35,10 +35,22 @@ public class JobbyServerTests
     }
 
     [Fact]
+    [Obsolete]
     public void StartBackgroundService_StartsAllModules()
     {
         _server.StartBackgroundService();
         
+        _availabilityCheckServerModuleMock.Verify(x => x.Start(), Times.Once);
+        _jobsExecutionServerModuleMock.Verify(x => x.Start(), Times.Once);
+        _permanentLocksCheckServerModuleMock.Verify(x => x.Start(), Times.Once);
+    }
+    
+    [Fact]
+    public async Task StartBackgroundServiceAsync_StartsAllModules()
+    {
+        await _server.StartBackgroundServiceAsync();
+        
+        _availabilityCheckServerModuleMock.Verify(x => x.AnnounceServer(), Times.Once);
         _availabilityCheckServerModuleMock.Verify(x => x.Start(), Times.Once);
         _jobsExecutionServerModuleMock.Verify(x => x.Start(), Times.Once);
         _permanentLocksCheckServerModuleMock.Verify(x => x.Start(), Times.Once);

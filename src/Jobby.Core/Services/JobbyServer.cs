@@ -29,8 +29,23 @@ internal class JobbyServer : IJobbyServer
         ServerId = serverId;
     }
 
+    [Obsolete("Use StartBackgroundServiceAsync")]
     public void StartBackgroundService()
     {
+        _logger.LogInformation("Announcing jobby server, serverId = {ServerId}", ServerId);
+        _availabilityCheckServerModule.AnnounceServer().GetAwaiter().GetResult();
+        
+        _logger.LogInformation("Jobby server is running, serverId = {ServerId}", ServerId);
+        _availabilityCheckServerModule.Start();
+        _jobsExecutionServerModule.Start();
+        _permanentLocksCheckServerModule.Start();
+    }
+
+    public async Task StartBackgroundServiceAsync()
+    {
+        _logger.LogInformation("Announcing jobby server, serverId = {ServerId}", ServerId);
+        await _availabilityCheckServerModule.AnnounceServer();
+        
         _logger.LogInformation("Jobby server is running, serverId = {ServerId}", ServerId);
         _availabilityCheckServerModule.Start();
         _jobsExecutionServerModule.Start();

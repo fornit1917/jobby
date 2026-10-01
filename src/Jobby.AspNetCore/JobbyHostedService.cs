@@ -14,8 +14,7 @@ internal class JobbyHostedService : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _jobbyServer.StartBackgroundService();
-        return Task.CompletedTask;
+        return _jobbyServer.StartBackgroundServiceAsync();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)

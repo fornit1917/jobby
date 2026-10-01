@@ -25,8 +25,8 @@ public static class Program
         var secondServer = CreateJobbyServer(dataSource);
         
         Console.WriteLine("Run servers");
-        firstServer.StartBackgroundService();
-        secondServer.StartBackgroundService();
+        await firstServer.StartBackgroundServiceAsync();
+        await secondServer.StartBackgroundServiceAsync();
 
         await ConcurrentJobCommandHandler.JobsCompletedTcs.Task;
         

@@ -28,7 +28,12 @@ internal class AvailabilityCheckServerModule : IAvailabilityCheckServerModule
         _serverId = serverId;
         _cancellationTokenSource = new CancellationTokenSource();
     }
-    
+
+    public Task AnnounceServer()
+    {
+        return _storage.SendHeartbeatAsync(_serverId);
+    }
+
     public void Start()
     {
         if (_cancellationTokenSource.IsCancellationRequested)

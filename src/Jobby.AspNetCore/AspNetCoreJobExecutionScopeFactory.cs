@@ -14,7 +14,6 @@ internal class AspNetCoreJobExecutionScopeFactory : IJobExecutionScopeFactory
 
     public IJobExecutionScope CreateJobExecutionScope()
     {
-        _serviceProvider.CreateAsyncScope();
         return new AspNetCoreJobExecutionScope(_serviceProvider.CreateScope());
     }
 }

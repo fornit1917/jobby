@@ -20,7 +20,7 @@ public class JobbyHostedServiceTests
     public async Task StartAsync_StartsJobbyServer()
     {
         await _hostedService.StartAsync(CancellationToken.None);
-        _jobbyServerMock.Verify(x => x.StartBackgroundService(), Times.Once);
+        _jobbyServerMock.Verify(x => x.StartBackgroundServiceAsync(), Times.Once);
     }
 
     [Fact]
