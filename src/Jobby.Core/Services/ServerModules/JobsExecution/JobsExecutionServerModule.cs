@@ -87,7 +87,7 @@ internal class JobsExecutionServerModule : IJobsExecutionServerModule
                 await _semaphore.WaitAsync(cancellationToken);
                 semaphoreCaptured = true;
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
             }
 
