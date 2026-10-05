@@ -37,19 +37,8 @@ internal class PostgresqlPermanentLocksStorage : IPermanentLocksStorage
                             SELECT 1 FROM {DbName.Jobs(settings)} as locker
                             WHERE
                                 locker.serializable_group_id = queue_top.serializable_group_id
-                                AND locker.is_group_locker = true
                                 AND locker.id != queue_top.id
-                                AND (
-                                    locker.status = {(int)JobStatus.Failed}
-                                    OR (
-                                        locker.status = {(int)JobStatus.Processing}
-                                        AND locker.can_be_restarted = false
-                                        AND NOT EXISTS (
-                                            SELECT 1 FROM {DbName.Servers(settings)} as s
-                                            WHERE s.id = locker.server_id
-                                        )
-                                    )
-                                )
+                                AND ({GroupLockSql.StuckLocker("locker", settings)})
                         )
                         AND NOT EXISTS (
                             SELECT 1 FROM {DbName.UnlockingGroups(settings)} as u

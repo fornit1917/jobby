@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-density="comfortable" data-status="solid">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <base href="/"/>
+    <title>Jobby Dashboard</title>
+    <link rel="icon" type="image/png" href="favicon-96x96.png?v=20260612" sizes="96x96"/>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20260612"/>
+    <link rel="shortcut icon" href="favicon.ico?v=20260612"/>
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=20260612"/>
+    <meta name="apple-mobile-web-app-title" content="Jobby"/>
+    <link rel="manifest" href="site.webmanifest?v=20260612"/>
+    <link rel="preload" href="css/fonts/ibm-plex-sans-400.woff2" as="font" type="font/woff2" crossorigin/>
+    <link rel="preload" href="css/fonts/ibm-plex-sans-500.woff2" as="font" type="font/woff2" crossorigin/>
+    <link rel="preload" href="css/fonts/ibm-plex-sans-600.woff2" as="font" type="font/woff2" crossorigin/>
+    <link rel="preload" href="css/fonts/ibm-plex-mono-400.woff2" as="font" type="font/woff2" crossorigin/>
+    <link rel="stylesheet" href="_content/MudBlazor/MudBlazor.min.css"/>
+    <link rel="stylesheet" href="Jobby.Dashboard.Client.styles.css"/>
+    <link rel="stylesheet" href="css/jobby-dashboard.css"/>
+    <script>
+        (function () {
+            var lang = null;
+            try {
+                var raw = localStorage.getItem("jobby.dashboard.language");
+                if (raw) {
+                    var p = JSON.parse(raw);
+                    if (p && p.v === 1 && typeof p.lang === "string") {
+                        lang = p.lang;
+                    }
+                }
+            } catch (e) {
+            }
+            if (lang) {
+                document.documentElement.setAttribute("lang", lang);
+            }
+            window.__jobbyBootLang = lang;
+            window.__jobbyGetBootLang = function () {
+                return window.__jobbyBootLang || null;
+            };
+        })();
+    </script>
+</head>
+<body>
+<div id="app">
+    <div style="font-family: system-ui; padding: 2rem;">Loading Jobby Dashboard...</div>
+</div>
+<div id="blazor-error-ui" style="display:none">
+    An unhandled error has occurred. <a href="" class="reload">Reload</a>
+</div>
+<script src="_framework/blazor.webassembly.js"></script>
+<script src="_content/MudBlazor/MudBlazor.min.js"></script>
+<script>
+    window.jobbyDashboard = {
+        getTimeZone: function () {
+            try {
+                return Intl.DateTimeFormat().resolvedOptions().timeZone;
+            } catch {
+                return null;
+            }
+        }
+    };
+</script>
+</body>
+</html>

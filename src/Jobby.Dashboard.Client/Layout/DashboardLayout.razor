@@ -1,0 +1,222 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime Js
+@inject DashboardClientConfig Config
+@inject DashboardModeState Mode
+@inject NavigationManager Nav
+@inject DashboardApiClient Api
+@inject DateTimeDisplayState Dt
+@inject LanguageState L
+@implements IDisposable
+@using Jobby.Dashboard.Client.Theme
+
+<MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="JobbyTheme.Instance" ObserveSystemDarkModeChange="false" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <a href="#dashboard-main" class="jobby-skip-link" @onclick="SkipToMainAsync" @onclick:preventDefault="true">@L["nav.skipToMain"]</a>
+    <div class="jobby-visually-hidden" role="status" aria-live="polite" aria-atomic="true">@RouteAnnouncement</div>
+    <MudAppBar Elevation="0" Color="Color.Surface" Class="jobby-appbar">
+        <MudIconButton Icon="@Icons.Material.Outlined.ViewSidebar" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="ToggleDrawer" aria-label="@L["nav.toggleNavigation"]" data-testid="drawer-toggle" />
+        <div class="jobby-breadcrumb">
+            <span>@L["nav.dashboardTitle"]</span>
+            <span>/</span>
+            <span class="crumb-current">@CurrentSection</span>
+        </div>
+        <MudSpacer />
+        @if (Config.ManagementEnabled)
+        {
+            <MudToggleGroup T="DashboardMode" Value="Mode.Mode" ValueChanged="OnModeChanged"
+                            Size="Size.Small" Color="Color.Primary" CheckMark="false"
+                            data-testid="mode-toggle">
+                <MudToggleItem Value="DashboardMode.Management">
+                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="mr-1" />@L["common.management"]
+                </MudToggleItem>
+                <MudToggleItem Value="DashboardMode.ReadOnly">
+                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Class="mr-1" />@L["common.readOnly"]
+                </MudToggleItem>
+            </MudToggleGroup>
+        }
+        else
+        {
+            <span class="jobby-tag jobby-tag-WaitingPrev" data-testid="readonly-chip">@L["common.readOnly"]</span>
+        }
+        <LanguageSelector />
+        <DateTimeSettings />
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit" OnClick="ToggleDarkModeAsync" data-testid="theme-toggle" />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Mini" OpenMiniOnHover="false" Elevation="0" Class="jobby-drawer">
+        <MudDrawerHeader Class="pa-0">
+            <div class="jobby-brand">
+                <span class="jobby-brand-mark"><MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" /></span>
+                <span class="jobby-brand-name">@L["nav.brand"]</span>
+            </div>
+        </MudDrawerHeader>
+        <MudNavMenu>
+            <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">@L["nav.overview"]</MudNavLink>
+            <MudNavLink Href="jobs" Icon="@Icons.Material.Filled.WorkOutline">@L["nav.jobs"]</MudNavLink>
+            <MudNavLink Href="recurrent" Icon="@Icons.Material.Filled.Schedule">@L["nav.recurrent"]</MudNavLink>
+            <MudNavLink Href="servers" Icon="@Icons.Material.Filled.Dns">@L["nav.servers"]</MudNavLink>
+            <MudNavLink Href="queues" Icon="@Icons.Material.Filled.Layers">@L["nav.queues"]</MudNavLink>
+            <MudNavLink Href="locked-groups" Icon="@Icons.Material.Filled.Lock" Class="jobby-nav-locked">
+                <span class="jobby-nav-label">@L["nav.lockedGroups"]</span>
+                @if (_lockedCount > 0)
+                {
+                    <span class="jobby-nav-count" data-testid="locked-count-badge">@_lockedCount</span>
+                }
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent role="main">
+        <div id="dashboard-main" tabindex="-1" @ref="_mainFocus"></div>
+        <MudContainer MaxWidth="MaxWidth.False" Class="px-6 py-4" Style="max-width:1480px;">
+            <ErrorBoundary>
+                <ChildContent>@Body</ChildContent>
+                <ErrorContent><MudAlert Severity="Severity.Error">@L["common.somethingWrong"]</MudAlert></ErrorContent>
+            </ErrorBoundary>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private const string ThemeStorageKey = "jobby-dashboard-dark";
+
+    private bool _isDarkMode = true;
+    private bool _drawerOpen = true;
+    private int _lockedCount;
+
+    private string CurrentSection
+    {
+        get
+        {
+            var path = Nav.ToBaseRelativePath(Nav.Uri);
+            var queryStart = path.IndexOf('?');
+            if (queryStart >= 0)
+            {
+                path = path[..queryStart];
+            }
+            path = path.Trim('/');
+            return path switch
+            {
+                "" => L["nav.overview"],
+                _ when path.StartsWith("jobs") => L["nav.jobs"],
+                _ when path.StartsWith("recurrent") => L["nav.recurrent"],
+                _ when path.StartsWith("servers") => L["nav.servers"],
+                _ when path.StartsWith("queue") => L["nav.queues"],
+                _ when path.StartsWith("locked-group") => L["nav.lockedGroups"],
+                _ => L["nav.overview"],
+            };
+        }
+    }
+
+    private void OnModeChanged(DashboardMode mode) => Mode.Mode = mode;
+
+    private string RouteAnnouncement
+    {
+        get
+        {
+            var path = Nav.ToBaseRelativePath(Nav.Uri);
+            var queryStart = path.IndexOf('?');
+            if (queryStart >= 0)
+            {
+                path = path[..queryStart];
+            }
+            path = path.Trim('/');
+            return path switch
+            {
+                "" => L["nav.overview"],
+                "jobs" => L["nav.jobs"],
+                _ when path.StartsWith("jobs/") => L["route.jobDetails"],
+                "recurrent" => L["route.recurrentJobs"],
+                "servers" => L["nav.servers"],
+                "queues" => L["nav.queues"],
+                _ when path.StartsWith("queue") => L["route.queueDetails"],
+                "locked-groups" => L["nav.lockedGroups"],
+                _ when path.StartsWith("locked-groups") => L["route.lockedGroupDetails"],
+                _ => L["nav.overview"],
+            };
+        }
+    }
+
+    private ElementReference _mainFocus;
+    private async Task SkipToMainAsync() => await _mainFocus.FocusAsync();
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += (_, _) => InvokeAsync(StateHasChanged);
+        L.Changed += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => L.Changed -= OnLanguageChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+        try
+        {
+            var stored = await Js.InvokeAsync<string?>("localStorage.getItem", ThemeStorageKey);
+            if (stored is "true" or "false" && stored == "true" != _isDarkMode)
+            {
+                _isDarkMode = stored == "true";
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+
+        await ApplyThemeAttributeAsync();
+
+        await Dt.InitializeAsync(Js);
+
+        await L.InitializeAsync(Js);
+
+        try
+        {
+            var locked = await Api.GetLockedGroupsAsync(new LockedGroupsQuery { Page = 1, PageSize = 1 });
+            _lockedCount = (int)locked.TotalCount;
+            StateHasChanged();
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private async Task ToggleDarkModeAsync()
+    {
+        _isDarkMode = !_isDarkMode;
+        await ApplyThemeAttributeAsync();
+        try
+        {
+            await Js.InvokeVoidAsync("localStorage.setItem", ThemeStorageKey, _isDarkMode ? "true" : "false");
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private async Task ApplyThemeAttributeAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", _isDarkMode ? "dark" : "light");
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+}

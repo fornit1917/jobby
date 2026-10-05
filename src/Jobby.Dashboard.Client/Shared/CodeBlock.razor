@@ -1,0 +1,22 @@
+@inherits LocalizedComponentBase
+
+<div style="position:relative;">
+    @if (!string.IsNullOrEmpty(Text))
+    {
+        <CopyButton Text="@Text" Tooltip="@(CopyTooltip ?? L["common.copy"])" Class="jobby-code-copy" TestId="@CopyTestId" />
+    }
+    <pre class="jobby-code @(IsError ? "is-error" : "")" data-testid="@TestId">@RenderedContent</pre>
+</div>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public bool IsError { get; set; }
+    [Parameter] public bool Json { get; set; }
+    [Parameter] public string? TestId { get; set; }
+    [Parameter] public string? CopyTestId { get; set; }
+    [Parameter] public string? CopyTooltip { get; set; }
+
+    private MarkupString RenderedContent => Json
+        ? (MarkupString)JsonHighlighter.Highlight(Text)
+        : (MarkupString)System.Text.Encodings.Web.HtmlEncoder.Default.Encode(Text ?? string.Empty);
+}

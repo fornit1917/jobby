@@ -51,6 +51,10 @@ CREATE INDEX IF NOT EXISTS jobby_jobs_frozen_group_id_scheduled_start_at_idx
     ON jobby_jobs(serializable_group_id, scheduled_start_at)
     WHERE serializable_group_id IS NOT NULL AND status = 6;
 
+CREATE INDEX IF NOT EXISTS jobby_jobs_serializable_group_status_scheduled_start_at_idx
+    ON jobby_jobs(serializable_group_id, status, scheduled_start_at)
+    WHERE serializable_group_id IS NOT NULL AND schedule IS NULL;
+
 -----
 
 CREATE TABLE IF NOT EXISTS jobby_servers (

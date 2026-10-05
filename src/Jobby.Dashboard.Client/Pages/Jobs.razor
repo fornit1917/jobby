@@ -1,0 +1,342 @@
+@page "/jobs"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject NavigationManager Nav
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+
+<PageHeader Title="@L["nav.jobs"]" Subtitle="@Subtitle">
+    <Actions>
+        <AutoRefresh OnRefresh="ReloadAsync" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+<MudPaper Outlined="true" Elevation="0" Class="pa-3 mb-4">
+    <div class="jobby-filter-bar">
+        <div class="jobby-field" style="width:160px;">
+            <span class="jobby-field-label">@L["field.status"]</span>
+            <MudSelect T="JobStatus?" Value="_status" ValueChanged="OnStatusChanged" Clearable="true"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["jobs.allStatuses"]"
+                       aria-label="@L["field.status"]" data-testid="filter-status">
+                @foreach (var s in Enum.GetValues<JobStatus>())
+                {
+                    <MudSelectItem T="JobStatus?" Value="@s">@L.Status(s)</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <div class="jobby-field" style="width:160px;">
+            <span class="jobby-field-label">@L["field.queue"]</span>
+            <MudSelect T="string" Value="_queue" ValueChanged="OnQueueChanged" Clearable="true"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["jobs.allQueues"]"
+                       aria-label="@L["field.queue"]" data-testid="filter-queue">
+                @foreach (var q in _queueNames)
+                {
+                    <MudSelectItem T="string" Value="@q">@q</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+        <div class="jobby-field" style="flex:1 1 220px; min-width:200px;">
+            <span class="jobby-field-label">@L["field.jobName"]</span>
+            <MudTextField T="string" Value="_search" ValueChanged="OnSearchChanged"
+                          DebounceInterval="400" Clearable="true" data-testid="filter-search"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="@L["field.jobName"]"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                          Placeholder="@L["field.searchName"]"/>
+        </div>
+        <div class="jobby-field" style="width:175px;">
+            <span class="jobby-field-label">@L["jobs.createdFrom"]</span>
+            <MudDatePicker Date="_from" DateChanged="OnFromChanged" Clearable="true"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["jobs.anyDate"]"
+                           aria-label="@L["jobs.createdFrom"]" data-testid="filter-from"/>
+        </div>
+        <div class="jobby-field" style="width:175px;">
+            <span class="jobby-field-label">@L["jobs.createdTo"]</span>
+            <MudDatePicker Date="_to" DateChanged="OnToChanged" Clearable="true"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="@L["jobs.anyDate"]"
+                           aria-label="@L["jobs.createdTo"]" data-testid="filter-to"/>
+        </div>
+        @if (HasFilters)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Close" Size="Size.Small"
+                       OnClick="ClearFiltersAsync" data-testid="filter-clear"
+                       Class="jobby-field-clear">@L["common.clear"]</MudButton>
+        }
+    </div>
+</MudPaper>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3" data-testid="jobs-error">@_error</MudAlert>
+}
+
+<MudDataGrid T="DashboardJobListItemDto" @ref="_grid" ServerData="LoadGridDataAsync" SortMode="SortMode.Single"
+             Outlined="true" Elevation="0" RowClick="OnRowClick" Class="jobby-grid-clickable" data-testid="jobs-grid">
+    <Columns>
+        <PropertyColumn Property="x => x.JobName" Title="@L["field.name"]">
+            <CellTemplate>
+                <a href="jobs/@context.Item.Id" class="jobby-row-link d-flex align-center gap-2 jobby-mono"
+                   @onclick="@(() => OpenJob(context.Item))" @onclick:preventDefault="true"
+                   @onclick:stopPropagation="true">
+                    @if (context.Item.IsGroupLocker)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                                 Style="color:var(--text-3);" data-testid="job-locker-icon"/>
+                    }
+                    <span>@context.Item.JobName</span>
+                </a>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.Status" Title="@L["field.status"]">
+            <CellTemplate>
+                <StatusChip Status="context.Item.Status"/>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.QueueName" Title="@L["field.queue"]" Sortable="false">
+            <CellTemplate>
+                <span class="jobby-pill">@context.Item.QueueName</span>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.CreatedAt" Title="@L["field.created"]">
+            <CellTemplate>
+                <div class="d-flex flex-column">
+                    <span class="jobby-mono jobby-text-sm"
+                          style="color:var(--text-1);">@Dt.FormatAbsolute(context.Item.CreatedAt)</span>
+                    <span class="jobby-text-xs"
+                          style="color:var(--text-3);">@L.Relative(context.Item.CreatedAt, allowFuture: false)</span>
+                </div>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.StartedCount" Title="@L["field.attempts"]" Sortable="false"
+                        CellClass="text-end">
+            <CellTemplate>
+                <span class="jobby-mono">@context.Item.StartedCount</span>
+            </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="" Sortable="false" CellClass="text-end">
+            <CellTemplate>
+                <div class="jobby-action-slot">
+                    <JobActionsMenu Id="context.Item.Id" Status="context.Item.Status"
+                                    IsGroupLocker="context.Item.IsGroupLocker" OnChanged="ReloadAsync"/>
+                </div>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <LoadingContent>
+        <div class="d-flex justify-center py-8" data-testid="jobs-loading">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small"/>
+        </div>
+    </LoadingContent>
+    <NoRecordsContent>
+        <EmptyState Icon="@Icons.Material.Outlined.Search" Title="@L["jobs.emptyFiltered"]"
+                    Subtitle="@(HasFilters ? L["jobs.emptyFilteredSub"] : L["jobs.emptyNoneSub"])"
+                    TestId="jobs-empty"/>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudDataGridPager T="DashboardJobListItemDto"
+                          RowsPerPageString="@L["mud.MudDataGridPager_RowsPerPage"]"/>
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+
+    [Parameter, SupplyParameterFromQuery(Name = "status")]
+    public string? StatusQuery { get; set; }
+
+    private MudDataGrid<DashboardJobListItemDto>? _grid;
+    private JobStatus? _status;
+    private string? _queue;
+    private string? _search;
+    private DateTime? _from;
+    private DateTime? _to;
+    private string? _error;
+    private GridData<DashboardJobListItemDto> _lastGrid = new() { Items = [], TotalItems = 0 };
+    private readonly CancellationTokenSource _cts = new();
+    private IReadOnlyList<string> _queueNames = [];
+
+    private string? _appliedStatusQuery;
+
+    private bool HasFilters =>
+        _status is not null || _queue is not null || !string.IsNullOrEmpty(_search) || _from is not null || _to is not null;
+
+    private string Subtitle => _lastGrid.TotalItems switch
+    {
+        var n => L.Format(HasFilters ? "jobs.subtitleFiltered" : "jobs.subtitle", n),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Dt.Changed += OnDisplayChanged;
+        try
+        {
+            var queues = await Reader.GetQueuesAsync(_cts.Token);
+            _queueNames = [.. queues.Select(q => q.QueueName)];
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (StatusQuery == _appliedStatusQuery)
+        {
+            return;
+        }
+
+        _appliedStatusQuery = StatusQuery;
+
+        var parsed = Enum.TryParse<JobStatus>(StatusQuery, ignoreCase: true, out var status) && Enum.IsDefined(status)
+            ? status
+            : (JobStatus?)null;
+
+        if (parsed is null)
+        {
+            return;
+        }
+
+        _status = parsed;
+        if (_grid is not null)
+        {
+            await ApplyFiltersAsync();
+        }
+    }
+
+    private async Task<GridData<DashboardJobListItemDto>> LoadGridDataAsync(GridState<DashboardJobListItemDto> state, CancellationToken cancellationToken)
+    {
+        var sort = state.SortDefinitions.FirstOrDefault();
+        var sortBy = sort?.SortBy switch
+        {
+            nameof(DashboardJobListItemDto.JobName) => DashboardJobsSortBy.JobName,
+            nameof(DashboardJobListItemDto.Status) => DashboardJobsSortBy.Status,
+            _ => DashboardJobsSortBy.CreatedAt,
+        };
+
+        var query = new DashboardJobsQuery
+        {
+            Status = _status,
+            QueueName = _queue,
+            JobNameSearch = _search,
+            CreatedFrom = _from is { } f ? Dt.ToUtc(f.Date, DstResolution.Earliest) : null,
+            CreatedTo = _to is { } t ? Dt.ToUtc(t.Date.AddDays(1).AddTicks(-1), DstResolution.Latest) : null,
+            Page = state.Page + 1,
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sort?.Descending ?? true,
+        };
+        try
+        {
+            var result = await Reader.GetJobsAsync(query, cancellationToken);
+            if (_error is not null)
+            {
+                _error = null;
+            }
+
+            _lastGrid = new GridData<DashboardJobListItemDto> { Items = result.Items, TotalItems = (int)Math.Min(result.TotalCount, int.MaxValue) };
+            StateHasChanged();
+            return _lastGrid;
+        }
+        catch (OperationCanceledException)
+        {
+            return _lastGrid;
+        }
+        catch (Exception)
+        {
+            _error = L["jobs.loadError"];
+            StateHasChanged();
+            return _lastGrid;
+        }
+    }
+
+    private async Task OnStatusChanged(JobStatus? v)
+    {
+        _status = v;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task OnQueueChanged(string? v)
+    {
+        _queue = v;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task OnSearchChanged(string? v)
+    {
+        _search = v;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task OnFromChanged(DateTime? v)
+    {
+        _from = v;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task OnToChanged(DateTime? v)
+    {
+        _to = v;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _status = null;
+        _queue = null;
+        _search = null;
+        _from = null;
+        _to = null;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        if (_grid is null)
+        {
+            return;
+        }
+
+        if (_grid.CurrentPage != 0)
+        {
+            _grid.NavigateTo(Page.First);
+        }
+        else
+        {
+            await _grid.ReloadServerData();
+        }
+    }
+
+    private void OnRowClick(DataGridRowClickEventArgs<DashboardJobListItemDto> args) => OpenJob(args.Item);
+
+    private void OpenJob(DashboardJobListItemDto item) => Nav.NavigateTo($"jobs/{item.Id}");
+
+    private async Task ReloadAsync()
+    {
+        if (_grid is not null)
+        {
+            await _grid.ReloadServerData();
+        }
+    }
+
+    private void OnDisplayChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if ((_from is not null || _to is not null) && _grid is not null)
+            {
+                await _grid.ReloadServerData();
+            }
+            else
+            {
+                StateHasChanged();
+            }
+        });
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

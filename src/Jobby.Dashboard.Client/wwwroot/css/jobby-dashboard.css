@@ -1,0 +1,897 @@
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-400.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-cyrillic-400.woff2") format("woff2");
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-500.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-cyrillic-500.woff2") format("woff2");
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-600.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-cyrillic-600.woff2") format("woff2");
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-700.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "IBM Plex Sans";
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-sans-cyrillic-700.woff2") format("woff2");
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-mono-400.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-mono-500.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+    src: url("fonts/ibm-plex-mono-600.woff2") format("woff2");
+}
+
+:root {
+    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --r-sm: 3px;
+    --r-md: 4px;
+    --r-lg: 6px;
+}
+
+:root, [data-theme="dark"] {
+    --bg-0: #0d0f13;
+    --bg-1: #14171c;
+    --bg-2: #1a1e25;
+    --bg-3: #222730;
+    --bg-input: #0f1217;
+    --border: rgba(255, 255, 255, 0.07);
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --text-1: #e7e9ee;
+    --text-2: #99a0ab;
+    --text-3: #6b7280;
+    --accent: #a07cf5;
+    --accent-hover: color-mix(in srgb, var(--accent) 84%, #fff);
+    --accent-dim: color-mix(in srgb, var(--accent) 15%, transparent);
+    --accent-text: color-mix(in srgb, var(--accent) 68%, #fff);
+    --st-scheduled: #9b8cf0;
+    --st-processing: #4ea6f5;
+    --st-completed: #46c08a;
+    --st-failed: #ef6b6b;
+    --st-frozen: #e8a13c;
+    --st-waiting: #8b93a1;
+    --st-alive: #46c08a;
+    --st-stale: #e8a13c;
+    --st-scheduled-bg: rgba(155, 140, 240, 0.13);
+    --st-processing-bg: rgba(78, 166, 245, 0.13);
+    --st-completed-bg: rgba(70, 192, 138, 0.13);
+    --st-failed-bg: rgba(239, 107, 107, 0.13);
+    --st-frozen-bg: rgba(232, 161, 60, 0.13);
+    --st-waiting-bg: rgba(139, 147, 161, 0.13);
+    --st-alive-bg: rgba(70, 192, 138, 0.13);
+    --st-stale-bg: rgba(232, 161, 60, 0.13);
+}
+
+[data-theme="light"] {
+    --bg-0: #f4f5f7;
+    --bg-1: #ffffff;
+    --bg-2: #f7f8fa;
+    --bg-3: #eef0f3;
+    --bg-input: #ffffff;
+    --border: rgba(17, 24, 39, 0.09);
+    --border-strong: rgba(17, 24, 39, 0.16);
+    --text-1: #1a1d23;
+    --text-2: #5b626e;
+    --text-3: #8b93a1;
+    --accent: #a07cf5;
+    --accent-hover: color-mix(in srgb, var(--accent) 88%, #000);
+    --accent-dim: color-mix(in srgb, var(--accent) 11%, transparent);
+    --accent-text: color-mix(in srgb, var(--accent) 82%, #000);
+    --st-scheduled: #6f5fd6;
+    --st-processing: #2b86d6;
+    --st-completed: #1f9d63;
+    --st-failed: #d64545;
+    --st-frozen: #c2810f;
+    --st-waiting: #6b7280;
+    --st-alive: #1f9d63;
+    --st-stale: #c2810f;
+    --st-scheduled-bg: rgba(111, 95, 214, 0.11);
+    --st-processing-bg: rgba(43, 134, 214, 0.1);
+    --st-completed-bg: rgba(31, 157, 99, 0.1);
+    --st-failed-bg: rgba(214, 69, 69, 0.1);
+    --st-frozen-bg: rgba(194, 129, 15, 0.12);
+    --st-waiting-bg: rgba(107, 114, 128, 0.1);
+    --st-alive-bg: rgba(31, 157, 99, 0.1);
+    --st-stale-bg: rgba(194, 129, 15, 0.12);
+}
+
+.jobby-mono {
+    font-family: var(--font-mono);
+}
+
+.jobby-text-sm {
+    font-size: 12.5px;
+}
+
+.jobby-text-xs {
+    font-size: 11.5px;
+}
+
+.jobby-detail-key {
+    width: 220px;
+    color: var(--text-2);
+    font-weight: 500;
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+.jobby-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10.5px;
+    line-height: 1.3;
+    padding: 3px 7px;
+    border-radius: var(--r-md);
+    white-space: nowrap;
+    color: #fff;
+}
+
+.jobby-tag .jobby-tag-dot {
+    display: none;
+}
+
+.jobby-tag-Scheduled {
+    background: var(--st-scheduled);
+}
+
+.jobby-tag-Processing {
+    background: var(--st-processing);
+}
+
+.jobby-tag-Completed {
+    background: var(--st-completed);
+}
+
+.jobby-tag-Failed {
+    background: var(--st-failed);
+}
+
+.jobby-tag-Frozen {
+    background: var(--st-frozen);
+}
+
+.jobby-tag-WaitingPrev {
+    background: var(--st-waiting);
+}
+
+.jobby-tag-Alive {
+    background: var(--st-alive);
+}
+
+.jobby-tag-Stale {
+    background: var(--st-stale);
+}
+
+[data-status="chips"] .jobby-tag {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11.5px;
+    font-weight: 500;
+    padding: 3px 9px 3px 8px;
+    color: var(--text-1);
+}
+
+[data-status="chips"] .jobby-tag .jobby-tag-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+[data-status="chips"] .jobby-tag-Scheduled {
+    background: var(--st-scheduled-bg);
+    color: var(--st-scheduled);
+}
+
+[data-status="chips"] .jobby-tag-Scheduled .jobby-tag-dot {
+    background: var(--st-scheduled);
+}
+
+[data-status="chips"] .jobby-tag-Processing {
+    background: var(--st-processing-bg);
+    color: var(--st-processing);
+}
+
+[data-status="chips"] .jobby-tag-Processing .jobby-tag-dot {
+    background: var(--st-processing);
+}
+
+[data-status="chips"] .jobby-tag-Completed {
+    background: var(--st-completed-bg);
+    color: var(--st-completed);
+}
+
+[data-status="chips"] .jobby-tag-Completed .jobby-tag-dot {
+    background: var(--st-completed);
+}
+
+[data-status="chips"] .jobby-tag-Failed {
+    background: var(--st-failed-bg);
+    color: var(--st-failed);
+}
+
+[data-status="chips"] .jobby-tag-Failed .jobby-tag-dot {
+    background: var(--st-failed);
+}
+
+[data-status="chips"] .jobby-tag-Frozen {
+    background: var(--st-frozen-bg);
+    color: var(--st-frozen);
+}
+
+[data-status="chips"] .jobby-tag-Frozen .jobby-tag-dot {
+    background: var(--st-frozen);
+}
+
+[data-status="chips"] .jobby-tag-WaitingPrev {
+    background: var(--st-waiting-bg);
+    color: var(--st-waiting);
+}
+
+[data-status="chips"] .jobby-tag-WaitingPrev .jobby-tag-dot {
+    background: var(--st-waiting);
+}
+
+[data-status="chips"] .jobby-tag-Alive {
+    background: var(--st-alive-bg);
+    color: var(--st-alive);
+}
+
+[data-status="chips"] .jobby-tag-Alive .jobby-tag-dot {
+    background: var(--st-alive);
+}
+
+[data-status="chips"] .jobby-tag-Stale {
+    background: var(--st-stale-bg);
+    color: var(--st-stale);
+}
+
+[data-status="chips"] .jobby-tag-Stale .jobby-tag-dot {
+    background: var(--st-stale);
+}
+
+[data-status="minimal"] .jobby-tag {
+    background: transparent !important;
+    padding: 2px 0;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+[data-status="minimal"] .jobby-tag .jobby-tag-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+[data-status="minimal"] .jobby-tag-Scheduled {
+    color: var(--st-scheduled);
+}
+
+[data-status="minimal"] .jobby-tag-Scheduled .jobby-tag-dot {
+    background: var(--st-scheduled);
+}
+
+[data-status="minimal"] .jobby-tag-Processing {
+    color: var(--st-processing);
+}
+
+[data-status="minimal"] .jobby-tag-Processing .jobby-tag-dot {
+    background: var(--st-processing);
+}
+
+[data-status="minimal"] .jobby-tag-Completed {
+    color: var(--st-completed);
+}
+
+[data-status="minimal"] .jobby-tag-Completed .jobby-tag-dot {
+    background: var(--st-completed);
+}
+
+[data-status="minimal"] .jobby-tag-Failed {
+    color: var(--st-failed);
+}
+
+[data-status="minimal"] .jobby-tag-Failed .jobby-tag-dot {
+    background: var(--st-failed);
+}
+
+[data-status="minimal"] .jobby-tag-Frozen {
+    color: var(--st-frozen);
+}
+
+[data-status="minimal"] .jobby-tag-Frozen .jobby-tag-dot {
+    background: var(--st-frozen);
+}
+
+[data-status="minimal"] .jobby-tag-WaitingPrev {
+    color: var(--st-waiting);
+}
+
+[data-status="minimal"] .jobby-tag-WaitingPrev .jobby-tag-dot {
+    background: var(--st-waiting);
+}
+
+[data-status="minimal"] .jobby-tag-Alive {
+    color: var(--st-alive);
+}
+
+[data-status="minimal"] .jobby-tag-Alive .jobby-tag-dot {
+    background: var(--st-alive);
+}
+
+[data-status="minimal"] .jobby-tag-Stale {
+    color: var(--st-stale);
+}
+
+[data-status="minimal"] .jobby-tag-Stale .jobby-tag-dot {
+    background: var(--st-stale);
+}
+
+.jobby-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: var(--r-md);
+    background: var(--bg-3);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+}
+
+.jobby-stack-bar {
+    display: flex;
+    height: 8px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--bg-3);
+    width: 100%;
+}
+
+.jobby-stack-bar > i {
+    height: 100%;
+    display: block;
+}
+
+.jobby-seg-Scheduled {
+    background: var(--st-scheduled);
+}
+
+.jobby-seg-Processing {
+    background: var(--st-processing);
+}
+
+.jobby-seg-Completed {
+    background: var(--st-completed);
+}
+
+.jobby-seg-Failed {
+    background: var(--st-failed);
+}
+
+.jobby-seg-Frozen {
+    background: var(--st-frozen);
+}
+
+.jobby-seg-WaitingPrev {
+    background: var(--st-waiting);
+}
+
+.jobby-code {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-1);
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    max-height: 340px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.jobby-code.is-error {
+    color: var(--st-failed);
+}
+
+.jobby-json-key {
+    color: var(--accent-text);
+}
+
+.jobby-json-str {
+    color: var(--st-completed);
+}
+
+.jobby-json-num {
+    color: var(--st-frozen);
+}
+
+.jobby-json-bool {
+    color: var(--st-processing);
+}
+
+.jobby-json-null {
+    color: var(--text-3);
+}
+
+.jobby-nav-locked .jobby-nav-label {
+    white-space: nowrap;
+}
+
+.jobby-nav-count {
+    margin-left: auto;
+    flex-shrink: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 9px;
+    background: var(--st-failed);
+    color: #fff;
+}
+
+.jobby-brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 0 8px;
+    height: 100%;
+}
+
+.jobby-brand-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    background: var(--accent);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.jobby-brand-name {
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+}
+
+.jobby-page-title {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+.jobby-page-title:focus, .jobby-page-title:focus-visible {
+    outline: none;
+}
+
+.jobby-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.jobby-skip-link {
+    position: fixed;
+    left: 12px;
+    top: -60px;
+    z-index: 3000;
+    background: #0d0f13;
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--accent);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.15s ease;
+}
+
+.jobby-skip-link:focus {
+    top: 12px;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+#dashboard-main:focus {
+    outline: none;
+}
+
+.jobby-page-sub {
+    color: var(--text-3);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.jobby-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-2);
+}
+
+.jobby-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-3);
+    font-size: 13px;
+}
+
+.jobby-breadcrumb .crumb-current {
+    color: var(--text-1);
+    font-weight: 500;
+}
+
+.jobby-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 56px 24px;
+    gap: 12px;
+    color: var(--text-2);
+}
+
+.jobby-state-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: var(--bg-2);
+    color: var(--text-3);
+}
+
+.jobby-state-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+
+.jobby-state-sub {
+    font-size: 13px;
+    color: var(--text-3);
+    max-width: 360px;
+}
+
+.jobby-tile-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.jobby-code-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 2;
+}
+
+.jobby-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.jobby-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.jobby-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-3);
+    line-height: 1;
+}
+
+.jobby-filter-bar .jobby-field-clear {
+    align-self: flex-end;
+}
+
+.jobby-action-slot {
+    width: 36px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.jobby-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 10px 0 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--bg-1);
+}
+
+.jobby-refresh-ago {
+    font-size: 11.5px;
+    color: var(--text-3);
+    white-space: nowrap;
+}
+
+.jobby-refresh-sep {
+    width: 1px;
+    height: 16px;
+    background: var(--border-strong);
+    flex-shrink: 0;
+}
+
+.jobby-refresh-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.jobby-refresh-dot.is-on {
+    background: var(--st-alive);
+}
+
+.jobby-refresh-dot.is-off {
+    background: var(--text-3);
+}
+
+.jobby-refresh-auto {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-1);
+}
+
+.jobby-refresh .jobby-refresh-switch {
+    margin: 0;
+}
+
+@keyframes jobby-refresh-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.jobby-actions-stop {
+    display: contents;
+}
+
+.jobby-row-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.jobby-row-link:hover {
+    color: inherit;
+    text-decoration: none;
+}
+
+.jobby-row-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+.jobby-lang-flag {
+    border-radius: 50%;
+    display: block;
+    flex: 0 0 auto;
+}
+
+/* ==========================================================================
+   MudBlazor internal overrides (written against MudBlazor 9.5.0)
+   --------------------------------------------------------------------------
+   Every rule below reaches into MudBlazor's private DOM structure or class
+   names (.mud-*) because no public component parameter covers the case.
+   These selectors are not part of MudBlazor's public API, so, that's why important to re-verify each
+   rule after upgrading the MudBlazor package.
+   ========================================================================== */
+
+.mud-nav-link.active {
+    background: var(--accent-dim) !important;
+    color: var(--accent-text) !important;
+    font-weight: 600;
+    box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.mud-nav-link.active .mud-icon-root {
+    color: var(--accent) !important;
+}
+
+.jobby-nav-locked .mud-nav-link-text {
+    display: inline-flex;
+    align-items: center;
+    flex: 1 1 auto;
+}
+
+.jobby-drawer.mud-drawer--closed .jobby-brand-name,
+.jobby-drawer.mud-drawer--closed .mud-nav-link-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.jobby-drawer.mud-drawer--closed .jobby-brand {
+    width: 100%;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+}
+
+.jobby-drawer.mud-drawer--closed .mud-nav-link {
+    justify-content: center;
+}
+
+.jobby-drawer.mud-drawer--closed .mud-nav-link .mud-nav-link-icon {
+    margin-right: 0;
+}
+
+.jobby-filter-bar .mud-input-control {
+    margin: 0 !important;
+}
+
+.mud-input-slot,
+.mud-input-root input,
+.mud-input-root textarea {
+    font-size: 13px !important;
+}
+
+.mud-popover .mud-list-item-text,
+.mud-popover .mud-list-item-text .mud-typography {
+    font-size: 13px !important;
+}
+
+.mud-data-grid thead tr:has(> .mud-table-loading) {
+    display: none;
+}
+
+.jobby-refresh .mud-icon-button {
+    padding: 5px;
+}
+
+.jobby-refresh-spin .mud-icon-root {
+    animation: jobby-refresh-spin 0.8s linear infinite;
+}
+
+.jobby-grid-clickable tbody tr:not(:has(.mud-table-empty-row)) {
+    cursor: pointer;
+}
+
+.jobby-grid-clickable tbody tr:not(:has(.mud-table-empty-row)):hover {
+    background: var(--bg-2);
+}
+
+.mud-data-grid .mud-table-head .mud-table-cell,
+.mud-simple-table table thead tr th {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.mud-data-grid .mud-table-head .mud-table-cell {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.mud-data-grid .mud-table-head .mud-table-cell:hover .sortable-column-header {
+    color: var(--text-1);
+}
+
+.mud-data-grid .mud-table-head .mud-table-cell .column-options .sort-direction-icon.mud-direction-asc,
+.mud-data-grid .mud-table-head .mud-table-cell .column-options .sort-direction-icon.mud-direction-desc {
+    color: var(--accent-text);
+}

@@ -1,0 +1,47 @@
+@inherits Jobby.Dashboard.Client.Localization.LocalizedComponentBase
+@inject IJSRuntime Js
+
+<MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+         ActivationEvent="@MouseEvent.LeftClick" Dense="true" Class="ml-2" data-testid="language-selector">
+    <ActivatorContent Context="menu">
+        <MudTooltip Text="@TooltipText">
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small"
+                       OnClick="@menu.ToggleAsync" aria-label="@TooltipText" data-testid="language-pill">
+                <img src="@DashboardLanguages.FlagAsset(L.Language)" alt="" aria-hidden="true"
+                     width="20" height="20" class="jobby-lang-flag"/>
+            </MudButton>
+        </MudTooltip>
+    </ActivatorContent>
+    <ChildContent>
+        <div class="pa-2" style="min-width:200px;" @onclick:stopPropagation="true">
+            @foreach (var lang in DashboardLanguages.All)
+            {
+                <MudMenuItem OnClick="@(() => SelectAsync(lang))"
+                             aria-current="@(lang == L.Language ? "true" : null)"
+                             data-testid="@($"language-item-{DashboardLanguages.Code(lang)}")">
+                    <div class="d-flex align-center" style="gap:8px;">
+                        <img src="@DashboardLanguages.FlagAsset(lang)" alt="" aria-hidden="true"
+                             width="18" height="18" class="jobby-lang-flag"/>
+                        <span>@DashboardLanguages.NativeName(lang)</span>
+                        @if (lang == L.Language)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="ml-auto"/>
+                        }
+                    </div>
+                </MudMenuItem>
+            }
+            @if (L.HasUserOverride)
+            {
+                <MudDivider Class="my-1"/>
+                <MudMenuItem OnClick="ResetAsync" data-testid="language-reset">@L["settings.useDefault"]</MudMenuItem>
+            }
+        </div>
+    </ChildContent>
+</MudMenu>
+
+@code {
+    private string TooltipText => $"{L["settings.language"]}: {DashboardLanguages.NativeName(L.Language)}";
+
+    private Task SelectAsync(DashboardLanguage lang) => L.SetAsync(Js, lang);
+    private Task ResetAsync() => L.ResetAsync(Js);
+}

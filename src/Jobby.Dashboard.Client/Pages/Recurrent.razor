@@ -1,0 +1,199 @@
+@page "/recurrent"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+
+<PageHeader Title="@L["nav.recurrent"]" Subtitle="@Subtitle">
+    <Actions>
+        <AutoRefresh OnRefresh="ReloadAsync" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+<MudPaper Outlined="true" Elevation="0" Class="pa-3 mb-4">
+    <div class="jobby-filter-bar">
+        <div class="jobby-field" style="flex:1 1 260px; min-width:220px;">
+            <span class="jobby-field-label">@L["field.jobName"]</span>
+            <MudTextField T="string" Value="_search" ValueChanged="OnSearchChanged"
+                          DebounceInterval="400" Clearable="true" data-testid="filter-search"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="@L["field.jobName"]"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                          Placeholder="@L["field.searchName"]"/>
+        </div>
+    </div>
+</MudPaper>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3" data-testid="recurrent-error">@_error</MudAlert>
+}
+
+<MudDataGrid T="DashboardRecurrentJobDto" @ref="_grid" ServerData="LoadGridDataAsync"
+             Outlined="true" Elevation="0" data-testid="recurrent-grid">
+    <Columns>
+        <PropertyColumn Property="x => x.JobName" Title="@L["field.name"]" Sortable="false">
+            <CellTemplate>
+                <span class="jobby-mono">@context.Item.JobName</span>
+            </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="@L["field.schedule"]" Sortable="false">
+            <CellTemplate>
+                <ScheduleDisplay Schedule="@context.Item.Schedule" SchedulerType="@context.Item.SchedulerType"/>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.SchedulerType" Title="@L["recurrent.scheduler"]" Sortable="false">
+            <CellTemplate>
+                <span class="jobby-pill">@(context.Item.SchedulerType ?? "-")</span>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.QueueName" Title="@L["field.queue"]" Sortable="false">
+            <CellTemplate>
+                <span class="jobby-pill">@context.Item.QueueName</span>
+            </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="@L["field.status"]" Sortable="false">
+            <CellTemplate>
+                <StatusChip Status="context.Item.Status"/>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.ScheduledStartAt" Title="@L["recurrent.nextRun"]" Sortable="false">
+            <CellTemplate>
+                <div class="d-flex flex-column">
+                    <span class="jobby-mono jobby-text-sm"
+                          style="color:var(--text-1);">@Dt.FormatAbsolute(context.Item.ScheduledStartAt)</span>
+                    <span class="jobby-text-xs"
+                          style="color:var(--text-3);">@L.Relative(context.Item.ScheduledStartAt)</span>
+                </div>
+            </CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn Property="x => x.LastFinishedAt" Title="@L["recurrent.lastFinished"]" Sortable="false">
+            <CellTemplate>
+                @if (context.Item.LastFinishedAt is { } finished)
+                {
+                    <div class="d-flex flex-column">
+                        <span class="jobby-mono jobby-text-sm"
+                              style="color:var(--text-1);">@Dt.FormatAbsolute(finished)</span>
+                        <span class="jobby-text-xs" style="color:var(--text-3);">@L.Relative(finished)</span>
+                    </div>
+                }
+                else
+                {
+                    <span style="color:var(--text-3);">-</span>
+                }
+            </CellTemplate>
+        </PropertyColumn>
+        <TemplateColumn Title="" Sortable="false" CellClass="text-end">
+            <CellTemplate>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Justify="Justify.FlexEnd">
+                    <JobActionsMenu Id="context.Item.Id" Status="context.Item.Status"
+                                    Recurrent="true" OnChanged="ReloadAsync"/>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+    <LoadingContent>
+        <div class="d-flex justify-center py-8" data-testid="recurrent-loading">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small"/>
+        </div>
+    </LoadingContent>
+    <NoRecordsContent>
+        <EmptyState Icon="@Icons.Material.Outlined.Schedule" Title="@L["recurrent.empty"]"
+                    Subtitle="@(string.IsNullOrEmpty(_search) ? L["recurrent.emptySub"] : L["recurrent.emptySearchSub"])"
+                    TestId="recurrent-empty"/>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudDataGridPager T="DashboardRecurrentJobDto"
+                          RowsPerPageString="@L["mud.MudDataGridPager_RowsPerPage"]"/>
+    </PagerContent>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<DashboardRecurrentJobDto>? _grid;
+    private string? _search;
+    private string? _error;
+    private GridData<DashboardRecurrentJobDto> _lastGrid = new() { Items = [], TotalItems = 0 };
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dt.Changed += OnDisplayChanged;
+    }
+
+    private void OnDisplayChanged() => InvokeAsync(StateHasChanged);
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+    }
+
+    private string Subtitle => _lastGrid.TotalItems switch
+    {
+        var n => L.Format(string.IsNullOrEmpty(_search) ? "recurrent.subtitle" : "recurrent.subtitleSearch", n),
+    };
+
+    private async Task<GridData<DashboardRecurrentJobDto>> LoadGridDataAsync(GridState<DashboardRecurrentJobDto> state, CancellationToken cancellationToken)
+    {
+        var query = new DashboardRecurrentJobsQuery
+        {
+            JobNameSearch = _search,
+            Page = state.Page + 1,
+            PageSize = state.PageSize,
+        };
+        try
+        {
+            var result = await Reader.GetRecurrentJobsAsync(query, cancellationToken);
+            if (_error is not null)
+            {
+                _error = null;
+                StateHasChanged();
+            }
+
+            _lastGrid = new GridData<DashboardRecurrentJobDto> { Items = result.Items, TotalItems = (int)Math.Min(result.TotalCount, int.MaxValue) };
+            StateHasChanged();
+            return _lastGrid;
+        }
+        catch (OperationCanceledException)
+        {
+            return _lastGrid;
+        }
+        catch (Exception)
+        {
+            _error = L["recurrent.loadError"];
+            StateHasChanged();
+            return _lastGrid;
+        }
+    }
+
+    private async Task OnSearchChanged(string? v)
+    {
+        _search = v;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        if (_grid is null)
+        {
+            return;
+        }
+
+        if (_grid.CurrentPage != 0)
+        {
+            _grid.NavigateTo(Page.First);
+        }
+        else
+        {
+            await _grid.ReloadServerData();
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_grid is not null)
+        {
+            await _grid.ReloadServerData();
+        }
+    }
+
+}

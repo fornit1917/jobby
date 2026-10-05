@@ -1,6 +1,17 @@
 @Jobby.Samples.AspNetSimple_HostAddress = http://localhost:5075
 
-GET {{Jobby.Samples.AspNetSimple_HostAddress}}/weatherforecast/
+POST {{Jobby.Samples.AspNetSimple_HostAddress}}/jobs/seed-dashboard-demo?reset=true
 Accept: application/json
+
+###
+
+POST {{Jobby.Samples.AspNetSimple_HostAddress}}/jobs/enqueue-job
+Content-Type: application/json
+
+{
+  "value": "manual sample job",
+  "delayMs": 500,
+  "startAfter": "2030-01-01T00:00:00Z"
+}
 
 ###

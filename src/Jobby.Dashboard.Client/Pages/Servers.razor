@@ -1,0 +1,139 @@
+@page "/servers"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+
+<PageHeader Title="@L["nav.servers"]" Subtitle="@Subtitle">
+    <Actions>
+        <AutoRefresh OnRefresh="LoadAsync" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-5" data-testid="servers-error">@_error</MudAlert>
+}
+
+@if (_loading && _servers is null)
+{
+    <MudProgressCircular Indeterminate="true" data-testid="servers-loading"/>
+}
+else if (_servers is not null)
+{
+    @if (_staleCount > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4" data-testid="servers-stale-warning">
+            @L.Format("servers.staleWarning", _staleCount, Options.StaleServerThresholdSeconds)
+        </MudAlert>
+    }
+
+    @if (_servers.Count == 0)
+    {
+        <EmptyState Title="@L["empty.noServersReporting"]" Icon="@Icons.Material.Filled.Dns"
+                    TestId="servers-empty"/>
+    }
+    else
+    {
+        <MudSimpleTable Dense="true" Bordered="true" data-testid="servers-table">
+            <thead>
+            <tr>
+                <th>@L["servers.serverId"]</th>
+                <th>@L["servers.lastHeartbeat"]</th>
+                <th style="width:130px;">@L["servers.state"]</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var s in _servers)
+            {
+                var alive = IsAlive(s);
+                <tr>
+                    <td>
+                        <div class="d-flex align-center gap-3">
+                            <span class="jobby-tile-icon"
+                                  style="background:@(alive ? "var(--st-alive-bg)" : "var(--st-stale-bg)");color:@(alive ? "var(--st-alive)" : "var(--st-stale)");">
+                                <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Small"/>
+                            </span>
+                            <span class="jobby-mono jobby-text-sm" style="color:var(--text-1);">@s.Id</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="jobby-mono jobby-text-sm"
+                             style="color:var(--text-1);">@Dt.FormatAbsolute(s.HeartbeatTs)</div>
+                        <div class="jobby-text-xs"
+                             style="color:var(--text-3);">@L.Relative(s.HeartbeatTs, allowFuture: false)</div>
+                    </td>
+                    <td data-testid="@($"server-state-{s.Id}")">
+                        <ServerStateChip Alive="alive"/>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </MudSimpleTable>
+    }
+}
+
+@code {
+    private IReadOnlyList<DashboardServerDto>? _servers;
+    private bool _loading;
+    private string? _error;
+    private DateTime _threshold;
+    private int _aliveCount;
+    private int _staleCount;
+    private readonly CancellationTokenSource _cts = new();
+
+    private string? Subtitle => _servers is null
+        ? null
+        : L.Format("servers.subtitle", _servers.Count, _aliveCount, _staleCount);
+
+    private bool IsAlive(DashboardServerDto s) => s.HeartbeatTs >= _threshold;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dt.Changed += OnDisplayChanged;
+    }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private void OnDisplayChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task LoadAsync()
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            _error = null;
+            var servers = await Reader.GetServersAsync(_cts.Token);
+            _threshold = Options.ServerUtcNow.AddSeconds(-Options.StaleServerThresholdSeconds);
+            _servers = servers;
+            _aliveCount = servers.Count(s => s.HeartbeatTs >= _threshold);
+            _staleCount = servers.Count - _aliveCount;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            _error = L["servers.loadError"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

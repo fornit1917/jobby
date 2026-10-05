@@ -1,0 +1,33 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Jobby.Benchmarks/Jobby.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Jobby.Samples.AspNet/Jobby.Samples.AspNet.csproj" />
+    <Project Path="samples/Jobby.Samples.CliJobsSample/Jobby.Samples.CliJobsSample.csproj" />
+    <Project Path="samples/Jobby.Samples.TestConcurrency/Jobby.Samples.TestConcurrency.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".github/workflows/dotnet.yml" />
+    <File Path="docker-compose.postgresql.yml" />
+    <File Path="README.md" />
+    <File Path="versions.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Jobby.AspNetCore/Jobby.AspNetCore.csproj" />
+    <Project Path="src/Jobby.Core/Jobby.Core.csproj" />
+    <Project Path="src/Jobby.Dashboard.Authorization/Jobby.Dashboard.Authorization.csproj" />
+    <Project Path="src/Jobby.Dashboard.Client/Jobby.Dashboard.Client.csproj" />
+    <Project Path="src/Jobby.Dashboard/Jobby.Dashboard.csproj" />
+    <Project Path="src/Jobby.Postgres/Jobby.Postgres.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jobby.IntegrationTests.Postgres/Jobby.IntegrationTests.Postgres.csproj" />
+    <Project Path="tests/Jobby.Tests.AspNetCore/Jobby.Tests.AspNetCore.csproj" />
+    <Project Path="tests/Jobby.Tests.Core/Jobby.Tests.Core.csproj" />
+    <Project Path="tests/Jobby.Tests.Dashboard.Globalization/Jobby.Tests.Dashboard.Globalization.csproj" />
+    <Project Path="tests/Jobby.Tests.Dashboard/Jobby.Tests.Dashboard.csproj" />
+    <Project Path="tests/Jobby.Tests.Postgres/Jobby.Tests.Postgres.csproj" />
+    <Project Path="tests/Jobby.TestsUtils/Jobby.TestsUtils.csproj" />
+  </Folder>
+</Solution>

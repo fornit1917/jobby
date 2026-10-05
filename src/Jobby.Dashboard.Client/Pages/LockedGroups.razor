@@ -1,0 +1,249 @@
+@page "/locked-groups"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DashboardClientConfig Options
+@inject DashboardModeState Mode
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageHeader Title="@L["nav.lockedGroups"]" Subtitle="@Subtitle">
+    <Actions>
+        <AutoRefresh OnRefresh="@(() => LoadAsync())" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-5" data-testid="locked-groups-error">@_error</MudAlert>
+}
+
+@if (_loading && _result is null)
+{
+    <MudProgressCircular Indeterminate="true" data-testid="locked-groups-loading"/>
+}
+else if (_result is not null)
+{
+    @if (_result.Items.Count == 0)
+    {
+        <MudAlert Severity="Severity.Success" data-testid="locked-groups-empty">
+            @L["lockedGroups.empty"]
+        </MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-5" data-testid="locked-groups-banner">
+            @L.Format("lockedGroups.warning", _result.TotalCount)
+        </MudAlert>
+        <MudSimpleTable Dense="true" Bordered="true" data-testid="locked-groups-table">
+            <thead>
+            <tr>
+                <th>@L["lockedGroups.group"]</th>
+                <th>@L["lockedGroups.queues"]</th>
+                <th>@L["lockedGroups.locker"]</th>
+                <th class="text-end">@L["lockedGroups.frozen"]</th>
+                <th class="text-end">@L["field.scheduled"]</th>
+                <th class="text-end">@L["lockedGroups.waiting"]</th>
+                <th class="text-end">@L["lockedGroups.failed"]</th>
+                <th>@L["lockedGroups.unlock"]</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var g in _result.Items)
+            {
+                <tr data-testid="@($"group-row-{TestToken(g.GroupId)}")">
+                    <td>
+                        <div class="d-flex align-center gap-3">
+                            <span class="jobby-tile-icon"
+                                  style="background:var(--st-frozen-bg);color:var(--st-frozen);">
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"/>
+                            </span>
+                            <MudLink Href="@DetailHref(g.GroupId)" Class="jobby-mono jobby-text-sm"
+                                     Style="font-weight:500;"
+                                     data-testid="@($"group-link-{TestToken(g.GroupId)}")">@g.GroupId</MudLink>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap align-center gap-1">
+                            @foreach (var q in g.Queues)
+                            {
+                                <span class="jobby-pill">@q</span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-center gap-2">
+                            <span class="jobby-mono jobby-text-sm" style="color:var(--text-1);">@g.LockerName</span>
+                            <StatusChip Status="g.LockerStatus"/>
+                        </div>
+                    </td>
+                    <td class="text-end jobby-mono" style="color:var(--text-1);">@g.FrozenCount</td>
+                    <td class="text-end jobby-mono" style="color:var(--text-1);">@g.ScheduledCount</td>
+                    <td class="text-end jobby-mono" style="color:var(--text-1);">@g.WaitingCount</td>
+                    <td class="text-end jobby-mono" style="color:var(--text-1);">@g.NonLockerFailedCount</td>
+                    <td>
+                        @if (g.UnlockRequested)
+                        {
+                            <span class="jobby-pill" data-testid="@($"group-requested-{TestToken(g.GroupId)}")"
+                                  style="color:var(--accent-text);border-color:var(--accent);background:var(--accent-dim);">@L["lockedGroups.requested"]</span>
+                        }
+                        else if (Options.ManagementEnabled && Mode.IsManagementView)
+                        {
+                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                       Disabled="@(_unlockingGroupId is not null)"
+                                       OnClick="@(() => RequestUnlockAsync(g))"
+                                       data-testid="@($"group-unlock-{TestToken(g.GroupId)}")">
+                                @if (_unlockingGroupId == g.GroupId)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1"/>
+                                }
+                                @L["lockedGroups.requestUnlock"]
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudText Class="jobby-mono"
+                                     Style="color:var(--text-3)">@L["lockedGroups.notRequested"]</MudText>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </MudSimpleTable>
+
+        @if (_result.TotalCount > PageSize)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-3">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@(_page <= 1)" OnClick="PrevPageAsync"
+                           StartIcon="@Icons.Material.Filled.ChevronLeft"
+                           data-testid="locked-groups-prev">@L["common.previous"]</MudButton>
+                <MudText Class="jobby-mono jobby-text-sm" Style="color:var(--text-3);"
+                         data-testid="locked-groups-page">@L.Format("common.pageN", _page)</MudText>
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@(!HasNextPage)"
+                           OnClick="NextPageAsync"
+                           EndIcon="@Icons.Material.Filled.ChevronRight"
+                           data-testid="locked-groups-next">@L["common.next"]</MudButton>
+            </MudStack>
+        }
+    }
+}
+
+@code {
+    private const int PageSize = 50;
+
+    private PagedResult<LockedGroupDto>? _result;
+    private int _page = 1;
+    private bool _loading;
+    private string? _error;
+    private string? _unlockingGroupId;
+    private readonly CancellationTokenSource _cts = new();
+
+    private bool HasNextPage => _result is not null && (long)_page * PageSize < _result.TotalCount;
+
+    private string? Subtitle => _result is null
+        ? null
+        : L.Format("lockedGroups.subtitle", _result.TotalCount);
+
+    protected override Task OnInitializedAsync()
+    {
+        Mode.Changed += OnModeChanged;
+        return LoadAsync();
+    }
+
+    private void OnModeChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task LoadAsync(bool force = false)
+    {
+        if (_loading && !force)
+        {
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            _error = null;
+            _result = await Reader.GetLockedGroupsAsync(new LockedGroupsQuery { Page = _page, PageSize = PageSize }, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            _error = L["lockedGroups.loadError"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrevPageAsync()
+    {
+        if (_page <= 1)
+        {
+            return;
+        }
+
+        _page--;
+        await LoadAsync(force: true);
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (!HasNextPage)
+        {
+            return;
+        }
+
+        _page++;
+        await LoadAsync(force: true);
+    }
+
+    private async Task RequestUnlockAsync(LockedGroupDto g)
+    {
+        var message = L.Format("lockedGroups.confirmBody", g.LockerName);
+        var confirmed = await Dialog.ShowMessageBoxAsync(L.Format("lockedGroups.confirmTitle", g.GroupId),
+            message, yesText: L["lockedGroups.requestUnlock"], cancelText: L["common.cancel"]);
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _unlockingGroupId = g.GroupId;
+            var result = await Reader.RequestGroupUnlockAsync(g.GroupId, _cts.Token);
+            Snackbar.Add(result.Inserted
+                ? L["lockedGroups.unlockRequested"]
+                : L["lockedGroups.unlockAlready"], Severity.Success);
+            await LoadAsync(force: true);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            Snackbar.Add(L["lockedGroups.unlockFailed"], Severity.Error);
+        }
+        finally
+        {
+            _unlockingGroupId = null;
+        }
+    }
+
+    private string DetailHref(string groupId) =>
+        Nav.GetUriWithQueryParameters("locked-groups/detail", new Dictionary<string, object?> { ["groupId"] = groupId });
+
+    private static string TestToken(string id) =>
+        string.Concat(id.Select(ch => char.IsLetterOrDigit(ch) ? ch : '-'));
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Mode.Changed -= OnModeChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

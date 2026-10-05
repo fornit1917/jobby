@@ -1,0 +1,257 @@
+@page "/"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+@inject NavigationManager Nav
+
+<PageHeader Title="@L["nav.overview"]" Subtitle="@Subtitle">
+    <Actions>
+        <AutoRefresh OnRefresh="LoadAsync" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-5" data-testid="overview-error">@_error</MudAlert>
+}
+
+@if (_loading && _stats is null)
+{
+    <div data-testid="overview-loading"
+         style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
+        @for (var i = 0; i < 6; i++)
+        {
+            <MudPaper Outlined="true" Class="pa-3">
+                <MudSkeleton Width="80px" Height="22px"/>
+                <MudSkeleton Width="48px" Height="34px" Class="mt-3"/>
+            </MudPaper>
+        }
+    </div>
+}
+else if (_stats is not null)
+{
+    <div data-testid="overview-cards"
+         style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
+        @foreach (var status in TileOrder)
+        {
+            var count = CountFor(status);
+            <MudPaper Outlined="true" Class="pa-3" Style="cursor:pointer;"
+                      @onclick="@(() => Nav.NavigateTo($"jobs?status={status}"))"
+                      data-testid="@($"tile-{status}")">
+                <div class="d-flex align-center justify-space-between">
+                    <StatusChip Status="status"/>
+                    <span class="jobby-mono" style="font-size:26px;line-height:1;color:var(--text-1);"
+                          data-testid="@($"count-{status}")">@count</span>
+                </div>
+            </MudPaper>
+        }
+    </div>
+
+    <MudText Class="mt-2" Typo="Typo.caption" data-testid="overview-total" Style="color:var(--text-3);">
+        @L.Format("overview.totalJobs", _stats.Total)
+    </MudText>
+
+    <MudGrid Class="mt-4" Spacing="3">
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-4" Style="height:100%;">
+                <div class="jobby-panel-title mb-3">@L["overview.queueBacklog"]</div>
+                <div data-testid="overview-queues">
+                    @if (_queues.Count == 0)
+                    {
+                        <EmptyState Title="@L["empty.noQueues"]" Icon="@Icons.Material.Filled.Layers"
+                                    TestId="overview-queues-empty"/>
+                    }
+                    else
+                    {
+                        @foreach (var q in _queues)
+                        {
+                            var total = q.StatusCounts.Sum(s => s.Count);
+                            <div class="d-flex flex-column" style="cursor:pointer;padding:7px 0;"
+                                 @onclick="@(() => Nav.NavigateTo(QueueHref(q.QueueName)))"
+                                 data-testid="@($"overview-queue-{q.QueueName}")">
+                                <div class="d-flex align-center justify-space-between">
+                                    <span style="color:var(--text-1);font-size:13px;">@q.QueueName</span>
+                                    <span class="jobby-mono" style="font-size:13px;color:var(--text-2);">@total</span>
+                                </div>
+                                <div class="mt-2">
+                                    <StackedStatusBar Counts="q.StatusCounts"/>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-4" Style="height:100%;">
+                <div class="jobby-panel-title mb-3">@L["overview.serverHealth"]</div>
+                <div data-testid="overview-servers">
+                    @if (_servers.Count == 0)
+                    {
+                        <EmptyState Title="@L["empty.noServersReporting"]" Icon="@Icons.Material.Filled.Dns"
+                                    TestId="overview-servers-empty"/>
+                    }
+                    else
+                    {
+                        @foreach (var s in _servers)
+                        {
+                            var alive = s.HeartbeatTs >= _threshold;
+                            <div class="d-flex align-center gap-3" style="padding:7px 0;">
+                                <span
+                                    style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:@(alive ? "var(--st-alive)" : "var(--st-stale)");"></span>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div class="jobby-mono jobby-text-xs"
+                                         style="color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@s.Id</div>
+                                    <div class="jobby-text-xs"
+                                         style="color:var(--text-3);">@L.Relative(s.HeartbeatTs, allowFuture: false)</div>
+                                </div>
+                                <ServerStateChip Alive="alive"/>
+                            </div>
+                        }
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-4" Style="height:100%;">
+                <div class="jobby-panel-title mb-3">@L["overview.needsAttention"]</div>
+                <div data-testid="overview-attention">
+                    @{
+                        var failed = CountFor(JobStatus.Failed);
+                        var frozen = CountFor(JobStatus.Frozen);
+                    }
+                    @if (failed == 0 && frozen == 0)
+                    {
+                        <EmptyState Title="@L["overview.nothingNeedsAttention"]"
+                                    Icon="@Icons.Material.Filled.CheckCircle"
+                                    TestId="overview-attention-empty"/>
+                    }
+                    else
+                    {
+                        @if (failed > 0)
+                        {
+                            <div class="d-flex align-center gap-3" style="cursor:pointer;padding:7px 0;"
+                                 @onclick="@(() => Nav.NavigateTo($"jobs?status={JobStatus.Failed}"))"
+                                 data-testid="overview-attention-failed">
+                                <span class="jobby-tile-icon"
+                                      style="background:var(--st-failed-bg);color:var(--st-failed);">
+                                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small"/>
+                                </span>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div style="color:var(--text-1);font-size:13px;">@L["overview.failedJobs"]</div>
+                                    <div class="jobby-text-xs"
+                                         style="color:var(--text-3);">@L.Format("overview.acrossAllQueues", failed)</div>
+                                </div>
+                                <StatusChip Status="JobStatus.Failed"/>
+                            </div>
+                        }
+
+                        @if (frozen > 0)
+                        {
+                            <div class="d-flex align-center gap-3" style="cursor:pointer;padding:7px 0;"
+                                 @onclick="@(() => Nav.NavigateTo($"jobs?status={JobStatus.Frozen}"))"
+                                 data-testid="overview-attention-frozen">
+                                <span class="jobby-tile-icon"
+                                      style="background:var(--st-frozen-bg);color:var(--st-frozen);">
+                                    <MudIcon Icon="@Icons.Material.Filled.AcUnit" Size="Size.Small"/>
+                                </span>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div style="color:var(--text-1);font-size:13px;">@L["overview.frozenJobs"]</div>
+                                    <div class="jobby-text-xs"
+                                         style="color:var(--text-3);">@L.Format("overview.acrossAllQueues", frozen)</div>
+                                </div>
+                                <StatusChip Status="JobStatus.Frozen"/>
+                            </div>
+                        }
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+
+    private static readonly JobStatus[] TileOrder =
+    [
+        JobStatus.Scheduled, JobStatus.Processing, JobStatus.Completed,
+        JobStatus.Failed, JobStatus.Frozen, JobStatus.WaitingPrev,
+    ];
+
+    private DashboardStatsDto? _stats;
+    private IReadOnlyList<DashboardServerDto> _servers = [];
+    private IReadOnlyList<DashboardQueueDto> _queues = [];
+    private int _aliveCount;
+    private DateTime _threshold;
+    private bool _loading;
+    private string? _error;
+    private readonly CancellationTokenSource _cts = new();
+
+    private string? Subtitle => _stats is null
+        ? null
+        : L.Format("overview.subtitle", _stats.Total, _aliveCount, _servers.Count, _queues.Count);
+
+    private long CountFor(JobStatus status) =>
+        _stats?.StatusCounts.FirstOrDefault(c => c.Status == status)?.Count ?? 0;
+
+    private string QueueHref(string queueName) =>
+        Nav.GetUriWithQueryParameters("queue", new Dictionary<string, object?> { ["name"] = queueName });
+
+    protected override Task OnInitializedAsync()
+    {
+        Dt.Changed += OnDisplayChanged;
+        return LoadAsync();
+    }
+
+    private void OnDisplayChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task LoadAsync()
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            _error = null;
+
+            var statsTask = Reader.GetStatsAsync(_cts.Token);
+            var serversTask = Reader.GetServersAsync(_cts.Token);
+            var queuesTask = Reader.GetQueuesAsync(_cts.Token);
+            await Task.WhenAll(statsTask, serversTask, queuesTask);
+
+            var servers = await serversTask;
+            var threshold = Options.ServerUtcNow.AddSeconds(-Options.StaleServerThresholdSeconds);
+            _stats = await statsTask;
+            _servers = servers;
+            _queues = await queuesTask;
+            _threshold = threshold;
+            _aliveCount = servers.Count(s => s.HeartbeatTs >= threshold);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            _error = L["overview.loadError"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

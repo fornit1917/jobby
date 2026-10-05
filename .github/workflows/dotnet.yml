@@ -11,16 +11,29 @@ on:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            start_infra: true
+            test_command: dotnet test --no-build --verbosity normal
+          - os: windows-latest
+            start_infra: false
+            test_command: dotnet test tests/Jobby.Tests.Dashboard/Jobby.Tests.Dashboard.csproj --no-build --verbosity normal
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: 8.0.x
+
+    - name: Install .NET WebAssembly build tools
+      run: dotnet workload install wasm-tools-net8
 
     - name: Restore dependencies
       run: dotnet restore
@@ -29,9 +42,10 @@ jobs:
       run: dotnet build --no-restore
 
     - name: Start infrastructure for integration tests
-      uses: hoverkraft-tech/compose-action@248470ecc5ed40d8ed3d4480d8260d77179ef579 # v2.4.2
+      if: ${{ matrix.start_infra }}
+      uses: hoverkraft-tech/compose-action@11beaa1c2dae4e8ed7b1665aa074723b6cecb0e4 # v3.0.0
       with:
         compose-file: "docker-compose.postgresql.yml"      
 
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: ${{ matrix.test_command }}

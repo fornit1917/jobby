@@ -1,4 +1,5 @@
 ﻿using Jobby.Postgres;
+using Jobby.Postgres.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -39,5 +40,21 @@ internal static class DbHelper
     public static PostgresqlPermanentLocksStorage CreatePermanentLockedGroupsStorage()
     {
         return new PostgresqlPermanentLocksStorage(DataSource, new PostgresqlStorageSettings());
+    }
+
+    public static PostgresqlJobbyDashboardReadStorage CreateDashboardReadStorage()
+    {
+        return new PostgresqlJobbyDashboardReadStorage(DataSource, new PostgresqlStorageSettings());
+    }
+
+    public static PostgresqlJobbyDashboardReadStorage CreateDashboardReadStorage(string tablesPrefix)
+    {
+        return new PostgresqlJobbyDashboardReadStorage(
+            DataSource, new PostgresqlStorageSettings { TablesPrefix = tablesPrefix });
+    }
+
+    public static PostgresqlJobbyDashboardCommandStorage CreateDashboardCommandStorage()
+    {
+        return new PostgresqlJobbyDashboardCommandStorage(DataSource, new PostgresqlStorageSettings());
     }
 }

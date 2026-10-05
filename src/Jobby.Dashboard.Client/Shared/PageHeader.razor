@@ -1,0 +1,19 @@
+<div class="d-flex align-start gap-4 mb-5">
+    <div class="flex-grow-1">
+        <h1 class="jobby-page-title">@Title</h1>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <div class="jobby-page-sub">@Subtitle</div>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="d-flex align-center gap-2">@Actions</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}

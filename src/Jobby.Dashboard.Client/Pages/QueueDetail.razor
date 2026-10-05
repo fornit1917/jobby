@@ -1,0 +1,226 @@
+@page "/queue"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject NavigationManager Nav
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+
+<PageHeader Title="@L.Format("queueDetail.titlePrefix", Name ?? string.Empty)">
+    <Actions>
+        <MudTooltip Text="@L["queueDetail.backToQueues"]">
+            <MudIconButton Icon="@Icons.Material.Outlined.ArrowBack" Href="queues"
+                           data-testid="back-to-queues"/>
+        </MudTooltip>
+        <AutoRefresh OnRefresh="ReloadAsync" Interval="Options.RefreshInterval"/>
+        @if (!string.IsNullOrEmpty(Name))
+        {
+            <MudToggleGroup T="QueueViewMode" Value="_mode" ValueChanged="OnModeChanged"
+                            SelectionMode="SelectionMode.SingleSelection" Size="Size.Small"
+                            Color="Color.Primary" CheckMark="false" data-testid="queue-mode-toggle">
+                <MudToggleItem Value="QueueViewMode.Backlog" Text="@L["queueDetail.backlog"]"
+                               data-testid="queue-mode-backlog"/>
+                <MudToggleItem Value="QueueViewMode.All" Text="@L["jobs.allStatuses"]" data-testid="queue-mode-all"/>
+            </MudToggleGroup>
+        }
+    </Actions>
+</PageHeader>
+
+@if (string.IsNullOrEmpty(Name))
+{
+    <MudAlert Severity="Severity.Info" data-testid="queue-noname">@L["queueDetail.noQueueSelected"]</MudAlert>
+}
+else
+{
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-3" data-testid="queue-jobs-error">@_error</MudAlert>
+    }
+
+    <MudDataGrid T="DashboardJobListItemDto" @key="@($"{Name}|{_mode}")" @ref="_grid"
+                 ServerData="LoadGridDataAsync" SortMode="SortMode.Single"
+                 Outlined="true" Elevation="0" RowClick="OnRowClick" Class="jobby-grid-clickable"
+                 data-testid="queue-jobs-grid">
+        <Columns>
+            <PropertyColumn Property="x => x.JobName" Title="@L["field.name"]">
+                <CellTemplate>
+                    <a href="jobs/@context.Item.Id" class="jobby-row-link d-flex align-center gap-2 jobby-mono"
+                       @onclick="@(() => OpenJob(context.Item))" @onclick:preventDefault="true"
+                       @onclick:stopPropagation="true">
+                        @if (context.Item.IsGroupLocker)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                                     Style="color:var(--text-3);" data-testid="job-locker-icon"/>
+                        }
+                        <span>@context.Item.JobName</span>
+                    </a>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Status" Title="@L["field.status"]">
+                <CellTemplate>
+                    <StatusChip Status="context.Item.Status"/>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.ScheduledStartAt" Title="@L["field.scheduled"]">
+                <CellTemplate>
+                    <div class="d-flex flex-column">
+                        <span class="jobby-mono jobby-text-sm"
+                              style="color:var(--text-1);">@Dt.FormatAbsolute(context.Item.ScheduledStartAt)</span>
+                        <span class="jobby-text-xs"
+                              style="color:var(--text-3);">@L.Relative(context.Item.ScheduledStartAt)</span>
+                    </div>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.StartedCount" Title="@L["field.attempts"]" Sortable="false"
+                            CellClass="text-end">
+                <CellTemplate>
+                    <span class="jobby-mono">@context.Item.StartedCount</span>
+                </CellTemplate>
+            </PropertyColumn>
+            <TemplateColumn Title="" Sortable="false" CellClass="text-end">
+                <CellTemplate>
+                    <div class="jobby-action-slot">
+                        <JobActionsMenu Id="context.Item.Id" Status="context.Item.Status"
+                                        IsGroupLocker="context.Item.IsGroupLocker" OnChanged="ReloadAsync"/>
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <LoadingContent>
+            <div class="d-flex justify-center py-8" data-testid="queue-jobs-loading">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Small"/>
+            </div>
+        </LoadingContent>
+        <NoRecordsContent>
+            <EmptyState Icon="@Icons.Material.Outlined.Inbox"
+                        Title="@(_mode == QueueViewMode.Backlog ? L["queueDetail.emptyBacklog"] : L["queueDetail.emptyAll"])"
+                        Subtitle="@(_mode == QueueViewMode.Backlog ? L["queueDetail.emptyBacklogSub"] : L["queueDetail.emptyAllSub"])"
+                        TestId="queue-jobs-empty"/>
+        </NoRecordsContent>
+        <PagerContent>
+            <MudDataGridPager T="DashboardJobListItemDto"
+                              RowsPerPageString="@L["mud.MudDataGridPager_RowsPerPage"]"/>
+        </PagerContent>
+    </MudDataGrid>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery] public string? Name { get; set; }
+
+    private QueueViewMode _mode = QueueViewMode.Backlog;
+    private MudDataGrid<DashboardJobListItemDto>? _grid;
+    private string? _error;
+    private GridData<DashboardJobListItemDto> _lastGrid = new() { Items = [], TotalItems = 0 };
+    private string? _loadedName;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dt.Changed += OnDisplayChanged;
+    }
+
+    private void OnDisplayChanged() => InvokeAsync(StateHasChanged);
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (_loadedName != Name)
+        {
+            _loadedName = Name;
+            _lastGrid = new GridData<DashboardJobListItemDto> { Items = [], TotalItems = 0 };
+            _error = null;
+        }
+    }
+
+    private async Task<GridData<DashboardJobListItemDto>> LoadGridDataAsync(
+        GridState<DashboardJobListItemDto> state, CancellationToken cancellationToken)
+    {
+        var name = Name;
+        var mode = _mode;
+
+        var sort = state.SortDefinitions.FirstOrDefault();
+        DashboardJobsSortBy sortBy;
+        bool sortDescending;
+        if (sort is null)
+        {
+            (sortBy, sortDescending) = mode == QueueViewMode.Backlog
+                ? (DashboardJobsSortBy.ScheduledStartAt, false)
+                : (DashboardJobsSortBy.CreatedAt, true);
+        }
+        else
+        {
+            sortBy = sort.SortBy switch
+            {
+                nameof(DashboardJobListItemDto.JobName) => DashboardJobsSortBy.JobName,
+                nameof(DashboardJobListItemDto.Status) => DashboardJobsSortBy.Status,
+                nameof(DashboardJobListItemDto.ScheduledStartAt) => DashboardJobsSortBy.ScheduledStartAt,
+                _ => DashboardJobsSortBy.CreatedAt,
+            };
+            sortDescending = sort.Descending;
+        }
+
+        var query = new DashboardJobsQuery
+        {
+            QueueName = name,
+            Statuses = mode == QueueViewMode.Backlog ? QueueBacklog.Statuses : null,
+            Page = state.Page + 1,
+            PageSize = state.PageSize,
+            SortBy = sortBy,
+            SortDescending = sortDescending,
+        };
+
+        try
+        {
+            var result = await Reader.GetJobsAsync(query, cancellationToken);
+
+            if (name != Name || mode != _mode)
+            {
+                return _lastGrid;
+            }
+
+            if (_error is not null)
+            {
+                _error = null;
+                StateHasChanged();
+            }
+
+            _lastGrid = new GridData<DashboardJobListItemDto>
+            {
+                Items = result.Items,
+                TotalItems = (int)Math.Min(result.TotalCount, int.MaxValue),
+            };
+            return _lastGrid;
+        }
+        catch (OperationCanceledException)
+        {
+            return _lastGrid;
+        }
+        catch (Exception)
+        {
+            if (name == Name && mode == _mode)
+            {
+                _error = L["queueDetail.loadError"];
+                StateHasChanged();
+            }
+
+            return _lastGrid;
+        }
+    }
+
+    private void OnModeChanged(QueueViewMode mode)
+    {
+        _mode = mode;
+        _lastGrid = new GridData<DashboardJobListItemDto> { Items = [], TotalItems = 0 };
+        _error = null;
+    }
+
+    private void OnRowClick(DataGridRowClickEventArgs<DashboardJobListItemDto> args) => OpenJob(args.Item);
+
+    private void OpenJob(DashboardJobListItemDto item) => Nav.NavigateTo($"jobs/{item.Id}");
+
+    private Task ReloadAsync() => _grid?.ReloadServerData() ?? Task.CompletedTask;
+}

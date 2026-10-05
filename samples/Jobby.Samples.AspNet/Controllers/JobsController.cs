@@ -1,6 +1,7 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Samples.AspNet.Db;
+using Jobby.Samples.AspNet.DashboardDemo;
 using Jobby.Samples.AspNet.Jobs;
 using Jobby.Samples.AspNet.Schedulers;
 using Microsoft.AspNetCore.Mvc;
@@ -14,12 +15,18 @@ public class JobsController
     private readonly IJobbyClient _jobbyClient;
     private readonly IJobsFactory _jobsFactory;
     private readonly JobbySampleDbContext _dbContext;
+    private readonly DashboardDemoSeeder _dashboardDemoSeeder;
 
-    public JobsController(IJobbyClient jobbyClient, IJobsFactory jobsFactory, JobbySampleDbContext dbContext)
+    public JobsController(
+        IJobbyClient jobbyClient,
+        IJobsFactory jobsFactory,
+        JobbySampleDbContext dbContext,
+        DashboardDemoSeeder dashboardDemoSeeder)
     {
         _jobbyClient = jobbyClient;
         _jobsFactory = jobsFactory;
         _dbContext = dbContext;
+        _dashboardDemoSeeder = dashboardDemoSeeder;
     }
 
     [HttpPost("enqueue-job")]
@@ -36,7 +43,7 @@ public class JobsController
     }
 
     [HttpPost("enqueue-job-by-ef")]
-    public async Task<string> EnqueueDemoJobByEF([FromBody] DemoJobCommand command)
+    public async Task<string> EnqueueDemoJobByEf([FromBody] DemoJobCommand command)
     {
         var job = _jobsFactory.Create(command);
         _dbContext.Jobs.Add(job);
@@ -53,6 +60,7 @@ public class JobsController
             var job = _jobsFactory.Create(command);
             jobs.Add(job);
         }
+
         await _jobbyClient.EnqueueBatchAsync(jobs);
         return jobs.Select(x => x.Id.ToString()).ToList();
     }
@@ -90,11 +98,26 @@ public class JobsController
         await _jobbyClient.CancelRecurrentAsync<EmptyRecurrentJobCommand>();
         return "ok";
     }
-    
+
     [HttpPost("cancel-recurrent-with-custom-scheduler")]
     public async Task<string> CancelRecurrentWithCustomScheduler()
     {
         await _jobbyClient.CancelRecurrentAsync<CustomSchedulerRecurrentJobCommand>();
         return "ok";
+    }
+
+    [HttpPost("seed-dashboard-demo")]
+    public async Task<ActionResult<DashboardDemoSeedResult>> SeedDashboardDemo(
+        [FromServices] IWebHostEnvironment environment,
+        [FromQuery] bool reset = true,
+        CancellationToken cancellationToken = default)
+    {
+        // dev-only endpoint
+        if (!environment.IsDevelopment())
+        {
+            return new NotFoundResult();
+        }
+
+        return await _dashboardDemoSeeder.SeedAsync(reset, cancellationToken);
     }
 }

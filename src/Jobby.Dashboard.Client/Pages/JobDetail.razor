@@ -1,0 +1,224 @@
+@page "/jobs/{Id:guid}"
+@using System.Text.Json
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DateTimeDisplayState Dt
+
+<div class="jobby-breadcrumb mb-3">
+    <MudLink Href="jobs" Underline="Underline.Hover" data-testid="back-to-jobs">@L["nav.jobs"]</MudLink>
+    <span>/</span>
+    <span class="crumb-current">@L["jobDetail.detail"]</span>
+</div>
+
+<PageHeader Title="@(_job?.JobName ?? L["jobDetail.title"])">
+    <Actions>
+        @if (_job is not null)
+        {
+            <JobActionsMenu Id="_job.Id" Status="_job.Status" Recurrent="@(_job.Schedule is not null)"
+                            IsGroupLocker="_job.IsGroupLocker" OnChanged="ReloadAsync"/>
+        }
+    </Actions>
+</PageHeader>
+
+@if (_job is { IsGroupLocker: true })
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4" data-testid="detail-locker-note">
+        @L["jobDetail.lockerNote"]
+        <MudLink
+            Href="@($"locked-groups/detail?groupId={Uri.EscapeDataString(_job.SerializableGroupId ?? string.Empty)}")">
+            @L["jobDetail.viewGroupRecovery"]
+        </MudLink>
+    </MudAlert>
+}
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" data-testid="detail-loading"/>
+}
+else if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" data-testid="detail-error-state">@_error</MudAlert>
+}
+else if (_job is null)
+{
+    <MudAlert Severity="Severity.Warning" data-testid="detail-notfound">@L.Format("jobDetail.notFound", Id)</MudAlert>
+}
+else
+{
+    <MudPaper Outlined="true" Elevation="0" Class="pa-0">
+        <MudSimpleTable Dense="true" Bordered="false" Elevation="0" data-testid="detail-table">
+            <tbody>
+            <tr>
+                <td class="jobby-detail-key">@L["field.id"]</td>
+                <td>
+                    <span class="jobby-mono">@_job.Id</span>
+                    <CopyButton Text="@_job.Id.ToString()" Tooltip="@L["jobDetail.copyId"]" TestId="copy-id"/>
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.name"]</td>
+                <td>@_job.JobName</td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.status"]</td>
+                <td>
+                    <StatusChip Status="_job.Status"/>
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.queue"]</td>
+                <td><span class="jobby-pill">@_job.QueueName</span></td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.created"]</td>
+                <td><span class="jobby-mono">@Dt.FormatAbsolute(_job.CreatedAt)</span></td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["jobDetail.scheduledStart"]</td>
+                <td><span class="jobby-mono">@Dt.FormatAbsolute(_job.ScheduledStartAt)</span></td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["jobDetail.lastStartedFinished"]</td>
+                <td>
+                    <span class="jobby-mono">@Fmt(_job.LastStartedAt)</span>
+                    <span style="color:var(--text-3)"> / </span>
+                    <span class="jobby-mono">@Fmt(_job.LastFinishedAt)</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.attempts"]</td>
+                <td><span class="jobby-mono">@_job.StartedCount</span></td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.server"]</td>
+                <td>
+                    @if (string.IsNullOrEmpty(_job.ServerId))
+                    {
+                        <span style="color:var(--text-3)">-</span>
+                    }
+                    else
+                    {
+                        <span class="jobby-mono">@_job.ServerId</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.schedule"]</td>
+                <td>
+                    <ScheduleDisplay Schedule="@_job.Schedule" SchedulerType="@_job.SchedulerType"/>
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["jobDetail.param"]</td>
+                <td>
+                    <CodeBlock Text="@_prettyParam" Json="true" TestId="detail-param"
+                               CopyTestId="copy-param" CopyTooltip="@L["jobDetail.copyParameters"]"/>
+                </td>
+            </tr>
+            @if (!string.IsNullOrEmpty(_job.Error))
+            {
+                <tr>
+                    <td class="jobby-detail-key">@L["jobDetail.error"]</td>
+                    <td>
+                        <CodeBlock Text="@_job.Error" IsError="true" TestId="detail-error"
+                                   CopyTestId="copy-error" CopyTooltip="@L["jobDetail.copyError"]"/>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private DashboardJobDetailsDto? _job;
+    private string? _prettyParam;
+    private bool _loading = true;
+    private string? _error;
+    private CancellationTokenSource? _cts;
+
+    private static readonly JsonSerializerOptions PrettyJsonOptions = new() { WriteIndented = true };
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dt.Changed += OnDisplayChanged;
+    }
+
+    private void OnDisplayChanged() => InvokeAsync(StateHasChanged);
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private Task ReloadAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (_cts is not null)
+        {
+            await _cts.CancelAsync();
+            _cts.Dispose();
+        }
+
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        _loading = true;
+        _job = null;
+        _prettyParam = null;
+        _error = null;
+        try
+        {
+            var job = await Reader.GetJobByIdAsync(Id, token);
+            if (!token.IsCancellationRequested)
+            {
+                _job = job;
+                _prettyParam = FormatJson(job?.JobParam);
+                _loading = false;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _error = L["jobDetail.loadError"];
+                _loading = false;
+            }
+        }
+    }
+
+    private string Fmt(DateTime? value) => value is { } v ? Dt.FormatAbsolute(v) : "-";
+
+    private static string? FormatJson(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return raw;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            return JsonSerializer.Serialize(doc.RootElement, PrettyJsonOptions);
+        }
+        catch (JsonException)
+        {
+            return raw;
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+        if (_cts is not null)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+        }
+    }
+
+}

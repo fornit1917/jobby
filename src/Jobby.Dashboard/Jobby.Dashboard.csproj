@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>jobby_package_icon.png</PackageIcon>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Jobby.Tests.Dashboard" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jobby.Core\Jobby.Core.csproj" />
+    <ProjectReference Include="..\Jobby.Dashboard.Client\Jobby.Dashboard.Client.csproj"
+                      ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../images/jobby_package_icon.png" Pack="true" PackagePath="\"/>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <Target Name="EmbedJobbyDashboardClient" BeforeTargets="_CalculateEmbeddedFilesManifestInputs">
+    <PropertyGroup>
+      <_JobbyClientPublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'jobbyclient'))</_JobbyClientPublishDir>
+    </PropertyGroup>
+    <MSBuild Projects="..\Jobby.Dashboard.Client\Jobby.Dashboard.Client.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);PublishDir=$(_JobbyClientPublishDir)" />
+    <Error Condition="!Exists('$(_JobbyClientPublishDir)wwwroot/_framework/blazor.boot.json')"
+           Text="Jobby Dashboard client embed failed: no published WASM assets at $(_JobbyClientPublishDir)wwwroot. The EmbedJobbyDashboardClient target did not produce the expected output." />
+    <ItemGroup>
+      <_JobbyClientAsset Include="$(_JobbyClientPublishDir)wwwroot/**/*"
+                         Exclude="$(_JobbyClientPublishDir)wwwroot/**/*.gz" />
+      <_JobbyClientBrotliAsset Include="$(_JobbyClientPublishDir)wwwroot/**/*.br" />
+      <_JobbyClientBrotliSourceAsset Include="@(_JobbyClientBrotliAsset->'%(RootDir)%(Directory)%(Filename)')" />
+      <_JobbyClientAsset Remove="@(_JobbyClientBrotliSourceAsset)" />
+      <EmbeddedResource Include="@(_JobbyClientAsset)"
+                        TargetPath="wwwroot$([System.IO.Path]::DirectorySeparatorChar)%(_JobbyClientAsset.RecursiveDir)%(_JobbyClientAsset.Filename)%(_JobbyClientAsset.Extension)"
+                        Link="wwwroot/%(_JobbyClientAsset.RecursiveDir)%(_JobbyClientAsset.Filename)%(_JobbyClientAsset.Extension)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

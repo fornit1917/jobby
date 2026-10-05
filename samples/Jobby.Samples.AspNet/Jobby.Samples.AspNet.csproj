@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	<IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -19,6 +20,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Jobby.AspNetCore\Jobby.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Jobby.Postgres\Jobby.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard\Jobby.Dashboard.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard.Authorization\Jobby.Dashboard.Authorization.csproj" />
   </ItemGroup>
 
 </Project>

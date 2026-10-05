@@ -1,0 +1,277 @@
+@page "/locked-groups/detail"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+@inject DashboardModeState Mode
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<div class="d-flex align-center gap-2 mb-2">
+    <MudIconButton Href="locked-groups" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                   Color="Color.Default" data-testid="back-to-locked-groups"/>
+    <MudText Class="jobby-mono jobby-text-sm" Style="color:var(--text-3);">@L["nav.lockedGroups"]</MudText>
+</div>
+
+<PageHeader Title="@L.Format("lockedGroupDetail.titlePrefix", GroupId ?? string.Empty)">
+    <Actions>
+        <AutoRefresh OnRefresh="LoadAsync" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+@if (_loading && _details is null)
+{
+    <MudProgressCircular Indeterminate="true" data-testid="locked-group-loading"/>
+}
+else if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" data-testid="locked-group-error">@_error</MudAlert>
+}
+else if (_details is null)
+{
+    <MudAlert Severity="Severity.Info" data-testid="locked-group-notfound">
+        @L["lockedGroupDetail.notLocked"]
+    </MudAlert>
+}
+else
+{
+    <MudPaper Outlined="true" Elevation="0" Class="pa-0 mb-5">
+        <MudSimpleTable Dense="true" Bordered="false" Elevation="0" data-testid="locked-group-header">
+            <tbody>
+            <tr>
+                <td class="jobby-detail-key">@L["lockedGroups.locker"]</td>
+                <td>
+                    <div class="d-flex align-center gap-2">
+                        <span class="jobby-mono jobby-text-sm"
+                              style="color:var(--text-1);">@_details.LockerName</span>
+                        <StatusChip Status="_details.LockerStatus"/>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["field.server"]</td>
+                <td>
+                    @if (string.IsNullOrEmpty(_details.LockerServerId))
+                    {
+                        <span style="color:var(--text-3)">-</span>
+                    }
+                    else
+                    {
+                        <span class="jobby-mono">@_details.LockerServerId</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["lockedGroupDetail.stuckSince"]</td>
+                <td><span class="jobby-mono">@Dt.FormatAbsolute(_details.StuckSince)</span></td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["nav.queues"]</td>
+                <td>
+                    <div class="d-flex flex-wrap align-center gap-1">
+                        @foreach (var q in _details.Queues)
+                        {
+                            <span class="jobby-pill">@q</span>
+                        }
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="jobby-detail-key">@L["lockedGroups.unlock"]</td>
+                <td>
+                    @if (_details.UnlockRequested)
+                    {
+                        <MudText Color="Color.Info" data-testid="locked-group-requested">
+                            @(_details.UnlockRequestedAt is { } at
+                                ? L.Format("lockedGroupDetail.pendingSince", Dt.FormatAbsolute(at))
+                                : L["lockedGroups.requested"])
+                        </MudText>
+                    }
+                    else if (Options.ManagementEnabled && Mode.IsManagementView)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                   Disabled="@_unlocking" OnClick="RequestUnlockAsync"
+                                   data-testid="locked-group-unlock">
+                            @if (_unlocking)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1"/>
+                            }
+                            @L["lockedGroups.requestUnlock"]
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudText Class="jobby-mono"
+                                 Style="color:var(--text-3)">@L["lockedGroups.notRequested"]</MudText>
+                    }
+                </td>
+            </tr>
+            @if (!string.IsNullOrEmpty(_details.LockerError))
+            {
+                <tr>
+                    <td class="jobby-detail-key">@L["jobDetail.error"]</td>
+                    <td>
+                        <CodeBlock Text="@_details.LockerError" IsError="true" TestId="locked-group-error-text"
+                                   CopyTestId="copy-locker-error" CopyTooltip="@L["jobDetail.copyError"]"/>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
+
+    <MudAlert Severity="Severity.Info" Class="mb-5">
+        @L["lockedGroupDetail.blockedNote"]
+    </MudAlert>
+
+    <MudSimpleTable Dense="true" Bordered="true" data-testid="locked-group-jobs">
+        <thead>
+        <tr>
+            <th>@L["lockedGroupDetail.role"]</th>
+            <th>@L["field.job"]</th>
+            <th>@L["field.status"]</th>
+            <th>@L["field.scheduled"]</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var j in _details.Jobs)
+        {
+            <tr>
+                <td>
+                    <div class="d-flex align-center gap-2">
+                        <span class="jobby-tile-icon" style="background:var(--st-frozen-bg);color:var(--st-frozen);">
+                            <MudIcon Icon="@RoleIcon(j.Role)" Size="Size.Small"/>
+                        </span>
+                        <span style="font-weight:500;">@L.Role(j.Role)</span>
+                    </div>
+                </td>
+                <td><span class="jobby-mono jobby-text-sm" style="color:var(--text-1);">@j.JobName</span></td>
+                <td>
+                    <StatusChip Status="j.Status"/>
+                </td>
+                <td><span class="jobby-mono" style="color:var(--text-1);">@Dt.FormatAbsolute(j.ScheduledStartAt)</span>
+                </td>
+                <td>
+                    <MudLink Href="@($"jobs/{j.Id}")" Class="jobby-mono jobby-text-sm">@L["lockedGroupDetail.detailsLink"]</MudLink>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </MudSimpleTable>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery] public string? GroupId { get; set; }
+
+    private LockedGroupDetailsDto? _details;
+    private bool _loading;
+    private bool _unlocking;
+    private string? _error;
+    private string? _loadedGroupId;
+    private readonly CancellationTokenSource _cts = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Mode.Changed += OnModeChanged;
+        Dt.Changed += OnModeChanged;
+    }
+
+    private void OnModeChanged() => InvokeAsync(StateHasChanged);
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (_loadedGroupId == GroupId)
+        {
+            return Task.CompletedTask;
+        }
+
+        _loadedGroupId = GroupId;
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrEmpty(GroupId))
+        {
+            _details = null;
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            _error = null;
+            _details = await Reader.GetLockedGroupAsync(GroupId, _cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            _error = L["lockedGroupDetail.loadError"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RequestUnlockAsync()
+    {
+        if (_details is null)
+        {
+            return;
+        }
+
+        var message = L.Format("lockedGroups.confirmBody", _details.LockerName);
+        var confirmed = await Dialog.ShowMessageBoxAsync(
+            L.Format("lockedGroups.confirmTitle", _details.GroupId),
+            message, yesText: L["lockedGroups.requestUnlock"], cancelText: L["common.cancel"]);
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            _unlocking = true;
+            var result = await Reader.RequestGroupUnlockAsync(_details.GroupId, _cts.Token);
+            Snackbar.Add(result.Inserted
+                ? L["lockedGroups.unlockRequested"]
+                : L["lockedGroups.unlockAlready"], Severity.Success);
+            await LoadAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            Snackbar.Add(L["lockedGroups.unlockFailed"], Severity.Error);
+        }
+        finally
+        {
+            _unlocking = false;
+        }
+    }
+
+    private static string RoleIcon(LockedGroupJobRole role) => role switch
+    {
+        LockedGroupJobRole.Locker => Icons.Material.Filled.Lock,
+        LockedGroupJobRole.Frozen => Icons.Material.Filled.AcUnit,
+        LockedGroupJobRole.WaitingPrev => Icons.Material.Filled.HourglassEmpty,
+        LockedGroupJobRole.Failed => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.Schedule,
+    };
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Mode.Changed -= OnModeChanged;
+        Dt.Changed -= OnModeChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

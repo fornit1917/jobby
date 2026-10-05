@@ -51,3 +51,7 @@ BenchmarkDotNet.Artifacts
 node_modules/
 
 docs/.vitepress/cache
+docs/.vitepress/dist
+
+# Embedded Jobby Dashboard WASM client (generated at build)
+src/Jobby.Dashboard/wwwroot/

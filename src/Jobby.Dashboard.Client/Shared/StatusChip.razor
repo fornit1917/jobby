@@ -1,0 +1,9 @@
+@inherits LocalizedComponentBase
+
+<span class="jobby-tag jobby-tag-@Status" data-testid="status-chip">
+    <span class="jobby-tag-dot"></span>@L.Status(Status)
+</span>
+
+@code {
+    [Parameter, EditorRequired] public JobStatus Status { get; set; }
+}

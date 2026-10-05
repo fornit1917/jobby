@@ -1,0 +1,281 @@
+@page "/queues"
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Reader
+@inject DashboardClientConfig Options
+@inject DateTimeDisplayState Dt
+@inject NavigationManager Nav
+
+<PageHeader Title="@L["nav.queues"]" Subtitle="@Subtitle">
+    <Actions>
+        <AutoRefresh OnRefresh="LoadAsync" Interval="Options.RefreshInterval"/>
+    </Actions>
+</PageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-5" data-testid="queues-error">@_error</MudAlert>
+}
+
+@if (_loading && _queues is null)
+{
+    <MudProgressCircular Indeterminate="true" data-testid="queues-loading"/>
+}
+else if (_queues is not null)
+{
+    @if (_queues.Count == 0)
+    {
+        <EmptyState Title="@L["empty.noQueues"]" Icon="@Icons.Material.Filled.Layers"
+                    TestId="queues-empty"/>
+    }
+    else
+    {
+        <MudSimpleTable Dense="true" Bordered="true" data-testid="queues-table">
+            <thead>
+            <tr>
+                <th style="width:36px;"></th>
+                <th>@L["field.queue"]</th>
+                <th>@L["queues.statusCounts"]</th>
+                <th style="width:220px;">@L["queues.distribution"]</th>
+                <th class="text-end" style="width:90px;">@L["queues.total"]</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var q in _queues)
+            {
+                var open = _expanded.Contains(q.QueueName);
+                <tr class="@(open ? "jobby-row-open" : null)">
+                    <td>
+                        <MudIconButton Size="Size.Small"
+                                       Icon="@(open ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                       OnClick="@(() => ToggleAsync(q.QueueName))"
+                                       aria-label="@L["queues.toggleJobs"]"
+                                       data-testid="@($"queue-toggle-{TestToken(q.QueueName)}")"/>
+                    </td>
+                    <td>
+                        <MudLink Href="@QueueHref(q.QueueName)" Class="jobby-mono"
+                                 Style="font-weight:500;"
+                                 data-testid="@($"queue-link-{TestToken(q.QueueName)}")">@q.QueueName</MudLink>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-wrap align-center gap-2">
+                            @foreach (var c in q.StatusCounts.OrderBy(c => c.Status))
+                            {
+                                <span class="d-flex align-center" style="gap:5px;">
+                                    <StatusChip Status="c.Status"/>
+                                    <span class="jobby-mono" style="font-size:12px;color:var(--text-3);">@c.Count</span>
+                                </span>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <StackedStatusBar Counts="q.StatusCounts"/>
+                    </td>
+                    <td class="text-end jobby-mono" style="color:var(--text-1);font-weight:600;"
+                        data-testid="@($"queue-total-{TestToken(q.QueueName)}")">@q.StatusCounts.Sum(c => c.Count)</td>
+                </tr>
+                @if (open)
+                {
+                    <tr class="jobby-row-open" data-testid="@($"queue-preview-{TestToken(q.QueueName)}")">
+                        <td></td>
+                        <td colspan="4" style="padding-bottom:14px;">
+                            @{
+                                var preview = _previews.GetValueOrDefault(q.QueueName);
+                            }
+                            @if (preview is null || preview.Loading)
+                            {
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small"
+                                                     data-testid="preview-loading"/>
+                            }
+                            else if (preview.Error)
+                            {
+                                <MudText Color="Color.Error" data-testid="preview-error">@L["jobs.loadError"]</MudText>
+                            }
+                            else if (preview.Items.Count == 0)
+                            {
+                                <div class="jobby-state-sub" style="padding:12px 0;"
+                                     data-testid="preview-empty">@L["queues.noJobsQueued"]</div>
+                            }
+                            else
+                            {
+                                <MudPaper Outlined="true" Elevation="0" Class="mt-1"
+                                          Style="background:var(--bg-0);overflow:hidden;">
+                                    <MudSimpleTable Dense="true" Class="jobby-text-sm">
+                                        <thead>
+                                        <tr>
+                                            <th>@L["field.id"]</th>
+                                            <th>@L["field.status"]</th>
+                                            <th>@L["field.job"]</th>
+                                            <th>@L["field.scheduled"]</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach (var j in preview.Items)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <MudLink Href="@($"jobs/{j.Id}")"
+                                                             Class="jobby-mono">@ShortId(j.Id)</MudLink>
+                                                </td>
+                                                <td>
+                                                    <StatusChip Status="j.Status"/>
+                                                </td>
+                                                <td class="jobby-mono">@j.JobName</td>
+                                                <td class="jobby-mono"
+                                                    style="color:var(--text-3);">@Dt.FormatAbsolute(j.ScheduledStartAt)</td>
+                                            </tr>
+                                        }
+                                        </tbody>
+                                    </MudSimpleTable>
+                                </MudPaper>
+                                <MudLink Href="@QueueHref(q.QueueName)" Class="d-inline-block mt-2 jobby-text-sm"
+                                         data-testid="@($"queue-viewall-{TestToken(q.QueueName)}")">@L.Format("queues.viewAll", preview.Total)</MudLink>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </MudSimpleTable>
+    }
+}
+
+@code {
+    private IReadOnlyList<DashboardQueueDto>? _queues;
+    private bool _loading;
+    private string? _error;
+    private readonly HashSet<string> _expanded = new();
+    private readonly Dictionary<string, QueuePreview> _previews = new();
+    private readonly Dictionary<string, int> _previewVersions = new();
+    private int _previewSeq;
+    private readonly CancellationTokenSource _cts = new();
+
+    private const int PreviewPageSize = 5;
+
+    private string? Subtitle => _queues is null
+        ? null
+        : L.Format("queues.subtitle", _queues.Count, _queues.Sum(q => q.StatusCounts.Sum(c => c.Count)));
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dt.Changed += OnDisplayChanged;
+    }
+
+    private void OnDisplayChanged() => InvokeAsync(StateHasChanged);
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            _error = null;
+            _queues = await Reader.GetQueuesAsync(_cts.Token);
+
+            _previews.Clear();
+            foreach (var name in _expanded.ToList())
+            {
+                if (_queues.Any(q => q.QueueName == name))
+                {
+                    await LoadPreviewAsync(name);
+                }
+                else
+                {
+                    _expanded.Remove(name);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            _error = L["queues.loadError"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ToggleAsync(string queueName)
+    {
+        if (!_expanded.Add(queueName))
+        {
+            _expanded.Remove(queueName);
+            return;
+        }
+
+        if (!_previews.ContainsKey(queueName))
+        {
+            await LoadPreviewAsync(queueName);
+        }
+    }
+
+    private async Task LoadPreviewAsync(string queueName)
+    {
+        var version = ++_previewSeq;
+        _previewVersions[queueName] = version;
+        _previews[queueName] = new QueuePreview { Loading = true };
+        try
+        {
+            var result = await Reader.GetJobsAsync(new DashboardJobsQuery
+            {
+                QueueName = queueName,
+                Statuses = QueueBacklog.Statuses,
+                Page = 1,
+                PageSize = PreviewPageSize,
+                SortBy = DashboardJobsSortBy.ScheduledStartAt,
+                SortDescending = false,
+            }, _cts.Token);
+
+            if (_previewVersions.GetValueOrDefault(queueName) != version)
+            {
+                return;
+            }
+
+            _previews[queueName] = new QueuePreview { Items = result.Items, Total = result.TotalCount };
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            if (_previewVersions.GetValueOrDefault(queueName) == version)
+            {
+                _previews[queueName] = new QueuePreview { Error = true };
+            }
+        }
+    }
+
+    private string QueueHref(string queueName) =>
+        Nav.GetUriWithQueryParameters("queue", new Dictionary<string, object?> { ["name"] = queueName });
+
+    private static string ShortId(Guid id) => id.ToString("N")[..8] + "...";
+
+    private static string TestToken(string queueName) =>
+        string.Concat(queueName.Select(ch => char.IsLetterOrDigit(ch) ? ch : '-'));
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Dt.Changed -= OnDisplayChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+    private sealed class QueuePreview
+    {
+        public bool Loading { get; init; }
+        public bool Error { get; init; }
+        public IReadOnlyList<DashboardJobListItemDto> Items { get; init; } = [];
+        public long Total { get; init; }
+    }
+
+}
