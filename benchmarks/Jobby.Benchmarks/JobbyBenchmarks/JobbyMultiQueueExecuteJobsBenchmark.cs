@@ -142,7 +142,7 @@ public class JobbyMultiQueueExecuteJobsBenchmarkAction
     [Benchmark]
     public void JobbyExecuteJobs()
     {
-        _jobbyServer?.StartBackgroundService();
+        _jobbyServer?.StartBackgroundServiceAsync().GetAwaiter().GetResult();
         Counter.Event.WaitOne();
         _jobbyServer?.SendStopSignal();
     }

@@ -13,7 +13,7 @@ internal class TimerService : ITimerService
         {
             await Task.Delay(milliseconds, cancellationToken);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
         }
     }
@@ -24,7 +24,7 @@ internal class TimerService : ITimerService
         {
             await Task.Delay(timeSpan, cancellationToken);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
         }
     }

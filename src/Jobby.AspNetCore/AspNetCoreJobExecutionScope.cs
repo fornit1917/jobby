@@ -21,4 +21,15 @@ internal class AspNetCoreJobExecutionScope : IJobExecutionScope
     {
         _containerScope.Dispose();
     }
+
+    ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (_containerScope is IAsyncDisposable ad)
+        {
+            return ad.DisposeAsync();
+        }
+        
+        _containerScope.Dispose();
+        return ValueTask.CompletedTask;
+    }
 }

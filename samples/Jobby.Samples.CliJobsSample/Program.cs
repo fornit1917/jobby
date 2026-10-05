@@ -114,7 +114,7 @@ internal static class Program
         Console.Write("Start server? (y/n): ");
         var runServer = Console.ReadLine();
         if (runServer != "n")
-            jobbyServer.StartBackgroundService();
+            jobbyServer.StartBackgroundServiceAsync().GetAwaiter().GetResult();
 
         Console.ReadLine();
 

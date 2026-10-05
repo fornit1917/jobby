@@ -1,5 +1,12 @@
 # Versions
 
+## v1.0.4 (2026-10-05)
+
+- Catch OperationCanceledException instead of TaskCanceledException
+- Send first heartbeat signal before server running
+- Support IAsyncDisposable for scoped user services
+- Fix minor bugs
+
 ## v1.0.3 (2026-09-20)
 
 - Fixed hanging retries of failed tasks in serializable groups

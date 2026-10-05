@@ -14,8 +14,7 @@ internal class JobbyHostedService : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _jobbyServer.StartBackgroundService();
-        return Task.CompletedTask;
+        return _jobbyServer.StartBackgroundServiceAsync();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -23,7 +22,13 @@ internal class JobbyHostedService : IHostedService
         _jobbyServer.SendStopSignal();
         while (!cancellationToken.IsCancellationRequested && _jobbyServer.HasInProgressJobs())
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+            }
+            catch (OperationCanceledException e)
+            {
+            }
         }
     }
 }

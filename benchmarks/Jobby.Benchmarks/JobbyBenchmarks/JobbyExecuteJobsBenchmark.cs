@@ -66,7 +66,7 @@ public class JobbyExecuteJobsBenchmark : IBenchmark
 [InvocationCount(1)]
 public class JobbyExecuteJobsBenchmarkAction
 {
-    private NpgsqlDataSource _dataSource;
+    private readonly NpgsqlDataSource _dataSource;
     private IJobbyServer? _jobbyServer;
     private IJobbyClient? _jobbyClient;
 
@@ -138,7 +138,7 @@ public class JobbyExecuteJobsBenchmarkAction
     [Benchmark]
     public void JobbyExecuteJobs()
     {
-        _jobbyServer?.StartBackgroundService();
+        _jobbyServer?.StartBackgroundServiceAsync().GetAwaiter().GetResult();
         Counter.Event.WaitOne();
         _jobbyServer?.SendStopSignal();
     }
