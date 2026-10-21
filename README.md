@@ -32,14 +32,14 @@ High-performance and reliable .NET library for background tasks, designed for di
 To use Jobby, install the Jobby.Core package and a storage package (currently only PostgreSQL is supported):  
 
 ```
-dotnet package add Jobby.Core  
-dotnet package add Jobby.Postgres  
+dotnet add package Jobby.Core  
+dotnet add package Jobby.Postgres  
 ```
 
 For ASP.NET Core integration, also install the Jobby.AspNetCore package:  
 
 ```
-dotnet package add Jobby.AspNetCore  
+dotnet add package Jobby.AspNetCore  
 ```
 
 ### Defining Background Tasks  
@@ -60,9 +60,9 @@ public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
 {  
     // Dependency injection is supported when using Jobby.AspNetCore  
     private readonly IEmailService _emailService;  
-    public SendEmailCommandHandler(IEmailService logger)  
+    public SendEmailCommandHandler(IEmailService emailService)  
     {  
-        _logger = logger;  
+        _emailService = emailService;  
     }  
 
     public async Task ExecuteAsync(SendEmailCommand command, JobExecutionContext ctx)  
@@ -126,10 +126,10 @@ jobbyBuilder
         .AddJobsFromAssemblies(typeof(SendEmailCommand).Assembly);  
 
 // Service for creating tasks  
-var jobbyClient = builder.CreateJobbyClient();  
+var jobbyClient = jobbyBuilder.CreateJobbyClient();  
 
 // Background task execution service  
-var jobbyServer = builder.CreateJobbyServer();  
+var jobbyServer = jobbyBuilder.CreateJobbyServer();  
 jobbyServer.StartBackgroundService(); // Start background service  
 //...  
 jobbyServer.SendStopSignal(); // Stop service  
@@ -153,7 +153,7 @@ var jobbyStorageMigrator = app.Services.GetRequiredService<IJobbyStorageMigrator
 jobbyStorageMigrator.Migrate();
 ```
 
-Without using Jobby.AspNetCore, the `IJobbyStorageMigrator` service can be obtained from the `JobbyBuilder.GetStorageMigrator` method.
+Without using Jobby.AspNetCore, the `IJobbyStorageMigrator` service can be obtained from the `JobbyBuilder.CreateStorageMigrator` method.
 
 For full examples, refer to the links: [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) and [Jobby.Samples.CliJobsSample](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.CliJobsSample).
 
@@ -249,7 +249,7 @@ public class YourDbContext : DbContext
 // Enqueue via EF  
 var command = new SendEmailCommand { Email = "some@email.com" };  
 var jobEntity = jobbyClient.Factory.Create(command);  
-_dbContext.Jobs.Add(job);  
+_dbContext.Jobs.Add(jobEntity);  
 await _dbContext.SaveChangesAsync();  
 ```
 
@@ -267,7 +267,7 @@ public class RecurrentJobCommand : IJobCommand
 
 public class RecurrentJobHandler : IJobCommandHandler<RecurrentJobCommand>  
 {  
-    public async Task ExecuteAsync(SendEmailCommand command, JobExecutionContext ctx)  
+    public async Task ExecuteAsync(RecurrentJobCommand command, JobExecutionContext ctx)  
     {  
         // Your scheduled task logic  
     }  
@@ -335,13 +335,13 @@ Or defined in the command class by implementing the `IHasDefaultJobOptions` inte
 ```csharp
 class SomeCommand : IJobCommand, IHasDefaultJobOptions
 {
-    public string GetJobName() => "JobName";
+    public static string GetJobName() => "JobName";
 
     // Queue for non-recurrent jobs
     public JobOpts GetOptionsForEnqueuedJob() => new() { QueueName = "special_queue" };
     
     // Queue for recurrent jobs
-    public RecurrentJobOptions GetOptionsForRecurrentJob() => new() { QueueName = "special_queue" };
+    public RecurrentJobOpts GetOptionsForRecurrentJob() => new() { QueueName = "special_queue" };
 }
 ```
 
@@ -501,4 +501,4 @@ builder.Services
     });
 ```
 
-In the [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) example, metric collection with export to stdout is enabled.
+In the [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) example, trace collection with export to stdout is enabled.

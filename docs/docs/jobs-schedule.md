@@ -20,7 +20,7 @@ public class RecurrentJobCommand : IJobCommand
 
 public class RecurrentJobHandler : IJobCommandHandler<RecurrentJobCommand>
 {
-    public async Task ExecuteAsync(SendEmailCommand command, JobExecutionContext ctx)
+    public async Task ExecuteAsync(RecurrentJobCommand command, JobExecutionContext ctx)
     {
         // Your scheduled task code
     }
@@ -44,7 +44,7 @@ await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * * *");
 // You can optionally pass a RecurrentJobOpts structure
 // For example, this creates a scheduled task
 // that first runs in one hour, then every 5 minutes
-await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * *", new RecurrentJobOps
+await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * *", new RecurrentJobOpts
 {
     StartTime = DateTime.UtcNow.AddHours(1)
 });
@@ -78,7 +78,7 @@ var schedule = new TimeSpanSchedule
     // The next execution time
     // will be calculated relative to the previous start time
     // rather than completion time
-    CalculcateNextFromPrev = true
+    CalculateNextFromPrev = true
 };
 await jobbyClient.ScheduleRecurrentAsync(command, schedule);
 ```
@@ -111,13 +111,13 @@ class MySpecialScheduleHandler : BaseScheduleHandler<MySpecialSchedule>
     public override string GetSchedulerTypeName() => "MY_SPECIAL_SCHEDULE";
 
     // Time for first execution
-    public override DateTime GetFirstStartTime(TimeSpanSchedule schedule, DateTime utcNow)
+    public override DateTime GetFirstStartTime(MySpecialSchedule schedule, DateTime utcNow)
     {
         // schedule - object with your schedule parameters
         // utcNow - current UTC time
     }
 
-    public override DateTime GetNextStartTime(TimeSpanSchedule schedule, ScheduleCalculationContext ctx)
+    public override DateTime GetNextStartTime(MySpecialSchedule schedule, ScheduleCalculationContext ctx)
     {
         // schedule - object with your schedule parameters
         // ctx - contains current time and the time the previous execution was scheduled

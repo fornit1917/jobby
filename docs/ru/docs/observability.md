@@ -54,7 +54,7 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
 ```
 
 Вызов `UseTracing` приводит к тому, что каждая фоновая задача выполняется внутри выделенной `Activity` с новым TraceId. Захват TraceId при создании фоновых задач
-на данный момент не поддерживается, но это возможность планируется к добавлению в будущих версиях Jobby.
+на данный момент не поддерживается, но эта возможность планируется к добавлению в будущих версиях Jobby.
 
 Включить экспорт трейсов по джобам Jobby через OpenTelemetry можно следующим образом:
 
@@ -72,5 +72,5 @@ builder.Services
     });
 ```
 
-В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) настроен сбор трейсов с экспортом в stdout при условии
+В примере [Jobby.Samples.AspNet](https://github.com/fornit1917/jobby/tree/master/samples/Jobby.Samples.AspNet) настроен сбор трейсов с экспортом в stdout при условии,
 что флаг `Jobby.UseTracing` из appsettings.json установлен в `true`.

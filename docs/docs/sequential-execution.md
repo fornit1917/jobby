@@ -54,7 +54,7 @@ class UpdateOrderCommand : IJobCommand, IHasDefaultJobOptions
         return new JobOpts
         {
             SerializableGroupId = OrderId
-        }
+        };
     }
 
     public RecurrentJobOpts GetOptionsForRecurrentJob()
@@ -144,7 +144,7 @@ class UpdateOrderCommand : IJobCommand, IHasDefaultJobOptions
             // If the task fails
             // other tasks from the group will not run
             LockGroupIfFailed = true,
-        }
+        };
     }
 
     public RecurrentJobOpts GetOptionsForRecurrentJob()
@@ -189,6 +189,6 @@ AND (
 );
 
 -- Initiate unlocking and unfreezing for a group
-INSERT INTO jobby_unlocking_groups (group_id, created_id)
+INSERT INTO jobby_unlocking_groups (group_id, created_at)
 VALUES (<group id to unlock>, now());
 ```

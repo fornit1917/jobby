@@ -33,7 +33,7 @@ To use multiple queues, you need to specify all of them (including `default`) in
 
 - **QueueName** - The name of the queue. Required parameter.
 - **MaxDegreeOfParallelism** - The maximum degree of parallelism when executing tasks from this queue. Optional parameter, defaults to `JobbyServerSettings.MaxDegreeOfParallelism`. Can be overridden to a lower value.
-- **DisableSerializableGroups** - When set to `false`, this flag disables (for optimization purposes) the sequential execution mechanism within groups for this queue (see [Sequential Execution](./sequential-execution) for details). Default value is `true`. **Important:** when using the value `false`, the library will only work correctly if all tasks in the queue have `SerializableGroupId` = `null`.
+- **DisableSerializableGroups** - When set to `true`, this flag disables (for optimization purposes) the sequential execution mechanism within groups for this queue (see [Sequential Execution](./sequential-execution) for details). Default value is `false`. **Important:** when using the value `true`, the library will only work correctly if all tasks in the queue have `SerializableGroupId` = `null`.
 
 Example configuration:
 
@@ -109,7 +109,7 @@ class MyHeavyCommand : IJobCommand, IHasDefaultJobOptions
         return new JobOpts
         {
             QueueName = "heavy"
-        }
+        };
     }
 
     // All scheduled tasks for MyHeavyCommand
@@ -119,7 +119,7 @@ class MyHeavyCommand : IJobCommand, IHasDefaultJobOptions
         return new RecurrentJobOpts()
         {
             QueueName = "heavy"
-        }
+        };
     }
 }
 ```

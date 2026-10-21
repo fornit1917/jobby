@@ -38,7 +38,7 @@ class SomeCommand : IJobCommand, IHasDefaultJobOptions
     {
         QueueName = "queue_1",
         CanBeRestartedIfServerGoesDown = false
-    }
+    };
 }
 
 // Adding a job to the queue
@@ -47,7 +47,7 @@ var command = new SomeCommand();
 var opts = new JobOpts
 {
     QueueName = "queue_2",
-}
+};
 
 await jobbyClient.EnqueueCommandAsync(command, opts); 
 ```
@@ -69,7 +69,7 @@ var jobs = new List<JobCreationModel>
     
     jobbyClient.Factory
         .Create(new SendEmailCommand { Email = "second@email.com" }),
-}
+};
 
 await jobbyClient.EnqueueBatchAsync(jobs);
 ```
@@ -154,7 +154,7 @@ public class YourDbContext : DbContext
 // Queuing a job via EF
 var command = new SendEmailCommand { Email = "some@email.com" };
 var jobEntity = jobbyClient.Factory.Create(command);
-_dbContext.Jobs.Add(job);
+_dbContext.Jobs.Add(jobEntity);
 await _dbContext.SaveChangesAsync();
 ```
 
