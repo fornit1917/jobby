@@ -56,11 +56,12 @@ internal class PostgresqlPermanentLocksStorage : IPermanentLocksStorage
                             WHERE u.group_id = queue_top.serializable_group_id
                             FOR UPDATE
                         )
-                    FOR UPDATE SKIP LOCKED
                 )
             UPDATE {DbName.Jobs(settings)}
             SET status = {(int)JobStatus.Frozen}
-            WHERE id IN (SELECT id FROM permanent_locked)
+            WHERE 
+                id IN (SELECT id FROM permanent_locked)
+                AND status = {(int)JobStatus.Scheduled}
             RETURNING id, serializable_group_id, job_name;
         ";
 
