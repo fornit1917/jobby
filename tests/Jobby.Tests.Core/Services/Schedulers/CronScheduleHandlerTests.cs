@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Helpers;
+﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Services.Schedulers;
@@ -60,6 +61,26 @@ public class CronScheduleHandlerTests
         
         var expected = CronHelper.GetNext(schedule.CronExpression, ctx.PrevScheduledTime);
         Assert.Equal(expected, startTime);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not a cron")]
+    [InlineData("*/5 * * *")]
+    [InlineData("*/5 * * * * * *")]
+    public void EnsureScheduleIsValid_InvalidCronExpression_Throws(string cronExpression)
+    {
+        var schedule = new CronSchedule { CronExpression = cronExpression };
+
+        Assert.Throws<InvalidScheduleException>(() => _scheduleHandler.EnsureScheduleIsValid(schedule));
+    }
+
+    [Fact]
+    public void EnsureScheduleIsValid_ValidCronExpression_DoesNotThrow()
+    {
+        var schedule = new CronSchedule { CronExpression = "*/5 * * * *" };
+
+        _scheduleHandler.EnsureScheduleIsValid(schedule);
     }
 
     [Fact]

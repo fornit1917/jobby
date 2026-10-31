@@ -11,6 +11,10 @@ public abstract class BaseScheduleHandler<TSchedule> : IScheduleHandler<TSchedul
     public abstract DateTime GetFirstStartTime(TSchedule schedule, DateTime utcNow);
     public abstract DateTime GetNextStartTime(TSchedule schedule, ScheduleCalculationContext ctx);
 
+    public virtual void EnsureScheduleIsValid(TSchedule schedule)
+    {
+    }
+
     public virtual string SerializeSchedule(TSchedule schedule)
     {
         return JsonSerializer.Serialize(schedule);

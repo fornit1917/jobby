@@ -72,8 +72,32 @@ public class TimeSpanScheduleHandlerTests
             PrevScheduledTime = DateTime.UtcNow.AddHours(-1),
             UtcNow = DateTime.UtcNow,
         };
-        
+
         Assert.Throws<InvalidScheduleException>(() => _scheduleHandler.GetNextStartTime(schedule, ctx));
+    }
+
+    [Theory]
+    [InlineData(-1, 0, 0)]
+    [InlineData(0, 0, 0)]
+    public void EnsureScheduleIsValid_NonPositiveInterval_Throws(int hours, int minutes, int seconds)
+    {
+        var schedule = new TimeSpanSchedule
+        {
+            Interval = new TimeSpan(hours, minutes, seconds),
+        };
+
+        Assert.Throws<InvalidScheduleException>(() => _scheduleHandler.EnsureScheduleIsValid(schedule));
+    }
+
+    [Fact]
+    public void EnsureScheduleIsValid_PositiveInterval_DoesNotThrow()
+    {
+        var schedule = new TimeSpanSchedule
+        {
+            Interval = TimeSpan.FromSeconds(1),
+        };
+
+        _scheduleHandler.EnsureScheduleIsValid(schedule);
     }
 
     [Theory]

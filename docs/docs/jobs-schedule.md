@@ -104,6 +104,8 @@ Then, for your schedule, you need to implement a handler class that inherits fro
 - **GetFirstStartTime** - Returns the UTC time for the first task execution (called when creating the task)
 - **GetNextStartTime** - Returns the UTC time for the next task execution (called after each task execution)
 
+There is also an optional `EnsureScheduleIsValid` method that checks the schedule for validity: it is called when a task is being created and should throw an exception (for example, the built-in `InvalidScheduleException`) if the schedule is invalid. Override it to fail task creation early instead of leaving an invalid schedule undetected until runtime. The base implementation does nothing.
+
 ```csharp
 class MySpecialScheduleHandler : BaseScheduleHandler<MySpecialSchedule>
 {
