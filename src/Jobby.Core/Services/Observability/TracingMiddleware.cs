@@ -14,6 +14,24 @@ internal class TracingMiddleware : IJobbyMiddleware
     {
         using var activity = JobbyActivitySource.StartActivity("JobExecution");
         activity?.SetTag("job_name", ctx.JobName);
-        await handler.ExecuteAsync(command, ctx);
+        try
+        {
+            await handler.ExecuteAsync(command, ctx);
+        }
+        catch (Exception e)
+        {
+            if (activity != null)
+            {
+                activity.SetStatus(ActivityStatusCode.Error, e.Message);
+                // Activity.AddException appeared only in .NET 9, add the exception event manually by OTel conventions
+                activity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection
+                {
+                    ["exception.type"] = e.GetType().FullName,
+                    ["exception.message"] = e.Message,
+                    ["exception.stacktrace"] = e.ToString(),
+                }));
+            }
+            throw;
+        }
     }
 }
