@@ -14,6 +14,20 @@ public class ReflectionHelperTests
     }
 
     [Fact]
+    public void TryGetJobNameByType_ExplicitInterfaceImplementation_ReturnsJobName()
+    {
+        var jobName = ReflectionHelper.TryGetJobNameByType(typeof(ExplicitImplJobCommand));
+        Assert.Equal("ExplicitImplJob", jobName);
+    }
+
+    [Fact]
+    public void TryGetJobNameByType_MultipleExplicitImplementations_ReturnsJobCommandImplementation()
+    {
+        var jobName = ReflectionHelper.TryGetJobNameByType(typeof(MultipleExplicitImplsCommand));
+        Assert.Equal("MultipleExplicitImplsJob", jobName);
+    }
+
+    [Fact]
     public void TryGetJobNameByType_NotJobCommand_ReturnsNull()
     {
         var jobName = ReflectionHelper.TryGetJobNameByType(typeof(string));
@@ -53,6 +67,22 @@ public class ReflectionHelperTests
     private class TestJobCommand : IJobCommand
     {
         public static string GetJobName() => "TestJob";
+    }
+
+    private class ExplicitImplJobCommand : IJobCommand
+    {
+        static string IJobCommand.GetJobName() => "ExplicitImplJob";
+    }
+
+    private interface IOtherNamedCommand
+    {
+        static abstract string GetJobName();
+    }
+
+    private class MultipleExplicitImplsCommand : IJobCommand, IOtherNamedCommand
+    {
+        static string IJobCommand.GetJobName() => "MultipleExplicitImplsJob";
+        static string IOtherNamedCommand.GetJobName() => "OtherJob";
     }
 
     private class FirstTestJobCommand : IJobCommand

@@ -270,7 +270,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         var commandTypesByJobName = new Dictionary<string, Type>();
         var handlerImplTypesByCommandType = new Dictionary<Type, Type>();
 
-        var notAbstractTypes = assemblies.SelectMany(a => a.GetTypes()).Where(a => !a.IsAbstract);
+        var notAbstractTypes = assemblies.SelectMany(GetAssemblyTypes).Where(a => !a.IsAbstract);
 
         foreach (var t in notAbstractTypes)
         {
@@ -318,6 +318,21 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         }
 
         return this;
+    }
+
+    private static IEnumerable<Type> GetAssemblyTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException e)
+        {
+            var loaderErrors = string.Join(Environment.NewLine, e.LoaderExceptions.Select(x => x?.Message));
+            var error = $"Could not load types from assembly {assembly.FullName}. Make sure all dependencies of the scanned assembly are available to the application."
+                        + Environment.NewLine + loaderErrors;
+            throw new InvalidJobsConfigException(error);
+        }
     }
 
     public IJobbyComponentsConfigurable ConfigurePipeline(Action<IPipelineConfigurable> configure)
