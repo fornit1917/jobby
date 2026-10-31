@@ -18,25 +18,20 @@ internal static class ReflectionHelper
         return getJobNameMethod?.Invoke(null, null) as string;
     }
 
-    public static Type? TryGetCommandTypeFromHandlerType(Type t)
+    public static IReadOnlyList<Type> TryGetCommandTypesFromHandlerType(Type t)
     {
         if (t.IsAbstract)
         {
-            return null;
+            return Array.Empty<Type>();
         }
 
-        for (var typeToCheck = t;  typeToCheck != null; typeToCheck = typeToCheck.BaseType)
-        {
-            var handlerInterface = typeToCheck
-                .GetInterfaces()
-                .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IJobCommandHandler<>));
-
-            if (handlerInterface != null)
-            {
-                return handlerInterface.GetGenericArguments().First();
-            }
-        }
-
-        return null;
+        // Type.GetInterfaces() returns the full interface closure including interfaces
+        // inherited from base classes, so a single scan is enough.
+        // A handler class may implement IJobCommandHandler<> for several commands - return all of them.
+        return t.GetInterfaces()
+            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IJobCommandHandler<>))
+            .Select(x => x.GetGenericArguments()[0])
+            .Distinct()
+            .ToArray();
     }
 }

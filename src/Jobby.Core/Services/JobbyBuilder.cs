@@ -284,8 +284,8 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
                 }
             }
 
-            var commandFromHandler = ReflectionHelper.TryGetCommandTypeFromHandlerType(t);
-            if (commandFromHandler != null)
+            var commandsFromHandler = ReflectionHelper.TryGetCommandTypesFromHandlerType(t);
+            foreach (var commandFromHandler in commandsFromHandler)
             {
                 if (!handlerImplTypesByCommandType.TryAdd(commandFromHandler, t))
                 {
