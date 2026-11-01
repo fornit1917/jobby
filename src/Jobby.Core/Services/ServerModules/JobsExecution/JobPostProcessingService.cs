@@ -110,7 +110,7 @@ internal class JobPostProcessingService : IJobPostProcessingService
         TimeSpan? retryInterval = retryPolicy.GetIntervalForNextAttempt(job);
         if (retryInterval.HasValue)
         {
-            var scheduledStartTime = DateTime.UtcNow.Add(retryInterval.Value);
+            var scheduledStartTime = _timerService.GetUtcNow().Add(retryInterval.Value);
             return _storage.RescheduleProcessingJobAsync(job, scheduledStartTime, error);
         }
         else

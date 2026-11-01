@@ -5,37 +5,22 @@ using Jobby.Core.Interfaces.HandlerPipeline;
 
 namespace Jobby.Core.Services.HandlerPipeline;
 
-internal class PipelineBuilder : IPipelineConfigurable, IPipelineBuilder
+internal class PipelineBuilder : IPipelineBuilder
 {
     /// <summary>
     /// Middlewares added by user
     /// </summary>
-    private readonly List<MiddlewareDefinition> _userMiddlewares = new();
+    private readonly IReadOnlyList<MiddlewareDefinition> _userMiddlewares;
 
     /// <summary>
     /// System middlewares (metrics, tracing)
     /// </summary>
-    private readonly List<MiddlewareDefinition> _systemOuterMiddlewares = new();
+    private readonly IReadOnlyList<MiddlewareDefinition> _systemOuterMiddlewares;
 
-    public IPipelineConfigurable Use(IJobbyMiddleware middleware)
+    public PipelineBuilder(IReadOnlyList<MiddlewareDefinition> userMiddlewares, IReadOnlyList<MiddlewareDefinition> systemOuterMiddlewares)
     {
-        _userMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = middleware });
-        return this;
-    }
-
-    public IPipelineConfigurable Use<TMiddleware>() where TMiddleware : IJobbyMiddleware
-    {
-        _userMiddlewares.Add(new MiddlewareDefinition { MiddlewareType = typeof(TMiddleware) });
-        return this;
-    }
-
-    /// <summary>
-    /// Internal method for add middlewares which should wrap middlewares added by user
-    /// </summary>
-    /// <param name="middleware"></param>
-    internal void UseAsOuter(IJobbyMiddleware middleware)
-    {
-        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = middleware });
+        _userMiddlewares = userMiddlewares;
+        _systemOuterMiddlewares = systemOuterMiddlewares;
     }
 
     public IJobCommandHandler<TCommand> Build<TCommand>(IJobCommandHandler<TCommand> innerHandler, IJobExecutionScope scope) 

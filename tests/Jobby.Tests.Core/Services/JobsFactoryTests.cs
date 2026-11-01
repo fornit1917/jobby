@@ -1,4 +1,5 @@
-﻿using Jobby.Core.Helpers;
+﻿using Jobby.Core.Exceptions;
+using Jobby.Core.Helpers;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Models;
@@ -370,6 +371,41 @@ public class JobsFactoryTests
         Assert.True(job.CanBeRestarted);
     }
     
+    [Fact]
+    public void CreateRecurrent_InvalidCron_Throws()
+    {
+        var command = new TestJobCommand();
+
+        Assert.Throws<InvalidScheduleException>(() => GetFactory().CreateRecurrent(command, "not a cron"));
+    }
+
+    [Fact]
+    public void CreateRecurrent_InvalidCronWithStartTime_Throws()
+    {
+        var command = new TestJobCommand();
+        var opts = new RecurrentJobOpts { StartTime = DateTime.UtcNow.AddHours(1) };
+
+        Assert.Throws<InvalidScheduleException>(() => GetFactory().CreateRecurrent(command, "not a cron", opts));
+    }
+
+    [Fact]
+    public void CreateRecurrent_ZeroInterval_Throws()
+    {
+        var command = new TestJobCommand();
+        var schedule = new TimeSpanSchedule { Interval = TimeSpan.Zero };
+
+        Assert.Throws<InvalidScheduleException>(() => GetFactory().CreateRecurrent(command, schedule));
+    }
+
+    [Fact]
+    public void CreateRecurrent_NegativeInterval_Throws()
+    {
+        var command = new TestJobCommand();
+        var schedule = new TimeSpanSchedule { Interval = TimeSpan.FromMinutes(-1) };
+
+        Assert.Throws<InvalidScheduleException>(() => GetFactory().CreateRecurrent(command, schedule));
+    }
+
     private JobsFactory GetFactory(string? defaultRecurrentQueue = null)
     {
         var schedulers = new SchedulersRegistryBuilder()

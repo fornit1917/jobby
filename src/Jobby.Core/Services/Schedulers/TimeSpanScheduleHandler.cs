@@ -14,18 +14,18 @@ internal class TimeSpanScheduleHandler : BaseScheduleHandler<TimeSpanSchedule>
 
     public override DateTime GetNextStartTime(TimeSpanSchedule schedule, ScheduleCalculationContext ctx)
     {
-        EnsureIntervalNotNegative(schedule);
+        EnsureScheduleIsValid(schedule);
         return schedule.CalculateNextFromPrev
             ? ctx.PrevScheduledTime.Add(schedule.Interval)
             : ctx.UtcNow.Add(schedule.Interval);
     }
 
-    private void EnsureIntervalNotNegative(TimeSpanSchedule schedule)
+    public override void EnsureScheduleIsValid(TimeSpanSchedule schedule)
     {
-        if (schedule.Interval < TimeSpan.Zero)
+        if (schedule.Interval <= TimeSpan.Zero)
         {
             throw new InvalidScheduleException(
-                $"Interval for TimeSpanSchedule can not be negative, but '{schedule}' is");
+                $"Interval for TimeSpanSchedule must be positive, but '{schedule.Interval}'");
         }
     }
 }

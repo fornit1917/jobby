@@ -26,7 +26,7 @@ internal class JobbyHostedService : IHostedService
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
             }
-            catch (OperationCanceledException e)
+            catch (OperationCanceledException)
             {
             }
         }

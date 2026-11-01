@@ -46,14 +46,12 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     private MetricsMiddleware? _metricsMiddleware;
     private TracingMiddleware? _tracingMiddleware;
-    private readonly PipelineBuilder _pipelineBuilder = new();
+    private readonly PipelineBuilderConfiguration _pipelineBuilderConfiguration = new();
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
     private readonly Dictionary<string, RetryPolicy> _retryPolicyByJobName = new();
-    private IRetryPolicyService? _retryPolicyService;
 
     private readonly Dictionary<string, IJobExecutor> _jobExecutorsByJobName = new();
-    private IJobsRegistry? _jobsRegistry;
 
     private JobbyServerSettings _serverSettings = new();
 
@@ -82,16 +80,17 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             throw new InvalidBuilderConfigException("ExecutionScopeFactory is not specified");
         }
         
-        _retryPolicyService ??= new RetryPolicyService(_defaultRetryPolicy, _retryPolicyByJobName);
-        _jobsRegistry ??= new JobsRegistry(_jobExecutorsByJobName.ToFrozenDictionary());
+        var retryPolicyService = new RetryPolicyService(_defaultRetryPolicy, _retryPolicyByJobName);
+        var jobsRegistry = new JobsRegistry(_jobExecutorsByJobName.ToFrozenDictionary());
 
+        _pipelineBuilderConfiguration.ClearSystemOuterMiddlewares();
         if (_metricsMiddleware != null)
         {
-            _pipelineBuilder.UseAsOuter(_metricsMiddleware);
+            _pipelineBuilderConfiguration.UseAsOuter(_metricsMiddleware);
         }
         if (_tracingMiddleware != null)
         {
-            _pipelineBuilder.UseAsOuter(_tracingMiddleware);
+            _pipelineBuilderConfiguration.UseAsOuter(_tracingMiddleware);
         }
 
         var storage = GetStorage();
@@ -110,10 +109,10 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             LoggerFactory.CreateLogger<JobPostProcessingService>());
 
         var executionService = new JobExecutionService(_scopeFactory,
-            _jobsRegistry,
-            _retryPolicyService,
+            jobsRegistry,
+            retryPolicyService,
             Serializer,
-            _pipelineBuilder,
+            _pipelineBuilderConfiguration.CreatePipelineBuilder(),
             postProcessingService,
             LoggerFactory.CreateLogger<JobExecutionService>());
         
@@ -271,7 +270,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         var commandTypesByJobName = new Dictionary<string, Type>();
         var handlerImplTypesByCommandType = new Dictionary<Type, Type>();
 
-        var notAbstractTypes = assemblies.SelectMany(a => a.GetTypes()).Where(a => !a.IsAbstract);
+        var notAbstractTypes = assemblies.SelectMany(GetAssemblyTypes).Where(a => !a.IsAbstract);
 
         foreach (var t in notAbstractTypes)
         {
@@ -285,8 +284,8 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
                 }
             }
 
-            var commandFromHandler = ReflectionHelper.TryGetCommandTypeFromHandlerType(t);
-            if (commandFromHandler != null)
+            var commandsFromHandler = ReflectionHelper.TryGetCommandTypesFromHandlerType(t);
+            foreach (var commandFromHandler in commandsFromHandler)
             {
                 if (!handlerImplTypesByCommandType.TryAdd(commandFromHandler, t))
                 {
@@ -321,9 +320,24 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         return this;
     }
 
+    private static IEnumerable<Type> GetAssemblyTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException e)
+        {
+            var loaderErrors = string.Join(Environment.NewLine, e.LoaderExceptions.Select(x => x?.Message));
+            var error = $"Could not load types from assembly {assembly.FullName}. Make sure all dependencies of the scanned assembly are available to the application."
+                        + Environment.NewLine + loaderErrors;
+            throw new InvalidJobsConfigException(error);
+        }
+    }
+
     public IJobbyComponentsConfigurable ConfigurePipeline(Action<IPipelineConfigurable> configure)
     {
-        configure(_pipelineBuilder);
+        configure(_pipelineBuilderConfiguration);
         return this;
     }
 
