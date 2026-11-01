@@ -36,6 +36,15 @@ docker compose -f docker-compose.postgresql.yml up -d
 
 Connection settings: host `localhost`, port `5432`, user `jobby`, password `jobby`, database `jobby_tests_db`.
 
+## Regression Testing
+
+A manual regression suite for the library (26 scenarios: jobs, queues, groups, sequences,
+recurrent jobs, retry, heartbeat, fault tolerance, metrics, tracing, freezing) lives in
+`.claude/skills/regression-testing/SKILL.md`. When asked to run regression
+testing / регрессионное тестирование, read and follow `SKILL.md` exactly: it runs a disposable
+copy of `samples/Jobby.Samples.AspNet` against PostgreSQL in docker and never modifies
+anything outside `temp/`.
+
 CI (`.github/workflows/dotnet.yml`) builds on .NET 8.0.x, starts the compose file above and runs `dotnet test --no-build`.
 
 ### Documentation
