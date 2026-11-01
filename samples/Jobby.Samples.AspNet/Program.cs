@@ -34,7 +34,7 @@ public static class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
+        var connectionString = "Host=localhost;Username=jobby;Password=jobby;Database=jobby_tests_db;GSS Encryption Mode=Disable";
         builder.Services.AddSingleton<NpgsqlDataSource>(NpgsqlDataSource.Create(connectionString));
 
         builder.Services.AddDbContext<JobbySampleDbContext>((sp, opts) =>
@@ -62,7 +62,8 @@ public static class Program
                         TakeToProcessingBatchSize = 10,
                         Queues = [
                             new QueueSettings { QueueName = QueueSettings.DefaultQueueName },
-                            new QueueSettings { QueueName = recurrentJobsQueueName }
+                            new QueueSettings { QueueName = recurrentJobsQueueName },
+                            new QueueSettings { QueueName = "heavy", MaxDegreeOfParallelism = 1 }
                         ]
                     })
                     .UseDefaultRetryPolicy(new RetryPolicy

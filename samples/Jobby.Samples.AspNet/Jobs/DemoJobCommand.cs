@@ -10,6 +10,7 @@ namespace Jobby.Samples.AspNet.Jobs
         public bool ShouldThrowIgnoredException { get; init; } = false;
         public DateTime? StartAfter { get; init; }
         public int DelayMs { get; init; }
+        public string? QueueName { get; init; }
         public string? SerializableGroupId { get; init; }
         public bool LockGroupIfFailed { get; init; } = false;
 
@@ -18,6 +19,7 @@ namespace Jobby.Samples.AspNet.Jobs
         public JobOpts GetOptionsForEnqueuedJob() => new JobOpts
         {
             StartTime = StartAfter,
+            QueueName = QueueName,
             SerializableGroupId = SerializableGroupId,
             LockGroupIfFailed = LockGroupIfFailed,
         };
