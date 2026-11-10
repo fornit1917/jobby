@@ -3,7 +3,11 @@ using System.Reflection.Emit;
 using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
 using Jobby.Core.Services;
+using Jobby.TestsUtils;
+using Jobby.TestsUtils.Jobs;
+using Moq;
 
 namespace Jobby.Tests.Core.Services;
 
@@ -67,6 +71,104 @@ public class JobbyBuilderTests
 
         var exception = Assert.Throws<InvalidJobsConfigException>(() => builder.AddJobsFromAssemblies(assembly));
         Assert.Contains("Each job command must have single handler", exception.Message);
+    }
+
+    [Fact]
+    public void CreateJobbyServer_WithoutExecutionScopeFactory_ThrowsInvalidBuilderConfigException()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseStorage(new Mock<IJobbyStorage>().Object);
+
+        var exception = Assert.Throws<InvalidBuilderConfigException>(() => builder.CreateJobbyServer());
+        Assert.Contains("ExecutionScopeFactory is not specified", exception.Message);
+    }
+
+    [Fact]
+    public void CreateJobbyServer_WithoutStorage_ThrowsInvalidBuilderConfigException()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseExecutionScopeFactory(new TestJobbyExecutionScopeFactory(new ExecutedCommandsList()));
+
+        var exception = Assert.Throws<InvalidBuilderConfigException>(() => builder.CreateJobbyServer());
+        Assert.Contains("Storage is not specified", exception.Message);
+    }
+
+    [Fact]
+    public void CreateJobbyServer_WithoutPermanentLocksStorage_ThrowsInvalidBuilderConfigException()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseExecutionScopeFactory(new TestJobbyExecutionScopeFactory(new ExecutedCommandsList()));
+        builder.UseStorage(new Mock<IJobbyStorage>().Object);
+
+        var exception = Assert.Throws<InvalidBuilderConfigException>(() => builder.CreateJobbyServer());
+        Assert.Contains("PermanentLocksStorage is not specified", exception.Message);
+    }
+
+    [Fact]
+    public void CreateJobbyServer_WithAllComponents_CreatesServerTwiceWithoutErrors()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseExecutionScopeFactory(new TestJobbyExecutionScopeFactory(new ExecutedCommandsList()));
+        builder.UseStorage(new Mock<IJobbyStorage>().Object);
+        builder.UsePermanentLocksStorage(_ => new Mock<IPermanentLocksStorage>().Object);
+        // system outer middlewares are re-registered on every CreateJobbyServer call
+        builder.UseMetrics();
+        builder.UseTracing();
+
+        var server1 = builder.CreateJobbyServer();
+        var server2 = builder.CreateJobbyServer();
+
+        Assert.NotNull(server1);
+        Assert.NotNull(server2);
+        Assert.NotSame(server1, server2);
+    }
+
+    [Fact]
+    public void CreateJobbyClient_WithoutStorage_ThrowsInvalidBuilderConfigException()
+    {
+        var builder = new JobbyBuilder();
+
+        Assert.Throws<InvalidBuilderConfigException>(() => builder.CreateJobbyClient());
+    }
+
+    [Fact]
+    public void AddJob_DuplicateJobName_ThrowsInvalidJobsConfigException()
+    {
+        var builder = new JobbyBuilder();
+
+        builder.AddJob<TestJobCommand, TestJobCommandHandler>();
+
+        var exception = Assert.Throws<InvalidJobsConfigException>(
+            () => builder.AddJob<TestJobCommand, TestJobCommandHandler>());
+        Assert.Contains("has already been added", exception.Message);
+    }
+
+    [Fact]
+    public void AddJobsFromAssemblies_JobWithSameNameAlreadyAddedViaAddJob_Throws()
+    {
+        var assembly = BuildTempJobsAssembly(asm =>
+        {
+            var command = DefineCommand(asm, "TestJobCommand", "TestJob");
+            DefineHandler(asm, "TestJobHandler", command);
+        });
+        var builder = new JobbyBuilder();
+        builder.AddJob<TestJobCommand, TestJobCommandHandler>();
+
+        // AddJobsFromAssemblies uses Dictionary.Add, which throws on duplicate job name.
+        // Pins the current (arguably rough) behaviour: not a friendly InvalidJobsConfigException
+        var exception = Assert.Throws<ArgumentException>(() => builder.AddJobsFromAssemblies(assembly));
+        Assert.Contains("TestJob", exception.Message);
+    }
+
+    [Fact]
+    public void AddOrReplaceJob_DuplicateJobName_ReplacesWithoutThrow()
+    {
+        var builder = new JobbyBuilder();
+
+        builder.AddJob<TestJobCommand, TestJobCommandHandler>();
+        builder.AddOrReplaceJob<TestJobCommand, TestJobCommandHandler>();
+
+        Assert.Single(builder.AddedJobTypes);
     }
 
     private static void AssertJobAdded(JobbyBuilder builder, string commandTypeName)

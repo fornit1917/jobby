@@ -120,8 +120,57 @@ public class PipelineBuilderTests
     public void MiddlewareWithoutInstanceAndType_ThrowsInvalidMiddlewaresConfigException()
     {
         _userMiddlewares.Add(new MiddlewareDefinition());
-        
+
         Assert.Throws<InvalidMiddlewaresConfigException>(
             () => CreateBuilder().Build(_handler, _scopeMock.Object));
+    }
+
+    [Fact]
+    public async Task NoUserMiddlewares_TwoSystemMiddlewares_EachAppliedOnceInCorrectOrder()
+    {
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = new FirstMiddleware() });
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = new SecondMiddleware() });
+
+        var pipeline = CreateBuilder().Build(_handler, _scopeMock.Object);
+        await pipeline.ExecuteAsync(_command, CreateContext());
+
+        Assert.Equal(_command, _handler.PassedCommand);
+        // Current behaviour: without user middlewares the first system middleware
+        // wraps the handler directly, the rest wrap around it in list order,
+        // so the last listed system middleware ends up outermost
+        Assert.Equal(["before 2", "before 1", "inner", "after 1", "after 2"], _command.Traces);
+    }
+
+    [Fact]
+    public async Task NoUserMiddlewares_ThreeSystemMiddlewares_EachAppliedOnceInCorrectOrder()
+    {
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = new FirstMiddleware() });
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = new SecondMiddleware() });
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = new ThirdMiddleware() });
+
+        var pipeline = CreateBuilder().Build(_handler, _scopeMock.Object);
+        await pipeline.ExecuteAsync(_command, CreateContext());
+
+        Assert.Equal(_command, _handler.PassedCommand);
+        Assert.Equal(
+        [
+            "before 3", "before 2", "before 1",
+            "inner",
+            "after 1", "after 2", "after 3"
+        ], _command.Traces);
+    }
+
+    [Fact]
+    public async Task NoMiddlewaresExceptOneSystemFirst_BuildsCorrectPipeline()
+    {
+        // Guards the fragile `i = userMiddlewares.Count > 0 ? 0 : 1` index:
+        // with a single system middleware it must not be skipped
+        _systemOuterMiddlewares.Add(new MiddlewareDefinition { MiddlewareInstance = new SecondMiddleware() });
+
+        var pipeline = CreateBuilder().Build(_handler, _scopeMock.Object);
+        await pipeline.ExecuteAsync(_command, CreateContext());
+
+        Assert.Equal(_command, _handler.PassedCommand);
+        Assert.Equal(["before 2", "inner", "after 2"], _command.Traces);
     }
 }

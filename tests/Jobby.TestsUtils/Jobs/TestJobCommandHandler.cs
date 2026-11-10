@@ -26,7 +26,24 @@ public class TestJobCommandHandler : IJobCommandHandler<TestJobCommand>
         LatestExecutionContext = ctx;
 
         _executedCommands?.Add(command);
-        await Task.Delay(0);
+
+        if (command.DelayMs > 0)
+        {
+            SlowJobTracker.Enter();
+            try
+            {
+                await Task.Delay(command.DelayMs);
+            }
+            finally
+            {
+                SlowJobTracker.Exit();
+            }
+        }
+        else
+        {
+            await Task.Delay(0);
+        }
+
         if (command.ExceptionToThrow != null)
         {
             throw command.ExceptionToThrow;

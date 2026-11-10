@@ -64,3 +64,23 @@ internal class SecondMiddleware : IJobbyMiddleware
         }
     }
 }
+
+internal class ThirdMiddleware : IJobbyMiddleware
+{
+    public async Task ExecuteAsync<TCommand>(TCommand command, JobExecutionContext ctx, IJobCommandHandler<TCommand> handler)
+        where TCommand : IJobCommand
+    {
+        var testCommand = command as MwTestCommand;
+        if (testCommand != null)
+        {
+            testCommand.Traces.Add("before 3");
+        }
+
+        await handler.ExecuteAsync(command, ctx);
+
+        if (testCommand != null)
+        {
+            testCommand.Traces.Add("after 3");
+        }
+    }
+}

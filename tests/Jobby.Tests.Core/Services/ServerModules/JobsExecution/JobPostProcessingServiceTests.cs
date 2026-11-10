@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Schedulers;
 using Jobby.Core.Interfaces.ServerModules.JobsExecution;
@@ -127,7 +128,7 @@ public class JobPostProcessingServiceTests
         };
         _schedulerMock
             .Setup(x => x.GetNextStartTime(
-                It.Is<CronSchedule>(c => c.CronExpression == job.Schedule), 
+                It.Is<CronSchedule>(c => c.CronExpression == job.Schedule),
                 expectedCtx))
             .Returns(expectedNextTime);
 
@@ -135,6 +136,88 @@ public class JobPostProcessingServiceTests
 
         _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, expectedNextTime, error), Times.Once());
         Assert.True(_postProcessingService.IsRetryQueueEmpty);
+    }
+
+    [Fact]
+    public async Task RescheduleRecurrent_NullSchedulerType_UsesCronScheduler()
+    {
+        var job = new JobExecutionModel
+        {
+            Id = Guid.NewGuid(),
+            Schedule = "0 3 1 12 *",
+            SchedulerType = null,
+        };
+        var utcNow = DateTime.UtcNow;
+        _timerServiceMock.Setup(x => x.GetUtcNow()).Returns(utcNow);
+        var expectedNextTime = DateTime.UtcNow.AddMinutes(42);
+        SchedulerFunction cronSchedulerFunction =
+            (_, _) => expectedNextTime;
+        _schedulersRegistryMock
+            .Setup(x => x.GetSchedulerAsFunction(CronScheduleHandler.Name))
+            .Returns(cronSchedulerFunction);
+
+        await _postProcessingService.RescheduleRecurrent(job);
+
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, expectedNextTime, null), Times.Once());
+        Assert.True(_postProcessingService.IsRetryQueueEmpty);
+    }
+
+    [Fact]
+    public async Task RescheduleRecurrent_UnknownSchedulerType_FallsBackToNowPlusOneMinuteAndLogsError()
+    {
+        var job = new JobExecutionModel
+        {
+            Id = Guid.NewGuid(),
+            Schedule = "0 3 1 12 *",
+            SchedulerType = "unknown-scheduler",
+        };
+        var utcNow = DateTime.UtcNow;
+        _timerServiceMock.Setup(x => x.GetUtcNow()).Returns(utcNow);
+        _schedulersRegistryMock
+            .Setup(x => x.GetSchedulerAsFunction("unknown-scheduler"))
+            .Returns((SchedulerFunction?)null);
+
+        await _postProcessingService.RescheduleRecurrent(job);
+
+        var expectedFallbackTime = utcNow.AddMinutes(1);
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, expectedFallbackTime, null), Times.Once());
+        VerifyLoggedError(Times.Once());
+        Assert.True(_postProcessingService.IsRetryQueueEmpty);
+    }
+
+    [Fact]
+    public async Task RescheduleRecurrent_SchedulerThrows_FallsBackToNowPlusOneMinuteAndLogsError()
+    {
+        var job = new JobExecutionModel
+        {
+            Id = Guid.NewGuid(),
+            Schedule = "not a valid schedule",
+            SchedulerType = SchedulerType,
+        };
+        var utcNow = DateTime.UtcNow;
+        _timerServiceMock.Setup(x => x.GetUtcNow()).Returns(utcNow);
+        _schedulerMock
+            .Setup(x => x.GetNextStartTime(It.IsAny<CronSchedule>(), It.IsAny<ScheduleCalculationContext>()))
+            .Throws(new InvalidScheduleException("bad schedule"));
+
+        await _postProcessingService.RescheduleRecurrent(job);
+
+        var expectedFallbackTime = utcNow.AddMinutes(1);
+        _storageMock.Verify(x => x.RescheduleProcessingJobAsync(job, expectedFallbackTime, null), Times.Once());
+        VerifyLoggedError(Times.Once());
+        Assert.True(_postProcessingService.IsRetryQueueEmpty);
+    }
+
+    private void VerifyLoggedError(Times times)
+    {
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((_, _) => true),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            times);
     }
 
     [Fact]
