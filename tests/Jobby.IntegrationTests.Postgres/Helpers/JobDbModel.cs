@@ -63,6 +63,12 @@ internal class JobDbModel
     [Column("scheduler_type")]
     public string? SchedulerType { get; set; }
 
+    [Column("traceparent")]
+    public string? Traceparent { get; set; }
+
+    [Column("tracing_mode")]
+    public JobbyTracingMode TracingMode { get; set; }
+
     public JobExecutionModel ToJobExecutionModel()
     {
         return new JobExecutionModel
@@ -74,6 +80,8 @@ internal class JobDbModel
             JobName = JobName,
             JobParam = JobParam,
             StartedCount = StartedCount,
+            Traceparent = Traceparent,
+            TracingMode = TracingMode,
         };
     }
 }

@@ -26,6 +26,8 @@ public class TakeBatchToProcessingTests
             Status = JobStatus.Scheduled,
             ScheduledStartAt = DateTime.UtcNow.AddMinutes(-10),
             QueueName = QueueSettings.DefaultQueueName,
+            Traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            TracingMode = JobbyTracingMode.RestoreTraceId,
         };
         var secondExpected = new JobDbModel
         {
@@ -330,6 +332,8 @@ public class TakeBatchToProcessingTests
         Assert.Equal(createdJob.StartedCount + 1, takenJob.StartedCount);
         Assert.Equal(createdJob.NextJobId, takenJob.NextJobId);
         Assert.Equal(createdJob.SchedulerType, takenJob.SchedulerType);
+        Assert.Equal(createdJob.Traceparent, takenJob.Traceparent);
+        Assert.Equal(createdJob.TracingMode, takenJob.TracingMode);
         Assert.Equal(serverId, takenJob.ServerId);
     }
 

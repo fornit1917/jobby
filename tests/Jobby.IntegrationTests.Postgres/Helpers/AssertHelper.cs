@@ -25,8 +25,11 @@ internal static class AssertHelper
         Assert.Equal(expected.LockGroupIfFailed, actual.LockGroupIfFailed);
         Assert.Equal(expected.IsExclusive, actual.IsExclusive);
         Assert.Equal(expected.SchedulerType, actual.SchedulerType);
-    }    
-    
+        Assert.Equal(expected.Traceparent, actual.Traceparent);
+        Assert.Equal(expected.TracingMode, actual.TracingMode);
+    }
+
+
     public static void AssertCreatedJobExceptId(JobCreationModel expected, JobDbModel actual)
     {
         Assert.Equal(expected.Schedule, actual.Schedule);
@@ -47,6 +50,8 @@ internal static class AssertHelper
         Assert.Equal(expected.LockGroupIfFailed, actual.LockGroupIfFailed);
         Assert.Equal(expected.IsExclusive, actual.IsExclusive);
         Assert.Equal(expected.SchedulerType, actual.SchedulerType);
+        Assert.Equal(expected.Traceparent, actual.Traceparent);
+        Assert.Equal(expected.TracingMode, actual.TracingMode);
     }
 
     public static void AssertCreatedJobExceptIdAndStartTime(JobCreationModel expected, JobDbModel actual)
@@ -68,5 +73,7 @@ internal static class AssertHelper
         Assert.Equal(expected.LockGroupIfFailed, actual.LockGroupIfFailed);
         Assert.Equal(expected.IsExclusive, actual.IsExclusive);
         Assert.Equal(expected.SchedulerType, actual.SchedulerType);
+        Assert.Equal(expected.Traceparent, actual.Traceparent);
+        Assert.Equal(expected.TracingMode, actual.TracingMode);
     }
 }

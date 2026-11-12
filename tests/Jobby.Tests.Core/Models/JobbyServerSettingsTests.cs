@@ -62,7 +62,7 @@ public class JobbyServerSettingsTests
 
     [Theory]
     [MemberData(nameof(NumericProperties))]
-    public void NumericProperty_Zero_ThrowsArgumentException(string propertyName, Func<int, JobbyServerSettings> create, Func<JobbyServerSettings, int> get)
+    public void NumericProperty_Zero_ThrowsArgumentException(string propertyName, Func<int, JobbyServerSettings> create, Func<JobbyServerSettings, int> _)
     {
         var exception = Assert.Throws<ArgumentException>(() => create(0));
         Assert.Contains(propertyName, exception.Message);
@@ -70,7 +70,7 @@ public class JobbyServerSettingsTests
 
     [Theory]
     [MemberData(nameof(NumericProperties))]
-    public void NumericProperty_Negative_ThrowsArgumentException(string propertyName, Func<int, JobbyServerSettings> create, Func<JobbyServerSettings, int> get)
+    public void NumericProperty_Negative_ThrowsArgumentException(string propertyName, Func<int, JobbyServerSettings> create, Func<JobbyServerSettings, int> _)
     {
         var exception = Assert.Throws<ArgumentException>(() => create(-5));
         Assert.Contains(propertyName, exception.Message);
@@ -78,7 +78,7 @@ public class JobbyServerSettingsTests
 
     [Theory]
     [MemberData(nameof(NumericProperties))]
-    public void NumericProperty_PositiveValue_AcceptedAndStored(string propertyName, Func<int, JobbyServerSettings> create, Func<JobbyServerSettings, int> get)
+    public void NumericProperty_PositiveValue_AcceptedAndStored(string _, Func<int, JobbyServerSettings> create, Func<JobbyServerSettings, int> get)
     {
         var settings = create(7);
 

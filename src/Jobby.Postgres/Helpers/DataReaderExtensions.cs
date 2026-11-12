@@ -29,6 +29,8 @@ internal static class DataReaderExtensions
             ServerId =  reader.GetString(reader.GetOrdinal("server_id")),
             ScheduledStartAt = reader.GetDateTime(reader.GetOrdinal("scheduled_start_at")),
             SchedulerType = reader.GetNullableString("scheduler_type"),
+            Traceparent = reader.GetNullableString("traceparent"),
+            TracingMode = reader.GetTracingMode("tracing_mode"),
         };
         return job;
     }
@@ -54,6 +56,19 @@ internal static class DataReaderExtensions
             ServerId = reader.GetString(reader.GetOrdinal("server_id"))
         };
         return job;
+    }
+
+    /// <summary>
+    /// Reads tracing_mode as int and maps it to <see cref="JobbyTracingMode"/>.
+    /// Unknown values fall back to <see cref="JobbyTracingMode.CreateNewTraceId"/>
+    /// so that a newer DB can never crash an older reader.
+    /// </summary>
+    public static JobbyTracingMode GetTracingMode(this DbDataReader reader, string columnName)
+    {
+        var value = reader.GetInt32(reader.GetOrdinal(columnName));
+        return Enum.IsDefined(typeof(JobbyTracingMode), value)
+            ? (JobbyTracingMode)value
+            : JobbyTracingMode.CreateNewTraceId;
     }
 
     public static string? GetNullableString(this DbDataReader reader, string columnName)

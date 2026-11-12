@@ -6,5 +6,7 @@ public readonly record struct JobExecutionContext
     public required int StartedCount { get; init; }
     public required bool IsLastAttempt { get; init; }
     public required bool IsRecurrent { get; init; }
+    public string? Traceparent { get; init; }
+    public JobbyTracingMode TracingMode { get; init; }
     public required CancellationToken CancellationToken { get; init; }
 }

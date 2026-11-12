@@ -32,6 +32,7 @@ public class JobsController
             QueueName = command.QueueName,
             SerializableGroupId = command.SerializableGroupId,
             LockGroupIfFailed = command.LockGroupIfFailed,
+            TracingMode = command.TracingMode,
         };
         var jobId = await _jobbyClient.EnqueueCommandAsync(command, opts);
         return jobId.ToString();

@@ -1,5 +1,17 @@
 # Versions
 
+## v1.1.0 (unreleased)
+
+- Tracing context capture for enqueued jobs (opt-in): a job can capture the tracing context of the `Activity` current at creation time and reuse it at execution. The behaviour is selected with the new `JobbyTracingMode` enum:
+  - `CreateNewTraceId` (default) — every execution starts a new trace, previous behaviour
+  - `RestoreTraceId` — the full W3C traceparent (TraceId, SpanId and sampling flags) captured at creation becomes the parent context of the execution activity, so the job span is a child of the span that enqueued it; the sampling decision of the original trace is preserved (a job created in an unsampled request is not recorded either)
+  - `LinkTraceId` — the execution starts an independent trace referencing the captured one via an `ActivityLink`
+  - Set globally via `UseTracing(new JobbyTracingSettings { TracingMode = ... })`, or per job via `JobOpts.TracingMode` (nullable enum, also available through `IHasDefaultJobOptions.GetOptionsForEnqueuedJob`); the per-job value overrides the global setting. The modes take effect only when tracing is enabled with `UseTracing`; call it before `CreateJobsFactory`/`CreateJobbyClient` — settings are applied to a factory at its creation. The resolved mode is persisted in the new `tracing_mode` column of `jobby_jobs` (alongside the new `traceparent` column), so a job's tracing behaviour is pinned at creation time
+  - Recurrent jobs always start a new trace on each run, tracing settings have no effect on them; a non-W3C (hierarchical) ambient Activity is not captured (execution starts a new trace)
+  - Potentially breaking changes:
+    - `IJobbyComponentsConfigurable.UseTracing()` now takes an optional `JobbyTracingSettings?` parameter — external implementations of the interface must be updated to the new signature
+    - Job execution spans are now named after the job name (e.g. `DemoJob`) instead of the fixed `JobExecution`, and the `job_name` span tag is removed — the job name is carried by the span name itself. Queries, dashboards or alerts filtering on `name = "JobExecution"` or on the `job_name` tag must be updated to filter on the span name
+
 ## v1.0.5 (2026-11-01)
 
 - Fixed false `InvalidJobsConfigException: Command X does not have handler` in `AddJobsFromAssemblies` when a single handler class implements `IJobCommandHandler<>` for several commands

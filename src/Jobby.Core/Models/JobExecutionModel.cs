@@ -11,6 +11,8 @@ public class JobExecutionModel
     public int StartedCount { get; init; }
     public string ServerId { get; init; } = string.Empty;
     public Guid? NextJobId { get; init; }
-    
+    public string? Traceparent { get; init; }
+    public JobbyTracingMode TracingMode { get; init; }
+
     public bool IsRecurrent => Schedule != null;
 }

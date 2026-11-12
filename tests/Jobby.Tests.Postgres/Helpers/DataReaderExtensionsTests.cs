@@ -16,6 +16,8 @@ public class DataReaderExtensionsTests
         ["server_id"] = "server-1",
         ["scheduled_start_at"] = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
         ["scheduler_type"] = "JOBBY_CRON",
+        ["traceparent"] = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+        ["tracing_mode"] = (int)JobbyTracingMode.RestoreTraceId,
     };
 
     private static Dictionary<string, object?> RowWithNulls() => new(FullJobRow)
@@ -24,6 +26,8 @@ public class DataReaderExtensionsTests
         ["schedule"] = null,
         ["next_job_id"] = null,
         ["scheduler_type"] = null,
+        ["traceparent"] = null,
+        ["tracing_mode"] = (int)JobbyTracingMode.CreateNewTraceId,
     };
 
     [Fact]
@@ -54,6 +58,24 @@ public class DataReaderExtensionsTests
         Assert.Equal("server-1", job.ServerId);
         Assert.Equal(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc), job.ScheduledStartAt);
         Assert.Equal("JOBBY_CRON", job.SchedulerType);
+        Assert.Equal("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", job.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public async Task GetJobAsync_UnknownTracingModeValue_FallsBackToCreateNewTraceId()
+    {
+        // pin: unknown values from a newer DB must not crash an older reader
+        var row = new Dictionary<string, object?>(FullJobRow)
+        {
+            ["tracing_mode"] = 999
+        };
+        await using var reader = new FakeDbDataReader(row);
+
+        var job = await reader.GetJobAsync();
+
+        Assert.NotNull(job);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, job.TracingMode);
     }
 
     [Fact]
@@ -68,6 +90,8 @@ public class DataReaderExtensionsTests
         Assert.Null(job.Schedule);
         Assert.Null(job.NextJobId);
         Assert.Null(job.SchedulerType);
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, job.TracingMode);
     }
 
     [Fact]

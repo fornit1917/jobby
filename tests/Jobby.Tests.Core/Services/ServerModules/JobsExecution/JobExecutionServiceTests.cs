@@ -226,6 +226,37 @@ public class JobExecutionServiceTests
         _postProcessingServiceMock.VerifyNoOtherCalls();
     }
 
+    [Fact]
+    public async Task ExecuteJob_JobHasTracingContext_PassesTraceparentAndModeToExecutionContext()
+    {
+        var job = new JobExecutionModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = JobName,
+            StartedCount = 1,
+            JobParam = "jobParam",
+            Traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            TracingMode = JobbyTracingMode.RestoreTraceId
+        };
+        var cancelationToken = new CancellationTokenSource().Token;
+        SetupRetryPolicyMock(job, RetryPolicy.NoRetry);
+
+        await _executionService.ExecuteJob(job, cancelationToken);
+
+        var expectedCtx = new JobExecutionContext
+        {
+            CancellationToken = cancelationToken,
+            IsLastAttempt = true,
+            JobName = job.JobName,
+            IsRecurrent = job.IsRecurrent,
+            StartedCount = job.StartedCount,
+            Traceparent = job.Traceparent,
+            TracingMode = JobbyTracingMode.RestoreTraceId,
+        };
+        _jobExecutorMock
+            .Verify(x => x.Execute(job, expectedCtx, _scopeMock.Object, _serializerMock.Object, _pipelineBuilderMock.Object), Times.Once);
+    }
+
     private void SetupRetryPolicyMock(JobExecutionModel job, RetryPolicy retryPolicy)
     {
         _retryPolicyServiceMock.Setup(x => x.GetRetryPolicy(job)).Returns(retryPolicy);

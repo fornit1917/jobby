@@ -486,6 +486,25 @@ builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuil
 });
 ```
 
+By default every job execution starts a new trace. Optionally, the tracing context of the `Activity` current at job creation time can be captured and reused at execution — select the behaviour with the `JobbyTracingMode` enum (`CreateNewTraceId` — new trace, default; `RestoreTraceId` — the job execution continues the captured trace; `LinkTraceId` — a new independent trace referencing the captured one via an `ActivityLink`). Set it globally via `UseTracing`:
+
+```csharp
+jobbyBuilder.ConfigureJobby((sp, jobby) =>
+{
+    jobby
+        .UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId })
+        // ...
+});
+```
+
+or per job via `JobOpts`, which overrides the global setting (per-job `TracingMode` takes effect only when tracing is enabled with `UseTracing` — without it jobs are not executed inside an `Activity`):
+
+```csharp
+jobsFactory.Create(new SendEmailCommand { ... }, new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId });
+```
+
+Recurrent jobs always start a new trace on each run. Call `UseTracing` before creating the jobs factory (`CreateJobsFactory` / `CreateJobbyClient`) — tracing settings are applied to a factory at its creation. See the [documentation](docs/docs/observability.md) for details on the modes and their sampling semantics.
+
 You can enable the export of Jobby job traces via OpenTelemetry as follows:
 
 ```csharp

@@ -6,7 +6,9 @@ using Jobby.Core.Models;
 using Jobby.Core.Services;
 using Jobby.Core.Services.Schedulers;
 using Jobby.TestsUtils.Jobs;
+using Jobby.TestsUtils.Tracing;
 using Moq;
+using System.Diagnostics;
 
 namespace Jobby.Tests.Core.Services;
 
@@ -187,6 +189,158 @@ public class JobsFactoryTests
         Assert.Equal(defaultOpts.LockGroupIfFailed.Value, job.LockGroupIfFailed);
     }
     
+    [Fact]
+    public void Create_RestoreTraceIdViaJobOpts_CapturesFullTraceparent()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var activity = TestTracingContext.BeginAmbientActivity();
+
+        var job = GetFactory().Create(command, new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId });
+
+        Assert.Equal(activity.Traceparent, job.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_RestoreTraceIdViaGlobalSettings_CapturesFullTraceparent()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var activity = TestTracingContext.BeginAmbientActivity();
+
+        var settings = new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId };
+        var job = GetFactory(tracingSettings: settings).Create(command);
+
+        Assert.Equal(activity.Traceparent, job.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_LinkTraceIdViaJobOpts_CapturesTraceparentAndMode()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var activity = TestTracingContext.BeginAmbientActivity();
+
+        var job = GetFactory().Create(command, new JobOpts { TracingMode = JobbyTracingMode.LinkTraceId });
+
+        Assert.Equal(activity.Traceparent, job.Traceparent);
+        Assert.Equal(JobbyTracingMode.LinkTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_UnsampledCurrentActivity_CapturesTraceparentWithUnsampledFlags()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var activity = TestTracingContext.BeginAmbientActivity(traceFlags: ActivityTraceFlags.None);
+
+        var job = GetFactory().Create(command, new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId });
+
+        Assert.Equal(activity.Traceparent, job.Traceparent);
+        Assert.EndsWith("-00", job.Traceparent);
+    }
+
+    [Fact]
+    public void Create_HierarchicalIdFormatActivity_DoesNotCapture()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        // legacy app emulated: hierarchical IdFormat makes TraceId/SpanId all zeros,
+        // so capturing them would store a corrupt traceparent
+        using var _ = TestTracingContext.BeginAmbientActivity(idFormat: ActivityIdFormat.Hierarchical);
+
+        var job = GetFactory().Create(command, new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId });
+
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_CreateNewTraceIdViaJobOpts_GlobalRestoreSettings_DoesNotCapture()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var _ = TestTracingContext.BeginAmbientActivity();
+
+        var settings = new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId };
+        var job = GetFactory(tracingSettings: settings).Create(command, new JobOpts { TracingMode = JobbyTracingMode.CreateNewTraceId });
+
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_GlobalSettingsDefault_DoesNotCapture()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var _ = TestTracingContext.BeginAmbientActivity();
+
+        var job = GetFactory(tracingSettings: new JobbyTracingSettings()).Create(command);
+
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_RestoreTraceIdViaCommandDefaultOpts_CapturesFullTraceparent()
+    {
+        var defaultOpts = new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId };
+        var command = new TestJobWithDefaultOptsCommand(defaultOpts, defaultRecurrentJobOpts: default);
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var activity = TestTracingContext.BeginAmbientActivity();
+
+        var job = GetFactory().Create(command);
+
+        Assert.Equal(activity.Traceparent, job.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_JobOptsOverrideCommandDefaultOpts_DisablesCapture()
+    {
+        var defaultOpts = new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId };
+        var command = new TestJobWithDefaultOptsCommand(defaultOpts, defaultRecurrentJobOpts: default);
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        using var _ = TestTracingContext.BeginAmbientActivity();
+
+        var job = GetFactory().Create(command, new JobOpts { TracingMode = JobbyTracingMode.CreateNewTraceId });
+
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void Create_RestoreTraceId_NoCurrentActivity_TraceparentNullModePreserved()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        Assert.Null(Activity.Current);
+
+        var settings = new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId };
+        var job = GetFactory(tracingSettings: settings).Create(command);
+
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, job.TracingMode);
+    }
+
+    [Fact]
+    public void CreateRecurrent_RestoreTraceIdSettings_DoesNotCaptureAndPinsCreateNewMode()
+    {
+        var command = new TestJobCommand();
+        _serializerMock.Setup(x => x.SerializeJobParam(command)).Returns(SerializedCommand);
+        var cron = "0 3 1 12 *";
+        using var _ = TestTracingContext.BeginAmbientActivity();
+
+        var settings = new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId };
+        var job = GetFactory(tracingSettings: settings).CreateRecurrent(command, cron);
+
+        Assert.Null(job.Traceparent);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, job.TracingMode);
+    }
+
     [Fact]
     public void CreateRecurrent_OptionsNotSpecified_CreatesJobModelWithDefaultOptions()
     {
@@ -406,18 +560,19 @@ public class JobsFactoryTests
         Assert.Throws<InvalidScheduleException>(() => GetFactory().CreateRecurrent(command, schedule));
     }
 
-    private JobsFactory GetFactory(string? defaultRecurrentQueue = null)
+    private JobsFactory GetFactory(string? defaultRecurrentQueue = null, JobbyTracingSettings? tracingSettings = null)
     {
         var schedulers = new SchedulersRegistryBuilder()
             .AddScheduler(new CronScheduleHandler())
             .AddScheduler(new TimeSpanScheduleHandler())
             .AddScheduler(_customSchedulerMock.Object)
             .CreateRegistry();
-        
+
         return new JobsFactory(_guidGeneratorMock.Object,
             _serializerMock.Object,
             schedulers,
             _timerServiceMock.Object,
-            defaultRecurrentQueue);
+            defaultRecurrentQueue,
+            tracingSettings);
     }
 }

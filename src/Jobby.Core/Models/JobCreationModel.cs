@@ -18,6 +18,8 @@ public class JobCreationModel
     public string QueueName { get; internal set; } = QueueSettings.DefaultQueueName;
     public string? SerializableGroupId  { get; internal set; }
     public bool LockGroupIfFailed { get; internal set; }
+    public string? Traceparent { get; internal set; }
+    public JobbyTracingMode TracingMode { get; internal set; }
 
     internal JobCreationModel()
     {

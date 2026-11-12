@@ -46,6 +46,7 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
 
     private MetricsMiddleware? _metricsMiddleware;
     private TracingMiddleware? _tracingMiddleware;
+    private JobbyTracingSettings? _tracingSettings;
     private readonly PipelineBuilderConfiguration _pipelineBuilderConfiguration = new();
 
     private RetryPolicy _defaultRetryPolicy = RetryPolicy.NoRetry;
@@ -158,8 +159,9 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
             Serializer,
             GetSchedulersRegistry(),
             TimerService.Instance,
-            _defaultRecurrentQueue);
-        
+            _defaultRecurrentQueue,
+            _tracingSettings);
+
         return _jobsFactory;
     }
 
@@ -347,8 +349,11 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
         return this;
     }
 
-    public IJobbyComponentsConfigurable UseTracing()
+    public IJobbyComponentsConfigurable UseTracing(JobbyTracingSettings? settings = null)
     {
+        // last wins: settings are applied to factories created after the last UseTracing call;
+        // the middleware itself is still registered only once (see CreateJobbyServer)
+        _tracingSettings = settings ?? new JobbyTracingSettings();
         _tracingMiddleware ??= new TracingMiddleware();
         return this;
     }

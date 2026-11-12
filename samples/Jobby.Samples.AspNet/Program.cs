@@ -88,7 +88,7 @@ public static class Program
                 if (appJobbyConfig.UseTracing)
                 {
                     // Enable tracing context for each job run
-                    jobby.UseTracing();
+                    jobby.UseTracing(new JobbyTracingSettings { TracingMode = appJobbyConfig.TracingMode });
                 }
             });
         });
@@ -105,6 +105,10 @@ public static class Program
             .WithTracing(tracingBuilder =>
             {
                 tracingBuilder.AddConsoleExporter();
+
+                // Create an Activity for each incoming HTTP request,
+                // so jobs enqueued during a request can inherit its TraceId
+                tracingBuilder.AddAspNetCoreInstrumentation();
 
                 // Add traces from Jobby jobs execution to OpenTelemetry
                 tracingBuilder.AddSource(JobbyActivitySourceNames.JobsExecution);
