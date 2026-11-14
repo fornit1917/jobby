@@ -287,7 +287,7 @@ For recurring jobs, Trigger uses the same persisted job and ID, without creating
 
 ### Exclusive recurring definitions
 
-The recurring list and job details show `IsExclusive` (`is_exclusive` in storage). An exclusive recurring definition is unique among exclusive definitions with the same job name. Nonexclusive definitions with that name can coexist. This flag controls definition uniqueness, not mutual exclusion of executions; use serializable groups when jobs must execute sequentially.
+The recurring list and job details show `IsExclusive` (`is_exclusive` in storage). An exclusive recurring definition is unique among exclusive definitions with the same job name. Non-exclusive definitions with that name can coexist. This flag controls definition uniqueness, not mutual exclusion of executions; use serializable groups when jobs must execute sequentially.
 
 ### Read API
 

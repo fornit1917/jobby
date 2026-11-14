@@ -81,7 +81,7 @@ public class LanguageStateComputedTests
     {
         var l = New();
         l.ApplyForTests(DashboardLanguage.Russian);
-        Assert.Equal("Локер", l.Role(LockedGroupJobRole.Locker));
+        Assert.Equal("Блокирующая", l.Role(LockedGroupJobRole.Locker));
 
         foreach (var lang in DashboardLanguages.All)
         {
