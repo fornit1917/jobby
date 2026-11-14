@@ -1,61 +1,109 @@
 using Jobby.Core.Models;
 using Jobby.IntegrationTests.Postgres.Helpers;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyDashboardCommandStorageTests;
 
 [Collection(PostgresqlTestsCollection.Name)]
 public class TriggerJobsTests
 {
-    [Fact]
-    public async Task TriggerJobsAsync_ScheduledJob_MovesStartToNowAndReturns1()
+    private static readonly DateTime TriggerTime = new(2026, 1, 15, 12, 0, 0, DateTimeKind.Utc);
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task TriggerJobsAsync_FutureScheduledJob_MovesSameRowToNowAndRepeatedRequestReturns1(
+        bool recurrent, bool exclusive)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
         var id = Guid.NewGuid();
-        db.Jobs.Add(NewJob(id, JobStatus.Scheduled, scheduledStartAt: DateTime.UtcNow.AddDays(1)));
+        var original = NewJob(id, JobStatus.Scheduled, scheduledStartAt: TriggerTime.AddDays(1));
+        original.Schedule = recurrent ? "0 0 * * *" : null;
+        original.SchedulerType = recurrent ? "cron" : null;
+        original.IsExclusive = exclusive;
+        db.Jobs.Add(original);
         await db.SaveChangesAsync(cancellationToken);
 
-        var now = DateTime.UtcNow;
-        var affected = await DbHelper.CreateDashboardCommandStorage().TriggerJobsAsync([id], now, cancellationToken);
+        var storage = DbHelper.CreateDashboardCommandStorage();
+        var affected = await storage.TriggerJobsAsync([id], TriggerTime, cancellationToken);
+
+        Assert.Equal(1, affected);
+        var triggered = Assert.Single(await db.Jobs.AsNoTracking().ToListAsync(cancellationToken));
+        Assert.Equal(id, triggered.Id);
+        Assert.Equal(JobStatus.Scheduled, triggered.Status);
+        Assert.Equal(TriggerTime, triggered.ScheduledStartAt);
+        Assert.Equal(original.Schedule, triggered.Schedule);
+        Assert.Equal(original.SchedulerType, triggered.SchedulerType);
+        Assert.Equal(exclusive, triggered.IsExclusive);
+
+        var repeated = await storage.TriggerJobsAsync([id], TriggerTime.AddMinutes(1), cancellationToken);
+
+        Assert.Equal(1, repeated);
+        var unchanged = Assert.Single(await db.Jobs.AsNoTracking().ToListAsync(cancellationToken));
+        Assert.Equal(id, unchanged.Id);
+        Assert.Equal(JobStatus.Scheduled, unchanged.Status);
+        Assert.Equal(TriggerTime, unchanged.ScheduledStartAt);
+        Assert.Equal(original.Schedule, unchanged.Schedule);
+        Assert.Equal(original.SchedulerType, unchanged.SchedulerType);
+        Assert.Equal(exclusive, unchanged.IsExclusive);
+    }
+
+    [Theory]
+    [InlineData(false, -1)]
+    [InlineData(false, 0)]
+    [InlineData(true, -1)]
+    [InlineData(true, 0)]
+    public async Task TriggerJobsAsync_AlreadyDueScheduledJob_PreservesStartAndReturns1(bool recurrent, int daysFromNow)
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        var id = Guid.NewGuid();
+        var originalStart = TriggerTime.AddDays(daysFromNow);
+        var original = NewJob(id, JobStatus.Scheduled, scheduledStartAt: originalStart);
+        original.Schedule = recurrent ? "0 0 * * *" : null;
+        db.Jobs.Add(original);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var affected = await DbHelper.CreateDashboardCommandStorage().TriggerJobsAsync([id], TriggerTime, cancellationToken);
 
         Assert.Equal(1, affected);
         var job = await DbHelper.CreateDashboardReadStorage().GetJobByIdAsync(id, cancellationToken);
         Assert.Equal(JobStatus.Scheduled, job!.Status);
-        Assert.True((job.ScheduledStartAt - now).Duration() < TimeSpan.FromSeconds(1));
+        Assert.Equal(originalStart, job.ScheduledStartAt);
+        Assert.Equal(original.Schedule, job.Schedule);
     }
 
-    [Fact]
-    public async Task TriggerJobsAsync_NonScheduledJob_LeavesItUntouchedAndReturns0()
+    [Theory]
+    [InlineData(JobStatus.Processing, false)]
+    [InlineData(JobStatus.Processing, true)]
+    [InlineData(JobStatus.Frozen, false)]
+    [InlineData(JobStatus.Frozen, true)]
+    [InlineData(JobStatus.Failed, false)]
+    [InlineData(JobStatus.Failed, true)]
+    [InlineData(JobStatus.Completed, false)]
+    [InlineData(JobStatus.Completed, true)]
+    [InlineData(JobStatus.WaitingPrev, false)]
+    [InlineData(JobStatus.WaitingPrev, true)]
+    public async Task TriggerJobsAsync_NonScheduledJob_LeavesItUntouchedAndReturns0(JobStatus status, bool recurrent)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
         var id = Guid.NewGuid();
-        var originalStart = DateTime.UtcNow.AddDays(1);
-        db.Jobs.Add(NewJob(id, JobStatus.Processing, scheduledStartAt: originalStart));
+        var originalStart = TriggerTime.AddDays(1);
+        var original = NewJob(id, status, scheduledStartAt: originalStart);
+        original.Schedule = recurrent ? "0 0 * * *" : null;
+        db.Jobs.Add(original);
         await db.SaveChangesAsync(cancellationToken);
 
-        var affected = await DbHelper.CreateDashboardCommandStorage().TriggerJobsAsync([id], DateTime.UtcNow, cancellationToken);
+        var affected = await DbHelper.CreateDashboardCommandStorage().TriggerJobsAsync([id], TriggerTime, cancellationToken);
 
         Assert.Equal(0, affected);
         var job = await DbHelper.CreateDashboardReadStorage().GetJobByIdAsync(id, cancellationToken);
-        Assert.Equal(JobStatus.Processing, job!.Status);
-        Assert.True((job.ScheduledStartAt - originalStart).Duration() < TimeSpan.FromSeconds(1));
-    }
-
-    [Fact]
-    public async Task TriggerJobsAsync_RecurrentDefinition_LeavesItUntouchedAndReturns0()
-    {
-        var cancellationToken = TestContext.Current.CancellationToken;
-        await using var db = await DbHelper.CreateContextAndClearDbAsync();
-        var id = Guid.NewGuid();
-        var job = NewJob(id, JobStatus.Scheduled, scheduledStartAt: DateTime.UtcNow.AddDays(1));
-        job.Schedule = "0 0 * * *";
-        db.Jobs.Add(job);
-        await db.SaveChangesAsync(cancellationToken);
-
-        var affected = await DbHelper.CreateDashboardCommandStorage().TriggerJobsAsync([id], DateTime.UtcNow, cancellationToken);
-
-        Assert.Equal(0, affected);
+        Assert.Equal(status, job!.Status);
+        Assert.Equal(originalStart, job.ScheduledStartAt);
+        Assert.Equal(original.Schedule, job.Schedule);
     }
 
     internal static JobDbModel NewJob(Guid id, JobStatus status, DateTime scheduledStartAt) => new()

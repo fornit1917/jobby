@@ -10,6 +10,12 @@
     <span class="jobby-actions-stop" @onclick:stopPropagation="true">
     <MudMenu Icon="@Icons.Material.Filled.MoreVert" Dense="true" Size="Size.Small"
              AriaLabel="@L["actions.menu"]" data-testid="job-actions">
+        @if (Status == JobStatus.Scheduled)
+        {
+            <MudMenuItem Icon="@Icons.Material.Filled.PlayArrow"
+                         OnClick="TriggerAsync" data-testid="action-trigger">@L["actions.triggerNow"]</MudMenuItem>
+        }
+
         @if (Recurrent)
         {
             @if (!IsGroupLocker)
@@ -21,12 +27,6 @@
         }
         else
         {
-            @if (Status == JobStatus.Scheduled)
-            {
-                <MudMenuItem Icon="@Icons.Material.Filled.PlayArrow"
-                             OnClick="TriggerAsync" data-testid="action-trigger">@L["actions.triggerNow"]</MudMenuItem>
-            }
-
             @if (Status is (JobStatus.Failed or JobStatus.Frozen) && !IsGroupLocker)
             {
                 <MudMenuItem Icon="@Icons.Material.Filled.Replay"

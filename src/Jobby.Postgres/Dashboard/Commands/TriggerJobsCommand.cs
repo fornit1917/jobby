@@ -14,8 +14,8 @@ internal sealed class TriggerJobsCommand
         _dataSource = dataSource;
         _sql = $@"
             UPDATE {DbName.Jobs(settings)}
-            SET scheduled_start_at = $2
-            WHERE id = ANY($1) AND status = {(int)JobStatus.Scheduled} AND schedule IS NULL";
+            SET scheduled_start_at = LEAST(scheduled_start_at, $2)
+            WHERE id = ANY($1) AND status = {(int)JobStatus.Scheduled}";
     }
 
     public async Task<int> ExecuteAsync(IReadOnlyList<Guid> ids, DateTime now, CancellationToken cancellationToken)
