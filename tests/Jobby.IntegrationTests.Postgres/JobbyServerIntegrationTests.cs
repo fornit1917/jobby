@@ -29,7 +29,7 @@ public class JobbyServerIntegrationTests
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
 
-        server.StartBackgroundService();
+        await server.StartBackgroundServiceAsync();
         var command1 = new TestJobCommand();
         var command2 = new TestJobCommand();
         var jobId1 = await client.EnqueueCommandAsync(command1);
@@ -70,7 +70,7 @@ public class JobbyServerIntegrationTests
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
 
-        server.StartBackgroundService();
+        await server.StartBackgroundServiceAsync();
         var command1 = new TestJobCommand();
         var command2 = new TestJobCommand();
         
@@ -107,7 +107,7 @@ public class JobbyServerIntegrationTests
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
 
-        server.StartBackgroundService();
+        await server.StartBackgroundServiceAsync();
         var command1 = new TestJobCommand();
         var command2 = new TestJobCommand();
         var jobId1 = await client.EnqueueCommandAsync(command1);
@@ -149,7 +149,7 @@ public class JobbyServerIntegrationTests
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
 
-        server.StartBackgroundService();
+        await server.StartBackgroundServiceAsync();
         var command = new TestJobCommand();
         var jobId = await client.EnqueueCommandAsync(command);
 
@@ -182,7 +182,7 @@ public class JobbyServerIntegrationTests
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
         
-        server.StartBackgroundService();
+        await server.StartBackgroundServiceAsync();
         var command = new TestJobCommand();
         var jobId = await client.EnqueueCommandAsync(command);
 
@@ -218,7 +218,7 @@ public class JobbyServerIntegrationTests
 
         var client = jobbyBuilder.CreateJobbyClient();
         var server = jobbyBuilder.CreateJobbyServer();
-        server.StartBackgroundService();
+        await server.StartBackgroundServiceAsync();
 
         var groupId = Guid.NewGuid().ToString();
         var failedCommand = new TestJobCommand

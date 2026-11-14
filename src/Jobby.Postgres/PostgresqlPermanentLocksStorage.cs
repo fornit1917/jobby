@@ -45,11 +45,12 @@ internal class PostgresqlPermanentLocksStorage : IPermanentLocksStorage
                             WHERE u.group_id = queue_top.serializable_group_id
                             FOR UPDATE
                         )
-                    FOR UPDATE SKIP LOCKED
                 )
             UPDATE {DbName.Jobs(settings)}
             SET status = {(int)JobStatus.Frozen}
-            WHERE id IN (SELECT id FROM permanent_locked)
+            WHERE 
+                id IN (SELECT id FROM permanent_locked)
+                AND status = {(int)JobStatus.Scheduled}
             RETURNING id, serializable_group_id, job_name;
         ";
 
@@ -83,12 +84,23 @@ internal class PostgresqlPermanentLocksStorage : IPermanentLocksStorage
                     RETURNING group_id
                 ),
                 deleted_locker AS (
-    	            DELETE FROM {DbName.Jobs(settings)}
-    	            WHERE
-                        serializable_group_id IS NOT NULL
-                        AND is_group_locker = TRUE
-    		            AND serializable_group_id IN (SELECT group_id FROM deleted_unlocking_request)
-    	            RETURNING serializable_group_id
+                    DELETE FROM {DbName.Jobs(settings)} as d
+                    WHERE
+                        d.serializable_group_id IS NOT NULL
+                        AND d.is_group_locker = TRUE
+                        AND d.serializable_group_id IN (SELECT group_id FROM deleted_unlocking_request)
+                        AND (
+                            d.status = {(int)JobStatus.Failed}
+                            OR (
+                                d.status = {(int)JobStatus.Processing}
+                                AND d.can_be_restarted = false
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM {DbName.Servers(settings)} as s
+                                    WHERE s.id = d.server_id
+                                )
+                            )
+                        )
+                    RETURNING d.serializable_group_id
                 )
             
             SELECT r.group_id, (d.serializable_group_id IS NOT NULL) is_unlocked FROM unlocking_request r
@@ -147,7 +159,7 @@ internal class PostgresqlPermanentLocksStorage : IPermanentLocksStorage
         await using var lockCmd = new NpgsqlCommand(_globalLockCommand, conn, tx);
         await lockCmd.ExecuteNonQueryAsync();
 
-        GroupUnlockingStatusModel? unlockingStatus = null;
+        GroupUnlockingStatusModel? unlockingStatus;
         await using var unlockCmd = new NpgsqlCommand(_unlockCommand, conn, tx);
         await using (var reader = await unlockCmd.ExecuteReaderAsync())
         {

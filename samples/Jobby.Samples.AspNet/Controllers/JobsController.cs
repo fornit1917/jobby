@@ -1,5 +1,6 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
+using Jobby.Core.Services.Schedulers;
 using Jobby.Samples.AspNet.Db;
 using Jobby.Samples.AspNet.DashboardDemo;
 using Jobby.Samples.AspNet.Jobs;
@@ -35,11 +36,29 @@ public class JobsController
         var opts = new JobOpts
         {
             StartTime = command.StartAfter ?? DateTime.UtcNow,
+            QueueName = command.QueueName,
             SerializableGroupId = command.SerializableGroupId,
             LockGroupIfFailed = command.LockGroupIfFailed,
         };
         var jobId = await _jobbyClient.EnqueueCommandAsync(command, opts);
         return jobId.ToString();
+    }
+
+    [HttpPost("enqueue-sequence")]
+    public async Task<List<string>> EnqueueSequence([FromBody] List<DemoJobCommand> commands)
+    {
+        var sequenceBuilder = _jobsFactory.CreateSequenceBuilder(commands.Count);
+        foreach (var command in commands)
+        {
+            sequenceBuilder.Add(command, new JobOpts
+            {
+                StartTime = command.StartAfter ?? DateTime.UtcNow,
+                QueueName = command.QueueName,
+            });
+        }
+        var jobs = sequenceBuilder.GetJobs();
+        await _jobbyClient.EnqueueBatchAsync(jobs);
+        return jobs.Select(x => x.Id.ToString()).ToList();
     }
 
     [HttpPost("enqueue-job-by-ef")]
@@ -89,6 +108,15 @@ public class JobsController
         {
             StartTime = DateTime.UtcNow,
         });
+        return jobId.ToString();
+    }
+
+    [HttpPost("schedule-recurrent-with-interval")]
+    public async Task<string> ScheduleRecurrentWithInterval([FromBody] uint intervalSeconds)
+    {
+        var command = new EmptyRecurrentJobCommand();
+        var schedule = new TimeSpanSchedule { Interval = TimeSpan.FromSeconds(intervalSeconds) };
+        var jobId = await _jobbyClient.ScheduleRecurrentAsync(command, schedule);
         return jobId.ToString();
     }
 

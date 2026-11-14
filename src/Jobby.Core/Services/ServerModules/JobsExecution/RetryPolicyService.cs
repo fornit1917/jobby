@@ -10,28 +10,15 @@ internal class RetryPolicyService : IRetryPolicyService
 
     public RetryPolicyService(RetryPolicy defaultPolicy, IReadOnlyDictionary<string, RetryPolicy> retryPoliciesByJobName)
     {
-        _defaultRetryPolicy = defaultPolicy ?? new RetryPolicy()
-        {
-            MaxCount = 10,
-            IntervalsSeconds = [60, 120, 240, 480, 600]
-        };
-
+        _defaultRetryPolicy = defaultPolicy;
         _retryPoliciesByJobName = retryPoliciesByJobName;
     }
 
 
     public RetryPolicy GetRetryPolicy(JobExecutionModel job)
     {
-        RetryPolicy? retryPolicy = null;
-
-        // todo: try get policy from job instance
-
-        _retryPoliciesByJobName.TryGetValue(job.JobName, out retryPolicy);
-        if (retryPolicy == null)
-        {
-            retryPolicy = _defaultRetryPolicy;
-        }
-
+        _retryPoliciesByJobName.TryGetValue(job.JobName, out var retryPolicy);
+        retryPolicy ??= _defaultRetryPolicy;
         return retryPolicy;
     }
 }

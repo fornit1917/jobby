@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".github/workflows/dotnet.yml" />
+    <File Path="AGENTS.md" />
     <File Path="docker-compose.postgresql.yml" />
     <File Path="README.md" />
     <File Path="versions.md" />

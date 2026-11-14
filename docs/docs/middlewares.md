@@ -15,7 +15,7 @@ public class SomeMiddleware : IJobbyMiddleware
 
     public SomeMiddleware(ISomeService someService)
     {
-        _someService = someService
+        _someService = someService;
     }
 
     public async Task ExecuteAsync<TCommand>(

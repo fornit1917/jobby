@@ -227,6 +227,43 @@ public class TakeBatchToProcessingTests
         AssertTakenToRunJob(firstJobFromFirstGroup, result[1], request.ServerId);
         AssertTakenToRunJob(firstJobFromSecondGroup, result[2], request.ServerId);
     }
+
+    [Fact]
+    public async Task TakeBatchToProcessingAsync_DoesRetryForLocker()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        
+        var lockerForRetry = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "1_1",
+            Schedule = null,
+            JobParam = "param2",
+            StartedCount = 1,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-4),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = "g_1",
+            LockGroupIfFailed = true
+        };
+        
+        dbContext.Jobs.Add(lockerForRetry);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        
+        var storage = DbHelper.CreateJobbyStorage();
+        var result = new List<JobExecutionModel>();
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = 3,
+            ServerId = "serverId"
+        };
+        await storage.TakeBatchToProcessingAsync(request, result);
+
+        Assert.Single(result);
+        AssertTakenToRunJob(lockerForRetry, result[0], request.ServerId);
+    }
     
     [Theory]
     [InlineData(JobStatus.Processing, false)]
@@ -248,7 +285,7 @@ public class TakeBatchToProcessingTests
                 StartedCount = 1,
                 NextJobId = null,
                 Status = lockerStatus,
-                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-3),
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(3),
                 QueueName = QueueSettings.DefaultQueueName,
                 SerializableGroupId = "gid",
                 LockGroupIfFailed = lockerLockIfFailed

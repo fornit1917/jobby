@@ -9,7 +9,7 @@ internal class AspNetCoreJobbyBuilder : IAspNetCoreJobbyConfigurable
 {
     public JobbyBuilder JobbyBuilder { get; } = new JobbyBuilder();
 
-    private Action<IServiceProvider, IJobbyComponentsConfigurable>? _jobbyComponentsConfigureAction;
+    private readonly List<Action<IServiceProvider, IJobbyComponentsConfigurable>> _jobbyComponentsConfigureActions = new();
 
     public IAspNetCoreJobbyConfigurable AddJob<TCommand, THandler>()
         where TCommand : IJobCommand
@@ -47,12 +47,15 @@ internal class AspNetCoreJobbyBuilder : IAspNetCoreJobbyConfigurable
 
     public IAspNetCoreJobbyConfigurable ConfigureJobby(Action<IServiceProvider, IJobbyComponentsConfigurable> configure)
     {
-        _jobbyComponentsConfigureAction = configure;
+        _jobbyComponentsConfigureActions.Add(configure);
         return this;
     }
 
     public void ApplyJobbyComponentsConfigureAction(IServiceProvider sp)
     {
-        _jobbyComponentsConfigureAction?.Invoke(sp, JobbyBuilder);
+        foreach (var configureAction in _jobbyComponentsConfigureActions)
+        {
+            configureAction.Invoke(sp, JobbyBuilder);
+        }
     }
 }

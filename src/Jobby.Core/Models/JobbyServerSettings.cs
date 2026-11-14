@@ -114,7 +114,7 @@ public class JobbyServerSettings
         get => _permanentLockedHandleUnlockingRequestsIntervalSeconds;
         init
         {
-            ThrowIfValueIsNotPositive(value, nameof(PermanentLockedFreezingIntervalSeconds));
+            ThrowIfValueIsNotPositive(value, nameof(PermanentLockedHandleUnlockingRequestsIntervalSeconds));
             _permanentLockedHandleUnlockingRequestsIntervalSeconds = value;
         }
     }    

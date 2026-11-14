@@ -1,5 +1,41 @@
 # Versions
 
+## v1.0.5 (2026-11-01)
+
+- Fixed false `InvalidJobsConfigException: Command X does not have handler` in `AddJobsFromAssemblies` when a single handler class implements `IJobCommandHandler<>` for several commands
+  - Previously only an arbitrary one of the implemented handler interfaces was detected (interface order is not guaranteed), so the rest of the commands looked handler-less. Now all commands handled by the same class are registered
+- `AddJobsFromAssemblies` now supports commands that implement `GetJobName` explicitly (`static string IJobCommand.GetJobName()`)
+  - Previously such commands were silently skipped during scanning: jobs were created successfully, but every execution attempt failed with `Job X does not have suitable handler`
+- Invalid schedules now fail job creation. `ScheduleRecurrent` / `CreateRecurrent` throw `InvalidScheduleException` immediately if the cron expression cannot be parsed or the interval is not positive
+  - Previously these errors surfaced only after the first execution, and the job was silently rescheduled to run every minute instead of the specified schedule; a zero interval made the job run on every polling iteration endlessly
+  - Note: a zero interval is no longer allowed, intervals must be strictly positive
+- New optional `EnsureScheduleIsValid` method for custom schedulers (`IScheduleHandler<TSchedule>`, `BaseScheduleHandler<TSchedule>`): it is called during job creation, override it to reject an invalid custom schedule at creation time instead of runtime
+- Failed job executions are now distinguishable in traces: tracing middleware sets `ActivityStatusCode.Error` with the exception message and adds an `exception` event containing the exception type, message and stack trace
+  - Previously failed executions looked identical to successful ones
+- Multiple `ConfigureJobby(Action<IServiceProvider, IJobbyComponentsConfigurable>)` calls are now all applied in registration order
+  - Previously each call overwrote the previous one, so only the last configuration took effect
+- `JobbyBuilder.CreateJobbyServer` can now be called repeatedly on the same builder: metrics/tracing middlewares are no longer duplicated in the execution pipeline after each call
+- Freezing of permanent-locked groups now transitions only jobs in `Scheduled` status to `Frozen`
+  - Previously jobs in other statuses could be frozen too
+- Group unlocking now deletes only the group-locker jobs that are failed or stuck (cannot be restarted and their server is no longer alive)
+  - Previously all locker jobs of the unlocked group were deleted, which could remove tasks that should keep executing
+- Fixed misleading validation error message for `JobbyServerSettings.PermanentLockedHandleUnlockingRequestsIntervalSeconds`: it referenced another property name
+
+## v1.0.4 (2026-10-05)
+
+- Catch OperationCanceledException instead of TaskCanceledException
+- Send first heartbeat signal before server running
+- Support IAsyncDisposable for scoped user services
+- Fix minor bugs
+
+## v1.0.3 (2026-09-20)
+
+- Fixed hanging retries of failed tasks in serializable groups
+- Fixed semaphore slot leak when the database is unavailable
+- On server shutdown, a task that threw OperationCancelledException is no longer marked as failed and can be picked up by another instance for retry
+- Fixed a possible error during graceful server shutdown
+- Improved database query performance in the heartbeat mechanism
+
 ## v1.0.2 (2026-04-28)
 
 - Do not recalculate the start time when re-creating an existing exclusive recurring job if the schedule has not changed

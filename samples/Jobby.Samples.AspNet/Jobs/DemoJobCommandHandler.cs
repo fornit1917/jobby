@@ -4,7 +4,7 @@ using Jobby.Samples.AspNet.Exceptions;
 
 namespace Jobby.Samples.AspNet.Jobs;
 
-public class DemoJobCommandHandler : IJobCommandHandler<DemoJobCommand>
+public class DemoJobCommandHandler : IJobCommandHandler<DemoJobCommand>, IAsyncDisposable
 {
     private readonly ILogger<DemoJobCommandHandler> _logger;
 
@@ -25,5 +25,11 @@ public class DemoJobCommandHandler : IJobCommandHandler<DemoJobCommand>
             throw new ExceptionShouldBeIgnored("Job is configure to throw ignored exception");
 
         await Task.Delay(command.DelayMs);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _logger.LogInformation("Disposing demo job");
+        return ValueTask.CompletedTask;
     }
 }

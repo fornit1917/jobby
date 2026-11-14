@@ -24,7 +24,7 @@ internal static class Program
             .Select(q => new QueueSettings { QueueName = q })
             .ToList();
         
-        var connectionString = "Host=localhost;Username=test_user;Password=12345;Database=test_db;GSS Encryption Mode=Disable";
+        var connectionString = "Host=localhost;Username=jobby;Password=jobby;Database=jobby_tests_db;GSS Encryption Mode=Disable";
         using var dataSource = NpgsqlDataSource.Create(connectionString);
 
         var loggerFactory = LoggerFactory.Create(x => x.AddConsole());
@@ -114,7 +114,7 @@ internal static class Program
         Console.Write("Start server? (y/n): ");
         var runServer = Console.ReadLine();
         if (runServer != "n")
-            jobbyServer.StartBackgroundService();
+            jobbyServer.StartBackgroundServiceAsync().GetAwaiter().GetResult();
 
         Console.ReadLine();
 

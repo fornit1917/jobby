@@ -20,7 +20,7 @@ public class RecurrentJobCommand : IJobCommand
 
 public class RecurrentJobHandler : IJobCommandHandler<RecurrentJobCommand>
 {
-    public async Task ExecuteAsync(SendEmailCommand command, JobExecutionContext ctx)
+    public async Task ExecuteAsync(RecurrentJobCommand command, JobExecutionContext ctx)
     {
         // Your scheduled task code
     }
@@ -44,7 +44,7 @@ await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * * *");
 // You can optionally pass a RecurrentJobOpts structure
 // For example, this creates a scheduled task
 // that first runs in one hour, then every 5 minutes
-await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * *", new RecurrentJobOps
+await jobbyClient.ScheduleRecurrentAsync(command, "*/5 * * * *", new RecurrentJobOpts
 {
     StartTime = DateTime.UtcNow.AddHours(1)
 });
@@ -78,7 +78,7 @@ var schedule = new TimeSpanSchedule
     // The next execution time
     // will be calculated relative to the previous start time
     // rather than completion time
-    CalculcateNextFromPrev = true
+    CalculateNextFromPrev = true
 };
 await jobbyClient.ScheduleRecurrentAsync(command, schedule);
 ```
@@ -104,6 +104,8 @@ Then, for your schedule, you need to implement a handler class that inherits fro
 - **GetFirstStartTime** - Returns the UTC time for the first task execution (called when creating the task)
 - **GetNextStartTime** - Returns the UTC time for the next task execution (called after each task execution)
 
+There is also an optional `EnsureScheduleIsValid` method that checks the schedule for validity: it is called when a task is being created and should throw an exception (for example, the built-in `InvalidScheduleException`) if the schedule is invalid. Override it to fail task creation early instead of leaving an invalid schedule undetected until runtime. The base implementation does nothing.
+
 ```csharp
 class MySpecialScheduleHandler : BaseScheduleHandler<MySpecialSchedule>
 {
@@ -111,13 +113,13 @@ class MySpecialScheduleHandler : BaseScheduleHandler<MySpecialSchedule>
     public override string GetSchedulerTypeName() => "MY_SPECIAL_SCHEDULE";
 
     // Time for first execution
-    public override DateTime GetFirstStartTime(TimeSpanSchedule schedule, DateTime utcNow)
+    public override DateTime GetFirstStartTime(MySpecialSchedule schedule, DateTime utcNow)
     {
         // schedule - object with your schedule parameters
         // utcNow - current UTC time
     }
 
-    public override DateTime GetNextStartTime(TimeSpanSchedule schedule, ScheduleCalculationContext ctx)
+    public override DateTime GetNextStartTime(MySpecialSchedule schedule, ScheduleCalculationContext ctx)
     {
         // schedule - object with your schedule parameters
         // ctx - contains current time and the time the previous execution was scheduled

@@ -95,7 +95,11 @@ internal class JobsFactory : IJobsFactory
         {
             throw new InvalidScheduleException($"No scheduler registered for {typeof(TSchedule)}");
         }
-        
+
+        // Validate even when the first start time is overridden by opts.StartTime,
+        // so an invalid schedule fails the creation instead of falling back to another schedule at runtime
+        scheduler.EnsureScheduleIsValid(schedule);
+
         return new JobCreationModel
         {
             Id = _guidGenerator.NewGuid(),

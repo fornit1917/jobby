@@ -87,7 +87,8 @@ public static class Program
                         Queues =
                         [
                             new QueueSettings { QueueName = QueueSettings.DefaultQueueName },
-                            new QueueSettings { QueueName = recurrentJobsQueueName }
+                            new QueueSettings { QueueName = recurrentJobsQueueName },
+                            new QueueSettings { QueueName = "heavy", MaxDegreeOfParallelism = 1 }
                         ]
                     })
                     .UseDefaultRetryPolicy(new RetryPolicy

@@ -354,6 +354,88 @@ public class InsertTests
         AssertHelper.AssertCreatedJob(newJob, actualJobWithNewId);
     }
     
+    [Fact]
+    public async Task InsertAsync_RecurrentExclusiveExisting_SameSchedule_PreservesScheduledStartAt()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        var factory = CreateJobsFactory();
+
+        var uniqueId = Guid.NewGuid();
+        var firstStartTime = DateTime.UtcNow.AddDays(100);
+        var secondStartTime = DateTime.UtcNow.AddDays(200);
+
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = uniqueId }, "*/10 * * * *",
+            new RecurrentJobOpts
+            {
+                CanBeRestartedIfServerGoesDown = true,
+                StartTime = firstStartTime,
+            });
+
+        // same job name, same schedule, different start time:
+        // documented guarantee — scheduled_start_at must NOT be reset
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = uniqueId }, "*/10 * * * *",
+            new RecurrentJobOpts
+            {
+                CanBeRestartedIfServerGoesDown = true,
+                StartTime = secondStartTime,
+            });
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var firstJobId = await storage.InsertJobAsync(job);
+        var secondJobId = await storage.InsertJobAsync(newJob);
+
+        Assert.Equal(firstJobId, secondJobId);
+        Assert.Equal(job.Id, firstJobId);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking()
+            .SingleAsync(x => x.Id == job.Id, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(job.Id, actualJob.Id);
+        Assert.NotEqual(newJob.Id, actualJob.Id);
+        Assert.Equal(firstStartTime, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task InsertAsync_RecurrentExclusiveExisting_ChangedSchedule_ResetsScheduledStartAt()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+        var factory = CreateJobsFactory();
+
+        var uniqueId = Guid.NewGuid();
+        var firstStartTime = DateTime.UtcNow.AddDays(100);
+        var secondStartTime = DateTime.UtcNow.AddDays(200);
+
+        var job = factory.CreateRecurrent(new TestJobCommand { UniqueId = uniqueId }, "*/10 * * * *",
+            new RecurrentJobOpts
+            {
+                CanBeRestartedIfServerGoesDown = true,
+                StartTime = firstStartTime,
+            });
+
+        // schedule changed: id must be preserved, but scheduled_start_at must be reset
+        // to the new job's start time
+        var newJob = factory.CreateRecurrent(new TestJobCommand { UniqueId = uniqueId }, "*/20 * * * *",
+            new RecurrentJobOpts
+            {
+                CanBeRestartedIfServerGoesDown = true,
+                StartTime = secondStartTime,
+            });
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var firstJobId = await storage.InsertJobAsync(job);
+        var secondJobId = await storage.InsertJobAsync(newJob);
+
+        Assert.Equal(firstJobId, secondJobId);
+        Assert.Equal(job.Id, firstJobId);
+
+        var actualJob = await dbContext.Jobs.AsNoTracking()
+            .SingleAsync(x => x.Id == job.Id, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(job.Id, actualJob.Id);
+        Assert.Equal("*/20 * * * *", actualJob.Schedule);
+        Assert.Equal(secondStartTime, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+    }
+
     private IJobsFactory CreateJobsFactory()
     {
         return new JobbyBuilder().CreateJobsFactory();

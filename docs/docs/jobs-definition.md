@@ -21,9 +21,9 @@ public class SendEmailCommandHandler : IJobCommandHandler<SendEmailCommand>
     // When using the Jobby.AspNetCore package,
     // dependency injection from the DI container is supported
     private readonly IEmailService _emailService;
-    public SendEmailCommandHandler(IEmailService logger)
+    public SendEmailCommandHandler(IEmailService emailService)
     {
-        _logger = logger;
+        _emailService = emailService;
     }
 
     public async Task ExecuteAsync(SendEmailCommand command, JobExecutionContext ctx)

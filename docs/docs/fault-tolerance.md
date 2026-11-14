@@ -63,7 +63,7 @@ class MyCommand : IJobCommand, IHasDefaultJobOptions
         return new JobOpts
         {
             CanBeRestartedIfServerGoesDown = false
-        }
+        };
     }
 
     public RecurrentJobOpts GetOptionsForRecurrentJob()
@@ -71,7 +71,7 @@ class MyCommand : IJobCommand, IHasDefaultJobOptions
         return new RecurrentJobOpts()
         {
             CanBeRestartedIfServerGoesDown = false
-        }
+        };
     }
 }
 ```

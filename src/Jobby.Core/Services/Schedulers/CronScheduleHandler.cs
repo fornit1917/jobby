@@ -44,4 +44,9 @@ internal class CronScheduleHandler : BaseScheduleHandler<CronSchedule>
             ? CronHelper.GetNext(schedule.CronExpression, ctx.PrevScheduledTime)
             : CronHelper.GetNext(schedule.CronExpression, ctx.UtcNow);
     }
+
+    public override void EnsureScheduleIsValid(CronSchedule schedule)
+    {
+        CronHelper.EnsureCronExpressionIsValid(schedule.CronExpression);
+    }
 }

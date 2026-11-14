@@ -4,7 +4,7 @@ using Jobby.Core.Models;
 
 namespace Jobby.Core.Services.ServerModules.PermanentLocksCheck;
 
-public class FreezePermanentLockedJobsQueueReader : IQueueItemsReader<JobWithGroupModel>
+internal class FreezePermanentLockedJobsQueueReader : IQueueItemsReader<JobWithGroupModel>
 {
     private readonly IPermanentLocksStorage _storage;
 

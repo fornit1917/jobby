@@ -28,7 +28,7 @@ jobbyClient.EnqueueCommand(command);
 Указанные выше методы позволяют опционально передать структуру `JobOpts` - дополнительные настройки, с которыми будет создана фоновая задача. Входящие в эту структуру параметры
 описаны на странице [Описание задач](./jobs-definition).
 
-Параметры `JobOpts`, переданные в метод `EnqueueCommand`, имеют более высокий приоритет, чем параметры определенные на уровне класса команды при реализации интерфейса `IHasDefaultJobOptions`. Рассмотрим на примере, как объединяются параметры, определённые на разных уровнях:
+Параметры `JobOpts`, переданные в метод `EnqueueCommand`, имеют более высокий приоритет, чем параметры, определённые на уровне класса команды при реализации интерфейса `IHasDefaultJobOptions`. Рассмотрим на примере, как объединяются параметры, определённые на разных уровнях:
 
 ```csharp
 class SomeCommand : IJobCommand, IHasDefaultJobOptions
@@ -40,7 +40,7 @@ class SomeCommand : IJobCommand, IHasDefaultJobOptions
     {
         QueueName = "queue_1",
         CanBeRestartedIfServerGoesDown = false
-    }
+    };
 }
 
 // Добавление задачи в очередь
@@ -49,15 +49,15 @@ var command = new SomeCommand();
 var opts = new JobOpts
 {
     QueueName = "queue_2",
-}
+};
 
 await jobbyClient.EnqueueCommandAsync(command, opts); 
 ```
 
 В итоге будет создана фоновая задача со следующими опциями:
 
-- `QueueName` = `"queue_2"` т.к. этот параметр был переопределён в методе `Enqueue`
-- `CanBeRestartedIfServerGoesDown` = `false` т.к. этот параметр определён на уровне команды и не переопределялся в методе `Enqueue`
+- `QueueName` = `"queue_2"`, т.к. этот параметр был переопределён в методе `Enqueue`
+- `CanBeRestartedIfServerGoesDown` = `false`, т.к. этот параметр определён на уровне команды и не переопределялся в методе `Enqueue`
 
 
 ### Запуск нескольких задач
@@ -72,7 +72,7 @@ var jobs = new List<JobCreationModel>
     
     jobbyClient.Factory
         .Create(new SendEmailCommand { Email = "second@email.com" }),
-}
+};
 
 await jobbyClient.EnqueueBatchAsync(jobs);
 ```
@@ -107,7 +107,7 @@ await jobbyClient.EnqueueCommandAsync(command, new JobOpts
 });
 ```
 
-Следующая задача группы запустится только после успешного или не успешного завершения текущей задачи. Если при неуспешном
+Следующая задача группы запустится только после успешного или неуспешного завершения текущей задачи. Если при неуспешном
 завершении необходимо блокировать запуск любых задач из той же группы, то при создании задачи нужно установить
 флаг `LockGroupIfFailed`:
 
@@ -135,7 +135,7 @@ await jobbyClient.EnqueueCommandAsync(command, new JobOpts
 
 Теперь создание фоновых задач можно делать следующим образом:
 - C помощью `jobbyClient.Factory` создавать объекты `JobCreationModel`
-- Сохранять их в БД через стандартные методы DbConext
+- Сохранять их в БД через стандартные методы DbContext
 
 ```csharp
 public class YourDbContext : DbContext
@@ -161,7 +161,7 @@ public class YourDbContext : DbContext
 // Постановка задачи в очередь через EF
 var command = new SendEmailCommand { Email = "some@email.com" };
 var jobEntity = jobbyClient.Factory.Create(command);
-_dbContext.Jobs.Add(job);
+_dbContext.Jobs.Add(jobEntity);
 await _dbContext.SaveChangesAsync();
 ```
 

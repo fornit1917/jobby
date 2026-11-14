@@ -5,6 +5,15 @@ namespace Jobby.Core.Helpers;
 
 public static class CronHelper
 {
+    public static void EnsureCronExpressionIsValid(string cron)
+    {
+        var format = GetFormat(cron);
+        if (!CronExpression.TryParse(cron, format, out _))
+        {
+            throw new InvalidScheduleException($"Could not parse cron expression '{cron}'");
+        }
+    }
+
     public static DateTime GetNext(string cron, DateTime from)
     {
         var format = GetFormat(cron);
