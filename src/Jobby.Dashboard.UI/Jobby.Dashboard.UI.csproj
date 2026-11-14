@@ -8,6 +8,7 @@
     <IsPackable>false</IsPackable>
     <StaticWebAssetBasePath>/</StaticWebAssetBasePath>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <WasmBuildNative Condition="'$(Configuration)' == 'Release'">true</WasmBuildNative>
   </PropertyGroup>
 
   <ItemGroup>

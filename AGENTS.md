@@ -28,9 +28,9 @@ Jobby is a high-performance .NET library for background tasks (queued, scheduled
 
 ## Build and Test
 
-Install stable .NET SDK 10.0.401 as selected by `global.json` (`rollForward: latestPatch`, `allowPrerelease: false`). Projects remain `net8.0`. Install the .NET 8 and ASP.NET Core 8 runtimes for tests and samples; a side-by-side .NET 8 SDK also provides them. The `.slnx` solution format requires SDK 9.0.200 or newer, so SDK 8 alone is insufficient.
+Install the .NET 8 SDK, which includes the .NET 8 and ASP.NET Core 8 runtimes needed for tests and samples. All projects target `net8.0`, and `Jobby.sln` supports SDK 8. There is no repository-wide SDK pin. Without `global.json`, `dotnet` normally selects the newest installed SDK; verify `dotnet --version` when checking SDK 8 compatibility, or use an isolated SDK 8 installation.
 
-From the repository root, verify `dotnet --version` and run `dotnet workload install wasm-tools-net8` for the selected SDK. This workload is required because building Dashboard publishes and embeds its WebAssembly UI, including in Release and pack paths. For SDK 8 targeting .NET 8 the corresponding workload is `wasm-tools`; the repository's pinned SDK uses `wasm-tools-net8`.
+With SDK 8 selected, run `dotnet workload install wasm-tools`. Dashboard builds publish and embed the WebAssembly UI. Release builds explicitly require native WebAssembly tools to relink the runtime consistently; a missing workload is a build error. Debug builds can use the stock runtime. If you choose to use SDK 9 or 10, the corresponding workload for targeting .NET 8 is `wasm-tools-net8`. Applications consuming the published packages do not need this workload.
 
 ```bash
 dotnet build                # build the solution
@@ -100,7 +100,7 @@ testing / регрессионное тестирование, read and follow `
 copy of `samples/Jobby.Samples.AspNet` against PostgreSQL in docker and never modifies
 anything outside `temp/`.
 
-CI (`.github/workflows/dotnet.yml`) installs the SDK selected by `global.json`, .NET 8 runtimes through the .NET 8 SDK, and `wasm-tools-net8`. Both Ubuntu and Windows restore and build the solution. Ubuntu starts PostgreSQL with the compose file above and runs the full suite with `dotnet test --no-build`; Windows runs `tests/Jobby.Tests.Dashboard` without PostgreSQL.
+CI (`.github/workflows/dotnet.yml`) installs the latest stable .NET 8 SDK in an isolated directory, verifies SDK selection, and installs `wasm-tools`. Both Ubuntu and Windows restore and build the solution. Ubuntu starts PostgreSQL with the compose file above and runs the full suite with `dotnet test --no-build`; Windows runs `tests/Jobby.Tests.Dashboard` without PostgreSQL.
 
 ## Unit Test Guidelines
 

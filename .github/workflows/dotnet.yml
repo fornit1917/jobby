@@ -23,6 +23,8 @@ jobs:
             test_command: dotnet test tests/Jobby.Tests.Dashboard/Jobby.Tests.Dashboard.csproj --no-build --verbosity normal
 
     runs-on: ${{ matrix.os }}
+    env:
+      DOTNET_INSTALL_DIR: ${{ runner.temp }}/jobby-dotnet
 
     steps:
     - uses: actions/checkout@v6
@@ -30,14 +32,20 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
-        global-json-file: global.json
         dotnet-version: 8.0.x
+        dotnet-quality: ga
 
-    - name: Show selected .NET SDK
-      run: dotnet --version
+    - name: Verify .NET 8 SDK
+      shell: pwsh
+      run: |
+        $sdkVersion = dotnet --version
+        Write-Output $sdkVersion
+        if ($LASTEXITCODE -ne 0 -or $sdkVersion -notlike '8.0.*') {
+          throw 'Expected the isolated .NET 8 SDK.'
+        }
 
     - name: Install .NET WebAssembly build tools
-      run: dotnet workload install wasm-tools-net8
+      run: dotnet workload install wasm-tools
 
     - name: Restore dependencies
       run: dotnet restore
