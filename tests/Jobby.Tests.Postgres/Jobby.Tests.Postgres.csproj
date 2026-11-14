@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -24,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Jobby.Postgres\Jobby.Postgres.csproj" />
+    <ProjectReference Include="..\Jobby.TestsUtils\Jobby.TestsUtils.csproj" />
   </ItemGroup>
 
   <ItemGroup>

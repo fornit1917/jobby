@@ -1,0 +1,26 @@
+@inherits LocalizedComponentBase
+
+<div class="jobby-stack-bar">
+    @foreach (var seg in Segments())
+    {
+        <i class="jobby-seg-@seg.Status" style="width:@(seg.Percent.ToString(System.Globalization.CultureInfo.InvariantCulture))%"
+           title="@($"{L.Status(seg.Status)}: {seg.Count}")"></i>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DashboardStatusCount> Counts { get; set; } = [];
+
+    private IEnumerable<(JobStatus Status, long Count, double Percent)> Segments()
+    {
+        var total = Counts.Sum(c => c.Count);
+        if (total <= 0)
+        {
+            yield break;
+        }
+        foreach (var c in Counts.Where(c => c.Count > 0))
+        {
+            yield return (c.Status, c.Count, Math.Round(100.0 * c.Count / total, 4));
+        }
+    }
+}

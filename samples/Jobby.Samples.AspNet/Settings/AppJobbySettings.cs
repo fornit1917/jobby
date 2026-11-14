@@ -4,4 +4,5 @@ public class AppJobbySettings
 {
     public bool UseMetrics { get; init; } = true;
     public bool UseTracing { get; init; }
+    public bool SeedDashboardDemoData { get; init; }
 }

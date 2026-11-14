@@ -1,0 +1,9 @@
+@inherits LocalizedComponentBase
+
+<span class="jobby-tag jobby-tag-@(Alive ? "Alive" : "Stale")" data-testid="server-state-chip">
+    <span class="jobby-tag-dot"></span>@(Alive ? L["server.alive"] : L["server.stale"])
+</span>
+
+@code {
+    [Parameter] public bool Alive { get; set; }
+}

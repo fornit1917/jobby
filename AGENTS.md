@@ -4,18 +4,23 @@ Guidance for AI coding agents working on this repository.
 
 ## Project Overview
 
-Jobby is a high-performance .NET library for background tasks (queued, scheduled and recurring jobs), designed for distributed applications. Published as NuGet packages: `Jobby.Core`, `Jobby.Postgres`, `Jobby.AspNetCore`.
+Jobby is a high-performance .NET library for background tasks (queued, scheduled and recurring jobs), designed for distributed applications. NuGet packages are versioned together: `Jobby.Core`, `Jobby.Postgres`, `Jobby.AspNetCore`, `Jobby.Dashboard`, and the optional `Jobby.Dashboard.Authorization.Basic`.
 
 - Documentation site: https://fornit1917.github.io/jobby/
-- Targets .NET 8 (`net8.0`).
+- Targets .NET 8 (`net8.0`); build SDK selection is separate (see below).
 
 ## Repository Layout
 
 - `src/Jobby.Core` — core library: job models, interfaces, scheduling, retry policies, middlewares, server/client services.
 - `src/Jobby.Postgres` — PostgreSQL storage provider (uses Npgsql, Evolve for migrations).
 - `src/Jobby.AspNetCore` — ASP.NET Core / DI integration.
+- `src/Jobby.Dashboard` - ASP.NET Core Dashboard JSON API and embedded UI assets.
+- `src/Jobby.Dashboard.UI` - internal Blazor WebAssembly implementation, not a public NuGet package.
+- `src/Jobby.Dashboard.Authorization.Basic` - optional Basic authentication helpers.
 - `tests/Jobby.Tests.Core`, `tests/Jobby.Tests.Postgres`, `tests/Jobby.Tests.AspNetCore` — unit tests (xunit.v3, Moq).
-- `tests/Jobby.IntegrationTests.Postgres` — integration tests, require a running PostgreSQL.
+- `tests/Jobby.Tests.Dashboard` - Dashboard API, authorization, and UI component tests.
+- `tests/Jobby.Tests.Dashboard.Globalization` - Dashboard UI checks with invariant globalization enabled.
+- `tests/Jobby.IntegrationTests.Postgres` - integration tests, including Dashboard storage, require a running PostgreSQL.
 - `tests/Jobby.TestsUtils` — shared test utilities.
 - `samples` — runnable example applications.
 - `benchmarks/Jobby.Benchmarks` — BenchmarkDotNet benchmarks.
@@ -23,12 +28,26 @@ Jobby is a high-performance .NET library for background tasks (queued, scheduled
 
 ## Build and Test
 
+Install the .NET 8 SDK, which includes the .NET 8 and ASP.NET Core 8 runtimes needed for tests and samples. All projects target `net8.0`, and `Jobby.sln` supports SDK 8. There is no repository-wide SDK pin. Without `global.json`, `dotnet` normally selects the newest installed SDK; verify `dotnet --version` when checking SDK 8 compatibility, or use an isolated SDK 8 installation.
+
+With SDK 8 selected, run `dotnet workload install wasm-tools`. Dashboard builds publish and embed the WebAssembly UI. Release builds explicitly require native WebAssembly tools to relink the runtime consistently; a missing workload is a build error. Debug builds can use the stock runtime. If you choose to use SDK 9 or 10, the corresponding workload for targeting .NET 8 is `wasm-tools-net8`. Applications consuming the published packages do not need this workload.
+
 ```bash
 dotnet build                # build the solution
 dotnet test                 # run all tests (includes integration tests)
 ```
 
 If warnings appear while building the project, you should try to fix them.
+
+For local release package preparation, including in Windows PowerShell, replace `X.Y.Z` with the intended package version:
+
+```text
+dotnet restore
+dotnet build -c Release --no-restore
+dotnet pack -c Release --no-build --output nupkgs -p:PackageVersion=X.Y.Z
+```
+
+Run build, publish, and pack steps sequentially when they share WebAssembly output directories. These commands create local packages without publishing to NuGet. `Jobby.Dashboard.UI` is not packable; its assets belong to `Jobby.Dashboard`.
 
 Integration tests (`Jobby.IntegrationTests.Postgres`) need PostgreSQL. Start it with docker:
 find a working docker invocation with the algorithm below, then run the compose file with it.
@@ -81,7 +100,7 @@ testing / регрессионное тестирование, read and follow `
 copy of `samples/Jobby.Samples.AspNet` against PostgreSQL in docker and never modifies
 anything outside `temp/`.
 
-CI (`.github/workflows/dotnet.yml`) builds on .NET 8.0.x, starts the compose file above and runs `dotnet test --no-build`.
+CI (`.github/workflows/dotnet.yml`) installs the latest stable .NET 8 SDK in an isolated directory, verifies SDK selection, and installs `wasm-tools`. Both Ubuntu and Windows restore and build the solution. Ubuntu starts PostgreSQL with the compose file above and runs the full suite with `dotnet test --no-build`; Windows runs `tests/Jobby.Tests.Dashboard` without PostgreSQL.
 
 ## Unit Test Guidelines
 
@@ -146,8 +165,8 @@ npm run docs:build   # build docs
 ## Conventions
 
 - User-facing docs exist in both English (`docs/docs`) and Russian (`docs/ru`); keep both in sync when changing documentation.
-- Release notes are maintained in `versions.md` (one `## vX.Y.Z (YYYY-MM-DD)` section per release).
-- NuGet publishing is done via `./publish-nuget.sh <VERSION>` (requires `NUGET_KEY`); all three packages are versioned together.
+- Release notes are maintained in `versions.md` (one `## vX.Y.Z (YYYY-MM-DD)` section per release; use `## Unreleased` for changes without a published version/date).
+- NuGet publishing is done via `./publish-nuget.sh <VERSION>` (requires `NUGET_KEY` and Bash, including on Windows); all five public packages are versioned together. The script pushes to NuGet; use the Release/pack commands above for preparation without publication.
 - Breaking or notable API changes should be reflected in `versions.md`.
 
 ## Code Style

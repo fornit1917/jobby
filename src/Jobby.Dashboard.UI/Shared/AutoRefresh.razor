@@ -1,0 +1,135 @@
+@implements IAsyncDisposable
+@inject LanguageState L
+@inject DashboardClientConfig Config
+
+<div class="jobby-refresh" data-testid="auto-refresh">
+    <MudTooltip Text="@L["refresh.now"]">
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       Class="@(_refreshing ? "jobby-refresh-spin" : null)"
+                       OnClick="RefreshNowAsync" data-testid="refresh-now" aria-label="@L["refresh.now"]"/>
+    </MudTooltip>
+    <span class="jobby-mono jobby-refresh-ago" data-testid="updated-ago">@UpdatedAgo</span>
+    @if (Interval is not null)
+    {
+        <span class="jobby-refresh-sep" aria-hidden="true"></span>
+        <span class="jobby-refresh-dot @(_auto ? "is-on" : "is-off")" aria-hidden="true"></span>
+        <span class="jobby-refresh-auto">@L["refresh.auto"]</span>
+        <MudSwitch T="bool" @bind-Value="_auto" Color="Color.Primary" Size="Size.Small"
+                   Class="jobby-refresh-switch" data-testid="auto-toggle" aria-label="@L["refresh.toggleAuto"]"/>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventCallback OnRefresh { get; set; }
+    [Parameter] public TimeSpan? Interval { get; set; }
+
+    private bool _auto = true;
+    private bool _refreshing;
+    private PeriodicTimer? _timer;
+    private PeriodicTimer? _tick;
+    private Task? _loop;
+    private Task? _tickLoop;
+    private readonly CancellationTokenSource _cts = new();
+
+    private DateTime _lastRefresh = DateTime.UtcNow;
+    private string UpdatedAgo => L.Relative(_lastRefresh, allowFuture: false);
+
+    protected override void OnInitialized()
+    {
+        L.Changed += OnLangChanged;
+        _lastRefresh = Config.ServerUtcNow;
+        if (Interval is { } interval)
+        {
+            _timer = new PeriodicTimer(interval);
+            _loop = RunLoopAsync();
+
+            _tick = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            _tickLoop = RunTickAsync();
+        }
+    }
+
+    private async Task RunLoopAsync()
+    {
+        try
+        {
+            while (await _timer!.WaitForNextTickAsync(_cts.Token))
+            {
+                if (_auto)
+                {
+                    await RefreshAsync();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task RunTickAsync()
+    {
+        try
+        {
+            while (await _tick!.WaitForNextTickAsync(_cts.Token))
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void OnLangChanged() => InvokeAsync(StateHasChanged);
+
+    private Task RefreshNowAsync() => RefreshAsync();
+
+    private async Task RefreshAsync()
+    {
+        if (_refreshing)
+        {
+            return;
+        }
+
+        _refreshing = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await InvokeAsync(() => OnRefresh.InvokeAsync());
+            _lastRefresh = Config.ServerUtcNow;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _refreshing = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        L.Changed -= OnLangChanged;
+        await _cts.CancelAsync();
+        _timer?.Dispose();
+        _tick?.Dispose();
+        foreach (var t in new[] { _loop, _tickLoop })
+        {
+            if (t is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                await t;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _cts.Dispose();
+    }
+
+}

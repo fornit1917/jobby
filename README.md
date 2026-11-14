@@ -20,6 +20,7 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Multi-Queues
 - Configurable middlewares pipeline for executing background tasks code
 - OpenTelemetry-compatible metrics and tracing
+- Optional web dashboard for monitoring and managing jobs
 - Proper operation in distributed applications
 - Fault tolerance and component failure resilience  
 - High performance  
@@ -41,6 +42,12 @@ For ASP.NET Core integration, also install the Jobby.AspNetCore package:
 ```
 dotnet add package Jobby.AspNetCore  
 ```
+
+### Dashboard
+
+The optional ASP.NET Core dashboard shows jobs, recurring definitions, queues, servers, and locked groups. It supports filtering and sorting, early execution of scheduled jobs, retries, deletion, and group unlock requests. The Blazor WebAssembly UI uses a JSON API and polling. Configure an existing host authorization policy or install the optional Basic authentication package.
+
+See [Dashboard installation and configuration](https://fornit1917.github.io/jobby/docs/dashboard.html).
 
 ### Defining Background Tasks  
 

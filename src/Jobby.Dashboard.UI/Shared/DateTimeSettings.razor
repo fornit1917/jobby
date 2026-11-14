@@ -1,0 +1,183 @@
+@using System.Globalization
+@inject DateTimeDisplayState Dt
+@inject IJSRuntime Js
+@inject LanguageState L
+@implements IDisposable
+
+<MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+         ActivationEvent="@MouseEvent.LeftClick" Dense="true" Class="ml-2" data-testid="datetime-settings">
+    <ActivatorContent Context="menu">
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Schedule" OnClick="@menu.ToggleAsync"
+                   data-testid="datetime-pill">@PillLabel</MudButton>
+    </ActivatorContent>
+    <ChildContent>
+        <div class="pa-3" style="min-width:280px;" @onclick:stopPropagation="true">
+            <div class="jobby-field mb-3">
+                <span class="jobby-field-label">@L["settings.timeZone"]</span>
+                <MudAutocomplete T="string" Value="_tz" ValueChanged="OnTimeZoneChanged"
+                                 SearchFunc="SearchTimeZones" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 ResetValueOnEmptyText="false" CoerceValue="false" MaxItems="50"
+                                 data-testid="datetime-tz"/>
+            </div>
+            <div class="jobby-field mb-3">
+                <span class="jobby-field-label">@L["settings.dateFormat"]</span>
+                <MudSelect T="DashboardDateStyle" Value="_date" ValueChanged="OnDateChanged"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="datetime-date">
+                    @foreach (var s in Enum.GetValues<DashboardDateStyle>())
+                    {
+                        <MudSelectItem T="DashboardDateStyle" Value="@s">@DateSample(s)</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+            <div class="jobby-field mb-3">
+                <span class="jobby-field-label">@L["settings.timeFormat"]</span>
+                <MudSelect T="DashboardTimeStyle" Value="_time" ValueChanged="OnTimeChanged"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="datetime-time">
+                    @foreach (var s in Enum.GetValues<DashboardTimeStyle>())
+                    {
+                        <MudSelectItem T="DashboardTimeStyle" Value="@s">@TimeSample(s)</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+            <div class="d-flex align-center justify-space-between">
+                <span class="jobby-mono" style="font-size:12px;color:var(--text-3);"
+                      data-testid="datetime-preview">@Preview</span>
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="ResetAsync"
+                           Disabled="@(!Dt.HasUserOverrides)"
+                           data-testid="datetime-reset">@L["settings.reset"]</MudButton>
+            </div>
+        </div>
+    </ChildContent>
+</MudMenu>
+
+@code {
+    private string _tz = "UTC";
+    private DashboardDateStyle _date = DashboardDateStyle.Iso;
+    private DashboardTimeStyle _time = DashboardTimeStyle.H24WithSeconds;
+    private List<string> _zoneIds = new();
+
+    private DateTime LocalNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Dt.TimeZone);
+
+    private string PillLabel => Dt.TimeZone.Id == "UTC" ? "UTC" : $"{Dt.TimeZone.Id} - {OffsetLabel}";
+
+    private string OffsetLabel
+    {
+        get
+        {
+            var off = Dt.TimeZone.GetUtcOffset(DateTime.UtcNow);
+            if (off == TimeSpan.Zero)
+            {
+                return "UTC";
+            }
+
+            var minutes = Math.Abs(off.Minutes);
+            return $"UTC{(off < TimeSpan.Zero ? "-" : "+")}{Math.Abs(off.Hours)}{(minutes != 0 ? $":{minutes:D2}" : "")}";
+        }
+    }
+
+    private string Preview => Dt.FormatAbsolute(DateTime.UtcNow);
+
+    protected override void OnInitialized()
+    {
+        Dt.Changed += OnChanged;
+        L.Changed += OnChanged;
+        SyncFromState();
+        _zoneIds = BuildZoneList(null);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        string? browserTz = null;
+        try
+        {
+            browserTz = await Js.InvokeAsync<string?>("jobbyDashboard.getTimeZone");
+        }
+        catch
+        {
+            // ignored
+        }
+
+        _zoneIds = BuildZoneList(browserTz);
+        StateHasChanged();
+    }
+
+    private void OnChanged()
+    {
+        SyncFromState();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SyncFromState()
+    {
+        _tz = Dt.TimeZone.Id;
+        _date = Dt.DateStyle;
+        _time = Dt.TimeStyle;
+    }
+
+    private async Task OnTimeZoneChanged(string? tz)
+    {
+        if (string.IsNullOrWhiteSpace(tz))
+        {
+            return;
+        }
+
+        _tz = tz;
+        await Dt.SetAsync(Js, _tz, _date, _time);
+    }
+
+    private async Task OnDateChanged(DashboardDateStyle date)
+    {
+        _date = date;
+        await Dt.SetAsync(Js, _tz, _date, _time);
+    }
+
+    private async Task OnTimeChanged(DashboardTimeStyle time)
+    {
+        _time = time;
+        await Dt.SetAsync(Js, _tz, _date, _time);
+    }
+
+    private Task ResetAsync() => Dt.ResetAsync(Js);
+
+    private Task<IEnumerable<string>> SearchTimeZones(string? value, CancellationToken cancellationToken)
+    {
+        var result =
+            string.IsNullOrWhiteSpace(value) || string.Equals(value, _tz, StringComparison.Ordinal)
+                ? _zoneIds
+                : _zoneIds.Where(z => z.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(result);
+    }
+
+    private static List<string> BuildZoneList(string? browserTz)
+    {
+        var pinned = new List<string> { "UTC" };
+        if (!string.IsNullOrWhiteSpace(browserTz) &&
+            TimeZoneInfo.TryFindSystemTimeZoneById(browserTz, out _) &&
+            !pinned.Contains(browserTz))
+        {
+            pinned.Add(browserTz);
+        }
+
+        var all = TimeZoneInfo.GetSystemTimeZones().Select(z => z.Id);
+        return pinned.Concat(all.Where(z => !pinned.Contains(z))).Distinct().ToList();
+    }
+
+    private string DateSample(DashboardDateStyle s)
+        => LocalNow.ToString(DateTimeFormatPatterns.DatePattern(s), CultureInfo.InvariantCulture);
+
+    private string TimeSample(DashboardTimeStyle s)
+        => LocalNow.ToString(DateTimeFormatPatterns.TimePattern(s), CultureInfo.InvariantCulture);
+
+    public void Dispose()
+    {
+        Dt.Changed -= OnChanged;
+        L.Changed -= OnChanged;
+    }
+
+}
