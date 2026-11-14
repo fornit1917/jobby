@@ -94,24 +94,61 @@ public class GetJobsTests
         Assert.All(page.Items, i => Assert.Equal("emails", i.QueueName));
     }
 
-    [Fact]
-    public async Task GetJobsAsync_FiltersByCreatedDateRange()
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task GetJobsAsync_FiltersByInclusiveScheduledBounds(bool useFrom, bool useTo)
     {
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
-        var old = NewJob(JobStatus.Scheduled, "old");
-        old.CreatedAt = DateTime.UtcNow.AddDays(-10);
-        var recent = NewJob(JobStatus.Scheduled, "recent");
-        recent.CreatedAt = DateTime.UtcNow;
-        db.Jobs.AddRange(old, recent);
+        var from = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc).AddTicks(1234560);
+        var to = from.AddHours(2);
+        var rows = new[]
+        {
+            (Name: "before", Scheduled: from.AddTicks(-10)),
+            (Name: "from", Scheduled: from),
+            (Name: "middle", Scheduled: from.AddHours(1)),
+            (Name: "to", Scheduled: to),
+            (Name: "after", Scheduled: to.AddTicks(10)),
+        };
+        foreach (var row in rows)
+        {
+            var job = NewJob(JobStatus.Scheduled, row.Name);
+            job.ScheduledStartAt = row.Scheduled;
+            job.CreatedAt = from.AddYears(-1);
+            db.Jobs.Add(job);
+        }
+
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var page = await DbHelper.CreateDashboardReadStorage().GetJobsAsync(
+            new DashboardJobsQuery
+            {
+                ScheduledFrom = useFrom ? from : null,
+                ScheduledTo = useTo ? to : null,
+            }, TestContext.Current.CancellationToken);
+
+        var expected = rows.Where(row => (!useFrom || row.Scheduled >= from) && (!useTo || row.Scheduled <= to))
+            .Select(row => row.Name).ToArray();
+        Assert.Equal(expected.Length, page.TotalCount);
+        Assert.Equal(expected, page.Items.Select(item => item.JobName));
+    }
+
+    [Fact]
+    public async Task GetJobsAsync_ReversedScheduledBounds_ReturnNoMatches()
+    {
+        await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        var scheduled = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        var job = NewJob(JobStatus.Scheduled, "job");
+        job.ScheduledStartAt = scheduled;
+        db.Jobs.Add(job);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var storage = DbHelper.CreateDashboardReadStorage();
-        var page = await storage.GetJobsAsync(
-            new DashboardJobsQuery { CreatedFrom = DateTime.UtcNow.AddDays(-1) },
+        var page = await DbHelper.CreateDashboardReadStorage().GetJobsAsync(
+            new DashboardJobsQuery { ScheduledFrom = scheduled.AddHours(1), ScheduledTo = scheduled },
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(1, page.TotalCount);
-        Assert.Equal("recent", page.Items.Single().JobName);
+        Assert.Equal(0, page.TotalCount);
+        Assert.Empty(page.Items);
     }
 
     [Fact]
@@ -134,62 +171,67 @@ public class GetJobsTests
     }
 
     [Fact]
-    public async Task GetJobsAsync_FiltersByCreatedToUpperBound()
+    public async Task GetJobsAsync_DefaultSort_IsScheduledAscending_WithStableIdTiesAcrossPages()
     {
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
-        var older = NewJob(JobStatus.Scheduled, "older");
-        older.CreatedAt = DateTime.UtcNow.AddDays(-3);
-        var newer = NewJob(JobStatus.Scheduled, "newer");
-        newer.CreatedAt = DateTime.UtcNow;
-        db.Jobs.AddRange(older, newer);
+        var scheduled = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc).AddTicks(1234560);
+        var early = NewJob(JobStatus.Scheduled, "early");
+        early.ScheduledStartAt = scheduled.AddHours(-1);
+        early.CreatedAt = scheduled.AddDays(2);
+        var tieLow = NewJob(JobStatus.Scheduled, "tie-low");
+        tieLow.Id = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        tieLow.ScheduledStartAt = scheduled;
+        tieLow.CreatedAt = scheduled.AddDays(1);
+        var tieHigh = NewJob(JobStatus.Scheduled, "tie-high");
+        tieHigh.Id = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        tieHigh.ScheduledStartAt = scheduled;
+        tieHigh.CreatedAt = scheduled.AddDays(-1);
+        var late = NewJob(JobStatus.Scheduled, "late");
+        late.ScheduledStartAt = scheduled.AddHours(1);
+        late.CreatedAt = scheduled.AddDays(-2);
+        db.Jobs.AddRange(late, tieHigh, early, tieLow);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var storage = DbHelper.CreateDashboardReadStorage();
-        var page = await storage.GetJobsAsync(
-            new DashboardJobsQuery { CreatedTo = DateTime.UtcNow.AddDays(-1) },
+        var firstPage = await storage.GetJobsAsync(new DashboardJobsQuery { PageSize = 2 },
             TestContext.Current.CancellationToken);
+        var secondPage = await storage.GetJobsAsync(new DashboardJobsQuery { PageSize = 2, Page = 2 },
+            TestContext.Current.CancellationToken);
+        Assert.Equal(4, firstPage.TotalCount);
+        Assert.Equal(new[] { "early", "tie-low", "tie-high", "late" },
+            firstPage.Items.Concat(secondPage.Items).Select(item => item.JobName));
 
-        Assert.Equal(1, page.TotalCount);
-        Assert.Equal("older", page.Items.Single().JobName);
-    }
+        var descending = await storage.GetJobsAsync(new DashboardJobsQuery { SortDescending = true },
+            TestContext.Current.CancellationToken);
+        Assert.Equal(new[] { "late", "tie-high", "tie-low", "early" },
+            descending.Items.Select(item => item.JobName));
 
-    [Fact]
-    public async Task GetJobsAsync_DefaultSort_IsCreatedAtDescending()
-    {
-        await using var db = await DbHelper.CreateContextAndClearDbAsync();
-        var first = NewJob(JobStatus.Scheduled, "first");
-        first.CreatedAt = DateTime.UtcNow.AddMinutes(-10);
-        var last = NewJob(JobStatus.Scheduled, "last");
-        last.CreatedAt = DateTime.UtcNow;
-        db.Jobs.AddRange(first, last);
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        var storage = DbHelper.CreateDashboardReadStorage();
-        var page = await storage.GetJobsAsync(new DashboardJobsQuery(), TestContext.Current.CancellationToken);
-
-        Assert.Equal("last", page.Items[0].JobName);
-        Assert.Equal("first", page.Items[1].JobName);
+        var created = await storage.GetJobsAsync(new DashboardJobsQuery { SortBy = DashboardJobsSortBy.CreatedAt },
+            TestContext.Current.CancellationToken);
+        Assert.Equal(new[] { "late", "tie-high", "tie-low", "early" },
+            created.Items.Select(item => item.JobName));
     }
 
     [Fact]
     public async Task GetJobsAsync_CombinedFilters_AlignParametersCorrectly()
     {
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        var scheduled = new DateTime(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
         var match = NewJob(JobStatus.Failed, "send-report");
         match.QueueName = "emails";
-        match.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        match.ScheduledStartAt = scheduled.AddHours(-1);
         var wrongStatus = NewJob(JobStatus.Scheduled, "send-report-2");
         wrongStatus.QueueName = "emails";
-        wrongStatus.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        wrongStatus.ScheduledStartAt = scheduled.AddHours(-1);
         var wrongQueue = NewJob(JobStatus.Failed, "send-report-3");
         wrongQueue.QueueName = "default";
-        wrongQueue.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        wrongQueue.ScheduledStartAt = scheduled.AddHours(-1);
         var wrongName = NewJob(JobStatus.Failed, "cleanup");
         wrongName.QueueName = "emails";
-        wrongName.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        wrongName.ScheduledStartAt = scheduled.AddHours(-1);
         var tooOld = NewJob(JobStatus.Failed, "send-report-old");
         tooOld.QueueName = "emails";
-        tooOld.CreatedAt = DateTime.UtcNow.AddDays(-10);
+        tooOld.ScheduledStartAt = scheduled.AddDays(-10);
         db.Jobs.AddRange(match, wrongStatus, wrongQueue, wrongName, tooOld);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -200,8 +242,8 @@ public class GetJobsTests
                 Status = JobStatus.Failed,
                 QueueName = "emails",
                 JobNameSearch = "send",
-                CreatedFrom = DateTime.UtcNow.AddDays(-2),
-                CreatedTo = DateTime.UtcNow,
+                ScheduledFrom = scheduled.AddDays(-2),
+                ScheduledTo = scheduled,
             },
             TestContext.Current.CancellationToken);
 

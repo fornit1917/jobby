@@ -55,6 +55,48 @@ public class JobbyDashboardApiTests
         Assert.Equal(HttpStatusCode.OK, (await app.GetTestClient().GetAsync("/api/jobs?page=3&pageSize=7")).StatusCode);
         Assert.Equal(3, reader.LastJobsQuery!.Page);
         Assert.Equal(7, reader.LastJobsQuery!.PageSize);
+        Assert.Equal(DashboardJobsSortBy.ScheduledStartAt, reader.LastJobsQuery.SortBy);
+        Assert.False(reader.LastJobsQuery.SortDescending);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Jobs_ParsesScheduledBoundsAsUtc_AndPreservesExplicitSort(bool reversed)
+    {
+        var reader = new FakeDashboardDataReader();
+        await using var app = await StartAsync(reader);
+        var from = new DateTimeOffset(2026, 6, 10, 12, 30, 0, TimeSpan.FromHours(3));
+        var to = from.AddDays(reversed ? -1 : 1);
+        var url = $"/api/jobs?scheduledFrom={Uri.EscapeDataString(from.ToString("O"))}" +
+                  $"&scheduledTo={Uri.EscapeDataString(to.ToString("O"))}&sortBy=CreatedAt&sortDescending=true";
+
+        using var response = await app.GetTestClient().GetAsync(url, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(from.UtcDateTime, reader.LastJobsQuery!.ScheduledFrom);
+        Assert.Equal(to.UtcDateTime, reader.LastJobsQuery.ScheduledTo);
+        Assert.Equal(DateTimeKind.Utc, reader.LastJobsQuery.ScheduledFrom?.Kind);
+        Assert.Equal(DateTimeKind.Utc, reader.LastJobsQuery.ScheduledTo?.Kind);
+        Assert.Equal(DashboardJobsSortBy.CreatedAt, reader.LastJobsQuery.SortBy);
+        Assert.True(reader.LastJobsQuery.SortDescending);
+    }
+
+    [Fact]
+    public async Task Jobs_IgnoresMalformedBounds_AndDefaultsMalformedSort()
+    {
+        var reader = new FakeDashboardDataReader();
+        await using var app = await StartAsync(reader);
+
+        using var response = await app.GetTestClient().GetAsync(
+            "/api/jobs?scheduledFrom=invalid&scheduledTo=invalid&sortBy=invalid&sortDescending=invalid",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(reader.LastJobsQuery!.ScheduledFrom);
+        Assert.Null(reader.LastJobsQuery.ScheduledTo);
+        Assert.Equal(DashboardJobsSortBy.ScheduledStartAt, reader.LastJobsQuery.SortBy);
+        Assert.False(reader.LastJobsQuery.SortDescending);
     }
 
     [Fact]

@@ -60,7 +60,8 @@ else
                     <StatusChip Status="context.Item.Status"/>
                 </CellTemplate>
             </PropertyColumn>
-            <PropertyColumn Property="x => x.ScheduledStartAt" Title="@L["field.scheduled"]">
+            <PropertyColumn Property="x => x.ScheduledStartAt" Title="@L["field.scheduled"]"
+                            InitialDirection="SortDirection.Ascending">
                 <CellTemplate>
                     <div class="d-flex flex-column">
                         <span class="jobby-mono jobby-text-sm"
@@ -147,9 +148,7 @@ else
         bool sortDescending;
         if (sort is null)
         {
-            (sortBy, sortDescending) = mode == QueueViewMode.Backlog
-                ? (DashboardJobsSortBy.ScheduledStartAt, false)
-                : (DashboardJobsSortBy.CreatedAt, true);
+            (sortBy, sortDescending) = (DashboardJobsSortBy.ScheduledStartAt, false);
         }
         else
         {

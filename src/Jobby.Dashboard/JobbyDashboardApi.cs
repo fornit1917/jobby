@@ -188,20 +188,20 @@ internal static class JobbyDashboardApi
             QueueName = QueryValue(query, "queueName"),
             JobNameSearch = QueryValue(query, "jobNameSearch"),
             // Note: AssumeUniversal | AdjustToUniversal: values are bound to timestamptz parameters, which Npgsql only accepts with DateTimeKind.Utc.
-            CreatedFrom = DateTime.TryParse(QueryValue(query, "createdFrom"), CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var cf)
-                ? cf
+            ScheduledFrom = DateTime.TryParse(QueryValue(query, "scheduledFrom"), CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var sf)
+                ? sf
                 : null,
-            CreatedTo = DateTime.TryParse(QueryValue(query, "createdTo"), CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var ctv)
-                ? ctv
+            ScheduledTo = DateTime.TryParse(QueryValue(query, "scheduledTo"), CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var st)
+                ? st
                 : null,
             Page = int.TryParse(QueryValue(query, "page"), out var p) ? p : 1,
             PageSize = int.TryParse(QueryValue(query, "pageSize"), out var ps) ? ps : 50,
             SortBy = Enum.TryParse<DashboardJobsSortBy>(QueryValue(query, "sortBy"), true, out var sb)
                 ? sb
-                : DashboardJobsSortBy.CreatedAt,
-            SortDescending = !bool.TryParse(QueryValue(query, "sortDescending"), out var sd) || sd,
+                : DashboardJobsSortBy.ScheduledStartAt,
+            SortDescending = bool.TryParse(QueryValue(query, "sortDescending"), out var sd) && sd,
         };
     }
 

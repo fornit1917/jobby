@@ -45,16 +45,16 @@ internal sealed class GetJobsPagedCommand
             where.Add($"job_name ILIKE '%' || ${args.Count} || '%'");
         }
 
-        if (query.CreatedFrom is { } from)
+        if (query.ScheduledFrom is { } from)
         {
             args.Add(from);
-            where.Add($"created_at >= ${args.Count}");
+            where.Add($"scheduled_start_at >= ${args.Count}");
         }
 
-        if (query.CreatedTo is { } to)
+        if (query.ScheduledTo is { } to)
         {
             args.Add(to);
-            where.Add($"created_at <= ${args.Count}");
+            where.Add($"scheduled_start_at <= ${args.Count}");
         }
 
         var whereSql = "WHERE " + string.Join(" AND ", where);
@@ -62,8 +62,8 @@ internal sealed class GetJobsPagedCommand
         {
             DashboardJobsSortBy.JobName => "job_name",
             DashboardJobsSortBy.Status => "status",
-            DashboardJobsSortBy.ScheduledStartAt => "scheduled_start_at",
-            _ => "created_at"
+            DashboardJobsSortBy.CreatedAt => "created_at",
+            _ => "scheduled_start_at"
         };
         var orderDir = query.SortDescending ? "DESC" : "ASC";
 

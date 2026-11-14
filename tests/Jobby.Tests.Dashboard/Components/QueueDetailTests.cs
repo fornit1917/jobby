@@ -5,6 +5,7 @@ using Jobby.Dashboard.UI;
 using Jobby.Dashboard.UI.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor;
 
 namespace Jobby.Tests.Dashboard.Components;
 
@@ -30,6 +31,9 @@ public class QueueDetailTests : DashboardClientTestContext
         Assert.Contains("statuses=Scheduled,Processing,WaitingPrev,Frozen", query);
         Assert.Contains("sortBy=ScheduledStartAt", query);
         Assert.Contains("sortDescending=False", query);
+        var sort = Assert.Single(cut.FindComponent<MudDataGrid<DashboardJobListItemDto>>().Instance.SortDefinitions);
+        Assert.Equal(nameof(DashboardJobListItemDto.ScheduledStartAt), sort.Key);
+        Assert.False(sort.Value.Descending);
     }
 
     [Fact]
@@ -46,10 +50,49 @@ public class QueueDetailTests : DashboardClientTestContext
         {
             var query = Uri.UnescapeDataString(Handler.RequestsTo("/api/jobs").Last().RequestUri!.Query);
             Assert.DoesNotContain("statuses=", query);
-            Assert.Contains("sortBy=CreatedAt", query);
-            Assert.Contains("sortDescending=True", query);
+            Assert.Contains("sortBy=ScheduledStartAt", query);
+            Assert.Contains("sortDescending=False", query);
             Assert.Contains("page=1", query);
+            var sort = Assert.Single(cut.FindComponent<MudDataGrid<DashboardJobListItemDto>>().Instance.SortDefinitions);
+            Assert.Equal(nameof(DashboardJobListItemDto.ScheduledStartAt), sort.Key);
+            Assert.False(sort.Value.Descending);
         });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ManualSort_SurvivesRefresh_AndEmptySortUsesScheduledAscending(bool allJobs)
+    {
+        SetupApi(_ => EmptyJobs());
+        NavigateToQueue("emails");
+        var cut = Render<QueueDetail>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(Handler.RequestsTo("/api/jobs")));
+        if (allJobs)
+        {
+            cut.Find("[data-testid=queue-mode-all]").Click();
+            cut.WaitForAssertion(() => Assert.DoesNotContain("statuses=",
+                Uri.UnescapeDataString(Handler.RequestsTo("/api/jobs").Last().RequestUri!.Query)));
+        }
+
+        var grid = cut.FindComponent<MudDataGrid<DashboardJobListItemDto>>().Instance;
+        await cut.InvokeAsync(() => grid.SetSortAsync(nameof(DashboardJobListItemDto.JobName),
+            SortDirection.Descending, item => item.JobName));
+        await cut.InvokeAsync(() => grid.ReloadServerData());
+
+        var query = Uri.UnescapeDataString(Handler.RequestsTo("/api/jobs").Last().RequestUri!.Query);
+        Assert.Contains("sortBy=JobName", query);
+        Assert.Contains("sortDescending=True", query);
+
+        await cut.InvokeAsync(async () =>
+        {
+            grid.SortDefinitions.Clear();
+            await grid.ReloadServerData();
+        });
+
+        query = Uri.UnescapeDataString(Handler.RequestsTo("/api/jobs").Last().RequestUri!.Query);
+        Assert.Contains("sortBy=ScheduledStartAt", query);
+        Assert.Contains("sortDescending=False", query);
     }
 
     [Fact]

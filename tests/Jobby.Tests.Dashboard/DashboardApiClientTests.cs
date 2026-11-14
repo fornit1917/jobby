@@ -21,12 +21,39 @@ public class DashboardApiClientTests
             {
                 QueueName = "emails",
                 Statuses = [JobStatus.Scheduled, JobStatus.Processing, JobStatus.WaitingPrev, JobStatus.Frozen],
-            });
+            }, TestContext.Current.CancellationToken);
 
             var query = Uri.UnescapeDataString(handler.Requests.Single().RequestUri!.Query);
             Assert.Contains("queueName=emails", query);
             Assert.Contains("statuses=Scheduled,Processing,WaitingPrev,Frozen", query);
+            Assert.Contains("sortBy=ScheduledStartAt", query);
+            Assert.Contains("sortDescending=False", query);
         }
+    }
+
+    [Fact]
+    public async Task GetJobsAsync_SerializesScheduledBoundsAndExplicitSort()
+    {
+        var handler = new RecordingHttpMessageHandler(_ =>
+            new PagedResult<DashboardJobListItemDto>(Items: [], TotalCount: 0, Page: 1, PageSize: 50));
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        var client = new DashboardApiClient(http, new TestNavigationManager(), new DashboardClientConfig());
+        var from = new DateTime(2026, 6, 10, 12, 30, 0, DateTimeKind.Utc);
+        var to = from.AddDays(1).AddTicks(-1);
+
+        await client.GetJobsAsync(new DashboardJobsQuery
+        {
+            ScheduledFrom = from,
+            ScheduledTo = to,
+            SortBy = DashboardJobsSortBy.CreatedAt,
+            SortDescending = true,
+        }, TestContext.Current.CancellationToken);
+
+        var query = Uri.UnescapeDataString(handler.Requests.Single().RequestUri!.Query);
+        Assert.Contains("scheduledFrom=2026-06-10T12:30:00.0000000Z", query);
+        Assert.Contains("scheduledTo=2026-06-11T12:29:59.9999999Z", query);
+        Assert.Contains("sortBy=CreatedAt", query);
+        Assert.Contains("sortDescending=True", query);
     }
 
     [Fact]

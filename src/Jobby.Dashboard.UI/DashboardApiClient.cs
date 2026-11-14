@@ -166,14 +166,14 @@ public sealed class DashboardApiClient
             parameters["jobNameSearch"] = query.JobNameSearch;
         }
 
-        if (query.CreatedFrom is { } cf)
+        if (query.ScheduledFrom is { } scheduledFrom)
         {
-            parameters["createdFrom"] = cf.ToString("o", CultureInfo.InvariantCulture);
+            parameters["scheduledFrom"] = scheduledFrom.ToString("o", CultureInfo.InvariantCulture);
         }
 
-        if (query.CreatedTo is { } ctv)
+        if (query.ScheduledTo is { } scheduledTo)
         {
-            parameters["createdTo"] = ctv.ToString("o", CultureInfo.InvariantCulture);
+            parameters["scheduledTo"] = scheduledTo.ToString("o", CultureInfo.InvariantCulture);
         }
 
         parameters["page"] = query.Page.ToString(CultureInfo.InvariantCulture);

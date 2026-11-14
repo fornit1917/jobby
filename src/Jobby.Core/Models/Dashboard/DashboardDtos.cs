@@ -29,12 +29,12 @@ public sealed record DashboardJobsQuery
 
     public string? QueueName { get; init; }
     public string? JobNameSearch { get; init; }
-    public DateTime? CreatedFrom { get; init; }
-    public DateTime? CreatedTo { get; init; }
+    public DateTime? ScheduledFrom { get; init; }
+    public DateTime? ScheduledTo { get; init; }
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 50;
-    public DashboardJobsSortBy SortBy { get; init; } = DashboardJobsSortBy.CreatedAt;
-    public bool SortDescending { get; init; } = true;
+    public DashboardJobsSortBy SortBy { get; init; } = DashboardJobsSortBy.ScheduledStartAt;
+    public bool SortDescending { get; init; }
 }
 
 public sealed record DashboardJobListItemDto(
