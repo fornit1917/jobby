@@ -2,15 +2,7 @@
 
 ## Unreleased
 
-- Added the optional ASP.NET Core Dashboard with an embedded Blazor WebAssembly UI, polling JSON API, PostgreSQL storage, job and queue views, recurring definitions, server health, and locked-group management.
-- Added explicit Dashboard authorization through host policies, inline policies, anonymous opt-out, or the optional `Jobby.Dashboard.Authorization.Basic` package. Read and management permissions, read-only mode, and antiforgery checks protect management actions.
-- Dashboard job date filters now use scheduled-start bounds (`ScheduledFrom` / `ScheduledTo`, API `scheduledFrom` / `scheduledTo`) instead of creation-date bounds. Jobs and queue All jobs views initially sort by scheduled start ascending.
-- Dashboard Trigger supports scheduled recurring jobs using the existing persisted job. Triggering never postpones an already-due job; recurring jobs retain normal scheduler behavior, which can shift interval schedules.
-- Dashboard recurring definitions and job details expose `IsExclusive`, indicating uniqueness among exclusive definitions with the same job name.
-- Renamed the internal WebAssembly implementation project to `Jobby.Dashboard.UI`; it is embedded in `Jobby.Dashboard` and is not a separate NuGet package.
-- Dashboard tables, job details, and toolbar controls adapt to narrow screens.
-- Packing Dashboard with `--no-build` reuses the assets embedded in the existing assembly without publishing the WebAssembly project again.
-- Build tooling now selects stable SDK 10.0.401 with `latestPatch` roll-forward and prereleases disabled. Runtime targets remain .NET 8; repository builds require the `wasm-tools-net8` workload. CI builds on Ubuntu and Windows, with PostgreSQL integration tests on Ubuntu and Dashboard tests on Windows.
+- Added the optional ASP.NET Core Dashboard with an embedded Blazor WebAssembly UI, polling JSON API, and PostgreSQL storage. It provides job and queue views, scheduled-date filtering, recurring definitions, server health, and job and locked-group management. Authorization supports host or inline policies, explicit anonymous access, and the optional `Jobby.Dashboard.Authorization.Basic` package, with separate read and management permissions, server-enforced read-only mode, and antiforgery protection.
 
 ## v1.0.5 (2026-11-01)
 

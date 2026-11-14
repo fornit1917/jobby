@@ -12,7 +12,7 @@ The dashboard is a **Blazor WebAssembly** single-page application served as stat
 | `Jobby.Postgres` | `AddJobbyPostgresDashboardStorage()` - PostgreSQL read and command storage |
 | `Jobby.Dashboard.Authorization.Basic` | Optional first-party Basic authentication (`AddBasicAuth` / `AddBasicAuthScheme`) and `PasswordHasher` |
 
-`Jobby.Dashboard` depends on ASP.NET Core. It does not affect the Jobby engine itself: removing the package and its registration calls leaves the engine behavior unchanged.
+`Jobby.Dashboard` targets .NET 8 and depends on ASP.NET Core 8. Applications consuming the NuGet packages do not need a WebAssembly build workload. It does not affect the Jobby engine itself: removing the package and its registration calls leaves the engine behavior unchanged.
 
 Install `Jobby.Dashboard.Authorization.Basic` only when you want to use the built-in Basic authentication helpers. The dashboard can also run anonymously for local development, or use authentication/authorization already configured by the host application.
 
@@ -273,11 +273,11 @@ Management actions are enabled when an `IJobbyDashboardCommandStorage` is regist
 
 ### Scheduled dates and ordering
 
-The Jobs From/To filters select the scheduled start date in the dashboard's selected time zone. Both calendar days are included; the UI converts their boundaries to UTC, including daylight-saving transitions. A reversed range displays an error and retains the last valid results until corrected. Creation time remains visible and sortable.
+The Jobs From/To filters select the scheduled start date in the dashboard's selected time zone. Both calendar days are included; the UI converts their boundaries to UTC, including daylight-saving transitions. A reversed range displays an error and retains the entire last valid result until corrected. Changes to status, queue, or search filters made while the range is invalid apply once the range is corrected. Creation time is visible and sortable.
 
 Jobs and a queue's All jobs view initially sort by scheduled start ascending, so the earliest scheduled jobs appear first. The queue backlog uses the same order. Users can select another sort column and direction.
 
-The jobs API accepts inclusive UTC timestamp bounds `scheduledFrom` and `scheduledTo`; the corresponding `DashboardJobsQuery` properties are `ScheduledFrom` and `ScheduledTo`. `createdFrom` and `createdTo` are no longer supported. The date range refers to the current scheduled start, including retries and rescheduling, rather than creation time or actual execution time.
+The jobs API accepts inclusive UTC timestamp bounds `scheduledFrom` and `scheduledTo`; the corresponding `DashboardJobsQuery` properties are `ScheduledFrom` and `ScheduledTo`. The date range refers to the current scheduled start, including retries and rescheduling, rather than creation time or actual execution time.
 
 ### Run scheduled jobs early
 
@@ -333,26 +333,6 @@ Normal production concerns still apply:
 - **Reverse proxy / sub-path hosting** - configure `UseForwardedHeaders` and the proxy path base as usual. The dashboard injects the correct `<base href>` at runtime, so sub-path hosting works without manual configuration.
 - **Consistent data** - all reads come from the shared PostgreSQL database, so every replica returns the same cluster-wide view.
 - **Antiforgery / Data Protection** - management requests use ASP.NET Core antiforgery. If management actions are enabled and requests can be routed to different replicas, share ASP.NET Core Data Protection keys across replicas as you would for any antiforgery-enabled ASP.NET Core app.
-
-## Building from source and preparing packages
-
-These prerequisites apply when building this repository, including publishing packages from Windows. Applications consuming the NuGet packages need the .NET/ASP.NET Core 8 runtime; they do not need the WebAssembly build workload.
-
-- Install stable .NET SDK 10.0.401 as selected by `global.json`. It uses `latestPatch` roll-forward within that feature band and disables prereleases. The projects still target `net8.0`; SDK selection does not upgrade the runtime target.
-- Install the .NET 8 and ASP.NET Core 8 runtimes for tests and sample applications. Installing the .NET 8 SDK alongside the pinned SDK also provides these runtimes.
-- Install `wasm-tools-net8` for the selected SDK. The retained `.slnx` solution format requires SDK 9.0.200 or newer; SDK 8 alone cannot build this solution.
-
-Run from the repository root in a terminal or Windows PowerShell. Replace `X.Y.Z` with the intended package version:
-
-```text
-dotnet --version
-dotnet workload install wasm-tools-net8
-dotnet restore
-dotnet build -c Release --no-restore
-dotnet pack -c Release --no-build --output nupkgs -p:PackageVersion=X.Y.Z
-```
-
-The dashboard build publishes the WebAssembly UI and embeds its assets, so the workload is also required for Release builds and packing. Run build, publish, and pack steps sequentially when they share output directories. These commands prepare local packages only. The five public packages are versioned together: `Jobby.Core`, `Jobby.Postgres`, `Jobby.AspNetCore`, `Jobby.Dashboard`, and `Jobby.Dashboard.Authorization.Basic`. The release script `publish-nuget.sh` additionally pushes to NuGet and requires `NUGET_KEY` and a Bash environment; use the commands above to prepare and inspect packages on Windows before publication.
 
 ## What Next
 
