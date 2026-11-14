@@ -30,7 +30,11 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v5
       with:
+        global-json-file: global.json
         dotnet-version: 8.0.x
+
+    - name: Show selected .NET SDK
+      run: dotnet --version
 
     - name: Install .NET WebAssembly build tools
       run: dotnet workload install wasm-tools-net8
