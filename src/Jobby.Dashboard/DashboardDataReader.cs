@@ -60,6 +60,11 @@ internal sealed class DashboardDataReader : IDashboardDataReader
         return _readStorage.GetLockedGroupsAsync(query, cancellationToken);
     }
 
+    public Task<long> GetLockedGroupsCountAsync(CancellationToken cancellationToken = default)
+    {
+        return _readStorage.GetLockedGroupsCountAsync(cancellationToken);
+    }
+
     public Task<LockedGroupDetailsDto?> GetLockedGroupByIdAsync(string groupId, CancellationToken cancellationToken = default)
     {
         return _readStorage.GetLockedGroupByIdAsync(groupId, cancellationToken);

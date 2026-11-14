@@ -75,6 +75,13 @@ public sealed class DashboardApiClient
                ?? throw new InvalidOperationException("The locked-groups endpoint returned an empty response.");
     }
 
+    public async Task<long> GetLockedGroupsCountAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await _http.GetFromJsonAsync<LockedGroupsCountDto>("api/locked-groups/count", cancellationToken)
+                     ?? throw new InvalidOperationException("The locked-groups count endpoint returned an empty response.");
+        return result.Count;
+    }
+
     public async Task<LockedGroupDetailsDto?> GetLockedGroupAsync(string groupId, CancellationToken cancellationToken = default)
     {
         var uri = _nav.GetUriWithQueryParameters("api/locked-groups/detail",

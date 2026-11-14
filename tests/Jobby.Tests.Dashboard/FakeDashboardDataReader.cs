@@ -34,6 +34,7 @@ internal sealed class FakeDashboardDataReader : IDashboardDataReader
     public PagedResult<LockedGroupDto> LockedGroups { get; set; }
         = new(Items: [], TotalCount: 0, Page: 1, PageSize: 50);
 
+    public long LockedGroupsCount { get; set; }
     public LockedGroupDetailsDto? LockedGroupDetails { get; set; }
     public string? LastUnlockGroupId { get; private set; }
     public bool UnlockInserted { get; set; } = true;
@@ -104,6 +105,11 @@ internal sealed class FakeDashboardDataReader : IDashboardDataReader
     {
         LastLockedGroupsQuery = query;
         return Task.FromResult(LockedGroups);
+    }
+
+    public Task<long> GetLockedGroupsCountAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(LockedGroupsCount);
     }
 
     public Task<LockedGroupDetailsDto?> GetLockedGroupByIdAsync(string groupId, CancellationToken cancellationToken = default)

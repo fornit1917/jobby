@@ -29,6 +29,20 @@ public class JobbyDashboardLockedGroupsApiTests
     }
 
     [Fact]
+    public async Task GetLockedGroupsCount_ReturnsCountWithoutRequestingAPage()
+    {
+        var reader = new FakeDashboardDataReader { LockedGroupsCount = 7 };
+        await using var app = await StartAsync(reader);
+
+        var resp = await app.GetTestClient().GetAsync("/api/locked-groups/count");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<LockedGroupsCountDto>();
+        Assert.Equal(7, dto!.Count);
+        Assert.Null(reader.LastLockedGroupsQuery);
+    }
+
+    [Fact]
     public async Task GetLockedGroupDetail_Returns404_WhenNotLocked()
     {
         var reader = new FakeDashboardDataReader { ManagementEnabled = true, LockedGroupDetails = null };

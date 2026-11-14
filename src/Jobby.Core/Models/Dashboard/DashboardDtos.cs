@@ -131,6 +131,8 @@ public sealed record LockedGroupDto(
     bool UnlockRequested,
     DateTime? UnlockRequestedAt);
 
+public sealed record LockedGroupsCountDto(long Count);
+
 public sealed record LockedGroupJobDto(
     Guid Id,
     string JobName,

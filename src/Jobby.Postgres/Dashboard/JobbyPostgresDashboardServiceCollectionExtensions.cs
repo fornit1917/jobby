@@ -22,11 +22,14 @@ public static class JobbyPostgresDashboardServiceCollectionExtensions
             TablesPrefix = options.TablesPrefix,
         };
 
+        // One instance for both storages: management actions drop the counts they have just changed.
+        var countsCache = new QueueStatusCountsCache(dataSource, settings, options.CountsCacheDuration);
+
         services.AddSingleton<IJobbyDashboardReadStorage>(_ =>
-            new PostgresqlJobbyDashboardReadStorage(dataSource, settings));
+            new PostgresqlJobbyDashboardReadStorage(dataSource, settings, countsCache));
 
         services.AddSingleton<IJobbyDashboardCommandStorage>(_ =>
-            new PostgresqlJobbyDashboardCommandStorage(dataSource, settings));
+            new PostgresqlJobbyDashboardCommandStorage(dataSource, settings, countsCache));
         return services;
     }
 }

@@ -14,6 +14,7 @@ public interface IDashboardDataReader
     Task<IReadOnlyList<DashboardServerDto>> GetServersAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DashboardQueueDto>> GetQueuesAsync(CancellationToken cancellationToken = default);
     Task<PagedResult<LockedGroupDto>> GetLockedGroupsAsync(LockedGroupsQuery query, CancellationToken cancellationToken = default);
+    Task<long> GetLockedGroupsCountAsync(CancellationToken cancellationToken = default);
     Task<LockedGroupDetailsDto?> GetLockedGroupByIdAsync(string groupId, CancellationToken cancellationToken = default);
 
     // Management actions: each returns the number of affected jobs (0 means the job is gone or no

@@ -75,6 +75,19 @@ public class DashboardApiClientTests
     }
 
     [Fact]
+    public async Task GetLockedGroupsCountAsync_ReadsCountFromCountEndpoint()
+    {
+        var handler = new RecordingHttpMessageHandler(_ => new LockedGroupsCountDto(5));
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        var client = new DashboardApiClient(http, new TestNavigationManager(), new DashboardClientConfig());
+
+        var count = await client.GetLockedGroupsCountAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(5, count);
+        Assert.Equal("/api/locked-groups/count", handler.Requests.Single().RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
     public async Task RequestGroupUnlockAsync_PostsToUnlockEndpoint_WithManagementHeader_AndParsesResult()
     {
         var handler = new RecordingHttpMessageHandler(req => req.RequestUri!.AbsolutePath switch

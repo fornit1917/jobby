@@ -5,18 +5,18 @@ using Npgsql;
 
 namespace Jobby.Postgres.Dashboard.Commands;
 
-internal sealed class GetQueuesCommand
+internal sealed class GetQueueStatusCountsCommand
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly string _jobsTable;
 
-    public GetQueuesCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
+    public GetQueueStatusCountsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
         _dataSource = dataSource;
         _jobsTable = DbName.Jobs(settings);
     }
 
-    public async Task<IReadOnlyList<DashboardQueueDto>> ExecuteAsync(CancellationToken cancellationToken)
+    public async Task<QueueStatusCounts> ExecuteAsync(CancellationToken cancellationToken)
     {
         var sql = $@"SELECT queue_name, status, COUNT(*) AS cnt
                      FROM {_jobsTable}
@@ -42,8 +42,8 @@ internal sealed class GetQueuesCommand
             list.Add(new DashboardStatusCount(status, cnt));
         }
 
-        return byQueue
+        return new QueueStatusCounts(byQueue
             .Select(kv => new DashboardQueueDto(QueueName: kv.Key, StatusCounts: kv.Value))
-            .ToList();
+            .ToList());
     }
 }

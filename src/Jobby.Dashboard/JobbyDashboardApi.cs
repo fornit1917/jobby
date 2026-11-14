@@ -86,6 +86,10 @@ internal static class JobbyDashboardApi
             (HttpContext http, IDashboardDataReader reader, CancellationToken cancellationToken) =>
                 reader.GetLockedGroupsAsync(ParseLockedGroupsQuery(http.Request.Query), cancellationToken));
 
+        api.MapGet("locked-groups/count",
+            async (IDashboardDataReader reader, CancellationToken cancellationToken) =>
+                new LockedGroupsCountDto(await reader.GetLockedGroupsCountAsync(cancellationToken)));
+
         api.MapGet("locked-groups/detail",
             async (HttpContext http, IDashboardDataReader reader, CancellationToken cancellationToken) =>
             {

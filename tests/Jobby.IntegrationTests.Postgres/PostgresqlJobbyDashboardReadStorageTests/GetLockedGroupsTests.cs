@@ -175,6 +175,25 @@ public class GetLockedGroupsTests
     }
 
     [Fact]
+    public async Task GetLockedGroupsCountAsync_CountsStuckLockersOnly()
+    {
+        await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        db.Jobs.Add(Job(JobStatus.Failed, "failed-locker", lockIfFailed: true));
+        db.Jobs.Add(Job(JobStatus.Frozen, "failed-locker"));
+        db.Jobs.Add(Job(JobStatus.Processing, "dead-server", serverId: "ghost", canBeRestarted: false));
+        db.Jobs.Add(Job(JobStatus.Scheduled, "not-locked"));
+        var recurrent = Job(JobStatus.Failed, "recurrent", lockIfFailed: true);
+        recurrent.Schedule = "0 0 * * *";
+        db.Jobs.Add(recurrent);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var count = await DbHelper.CreateDashboardReadStorage()
+            .GetLockedGroupsCountAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
     public async Task RecurrentStuckLocker_DoesNotAppear()
     {
         await using var db = await DbHelper.CreateContextAndClearDbAsync();

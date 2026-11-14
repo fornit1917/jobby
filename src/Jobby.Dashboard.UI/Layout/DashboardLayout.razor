@@ -184,8 +184,7 @@
 
         try
         {
-            var locked = await Api.GetLockedGroupsAsync(new LockedGroupsQuery { Page = 1, PageSize = 1 });
-            _lockedCount = (int)locked.TotalCount;
+            _lockedCount = (int)Math.Min(await Api.GetLockedGroupsCountAsync(), int.MaxValue);
             StateHasChanged();
         }
         catch

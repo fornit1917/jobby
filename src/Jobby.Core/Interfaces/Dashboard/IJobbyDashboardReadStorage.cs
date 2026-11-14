@@ -11,5 +11,6 @@ public interface IJobbyDashboardReadStorage
     Task<IReadOnlyList<DashboardServerDto>> GetServersAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DashboardQueueDto>> GetQueuesAsync(CancellationToken cancellationToken = default);
     Task<PagedResult<LockedGroupDto>> GetLockedGroupsAsync(LockedGroupsQuery query, CancellationToken cancellationToken = default);
+    Task<long> GetLockedGroupsCountAsync(CancellationToken cancellationToken = default);
     Task<LockedGroupDetailsDto?> GetLockedGroupByIdAsync(string groupId, CancellationToken cancellationToken = default);
 }

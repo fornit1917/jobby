@@ -42,7 +42,8 @@ public class CustomPrefixRegistrationTests
         await using var conn = await DbHelper.DataSource.OpenConnectionAsync(cancellationToken);
         await using var cmd = new NpgsqlCommand(
             $@"DROP TABLE IF EXISTS ""{Prefix}jobs"";
-               CREATE TABLE ""{Prefix}jobs"" (status int NOT NULL, schedule text NULL);", conn);
+               CREATE TABLE ""{Prefix}jobs"" (
+                   status int NOT NULL, schedule text NULL, queue_name text NOT NULL DEFAULT 'default');", conn);
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 

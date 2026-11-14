@@ -58,6 +58,7 @@ builder.Services.AddJobbyPostgresDashboardStorage(npgsqlDataSource, o =>
 {
     o.SchemaName   = "";          // empty string -> public schema (default)
     o.TablesPrefix = "jobby_";
+    o.CountsCacheDuration = TimeSpan.FromSeconds(2);   // default; see "Job counts" below
 });
 ```
 
@@ -279,6 +280,14 @@ Jobs and a queue's All jobs view initially sort by scheduled start ascending, so
 
 The jobs API accepts inclusive UTC timestamp bounds `scheduledFrom` and `scheduledTo`; the corresponding `DashboardJobsQuery` properties are `ScheduledFrom` and `ScheduledTo`. The date range refers to the current scheduled start, including retries and rescheduling, rather than creation time or actual execution time.
 
+### Job counts
+
+Counting jobs per queue and status reads the whole jobs table, so one application instance runs that query once and reuses the result for `CountsCacheDuration` (2 seconds by default) for every open dashboard. The Overview statistics and queue cards always use these shared counts. The total of a job list filtered only by queue and status reuses them while they are loaded and is counted directly otherwise; totals for name search and scheduled-date filters are always counted directly. Job rows, job details, recurrent jobs, locked groups and management actions are never cached.
+
+A count can therefore be up to `CountsCacheDuration` old. Retrying or deleting a job from the dashboard discards the counts of the instance that handled the request. Keep the duration shorter than `RefreshInterval`, otherwise a dashboard can receive the same counts on consecutive refreshes. `TimeSpan.Zero` shares the counts only between requests that arrive while the query is running.
+
+By default, job lists are read through the existing `(queue_name, status, scheduled_start_at)` index. Sorting by another column, name search, scheduled-date filters and very deep pages scan the table instead and are slower on large tables.
+
 ### Run scheduled jobs early
 
 Trigger is available only for jobs in `Scheduled` status, including recurring jobs. It advances a future scheduled start to the current time and leaves an already-due timestamp unchanged. A worker executes the job when it can acquire it under the normal queue, server, and serializable-group rules; the HTTP request does not run the handler itself.
@@ -303,6 +312,7 @@ Read endpoints are exposed under the mount prefix:
 | `GET /jobby/api/servers` | Registered Jobby server instances |
 | `GET /jobby/api/queues` | Per-queue statistics |
 | `GET /jobby/api/locked-groups` | Paginated locked execution groups |
+| `GET /jobby/api/locked-groups/count` | Number of locked execution groups |
 | `GET /jobby/api/locked-groups/detail?groupId={id}` | Locked group details and affected jobs |
 
 ### Management API
@@ -331,7 +341,7 @@ Normal production concerns still apply:
 
 - **HTTPS** - required when using Basic authentication (credentials are base64-encoded, not encrypted).
 - **Reverse proxy / sub-path hosting** - configure `UseForwardedHeaders` and the proxy path base as usual. The dashboard injects the correct `<base href>` at runtime, so sub-path hosting works without manual configuration.
-- **Consistent data** - all reads come from the shared PostgreSQL database, so every replica returns the same cluster-wide view.
+- **Consistent data** - all reads come from the shared PostgreSQL database, so every replica returns the same cluster-wide view. The only in-memory data is each replica's copy of the [job counts](#job-counts), reused for `CountsCacheDuration`: replicas can report counts that differ by the changes of the last few seconds, and a retry or delete refreshes the counts only on the replica that handled it. Job rows and management actions always go to the database.
 - **Antiforgery / Data Protection** - management requests use ASP.NET Core antiforgery. If management actions are enabled and requests can be routed to different replicas, share ASP.NET Core Data Protection keys across replicas as you would for any antiforgery-enabled ASP.NET Core app.
 
 ## What Next

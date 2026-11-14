@@ -11,6 +11,7 @@ internal sealed class GetLockedGroupsCommand
     private readonly string _jobsTable;
     private readonly string _unlockingGroupsTable;
     private readonly string _stuckLocker;
+    private readonly string _countSql;
 
     public GetLockedGroupsCommand(NpgsqlDataSource dataSource, PostgresqlStorageSettings settings)
     {
@@ -18,6 +19,13 @@ internal sealed class GetLockedGroupsCommand
         _jobsTable = DbName.Jobs(settings);
         _unlockingGroupsTable = DbName.UnlockingGroups(settings);
         _stuckLocker = GroupLockSql.StuckLocker("j", settings);
+        _countSql = $"SELECT COUNT(*) FROM {_jobsTable} j WHERE {_stuckLocker} AND j.schedule IS NULL";
+    }
+
+    public async Task<long> CountAsync(CancellationToken cancellationToken)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
+        return await CountAsync(conn, cancellationToken);
     }
 
     public async Task<PagedResult<LockedGroupDto>> ExecuteAsync(LockedGroupsQuery query,
@@ -28,12 +36,7 @@ internal sealed class GetLockedGroupsCommand
 
         await using var conn = await _dataSource.OpenConnectionAsync(cancellationToken);
 
-        long total;
-        var countSql = $"SELECT COUNT(*) FROM {_jobsTable} j WHERE {_stuckLocker} AND j.schedule IS NULL";
-        await using (var countCmd = new NpgsqlCommand(countSql, conn))
-        {
-            total = (long)(await countCmd.ExecuteScalarAsync(cancellationToken))!;
-        }
+        var total = await CountAsync(conn, cancellationToken);
 
         // Page the lockers FIRST (cheap: scans the partial index, joins one row per group), THEN aggregate
         // counts only for the page's groups. schedule IS NULL scopes the feature to non-recurrent jobs.
@@ -89,6 +92,12 @@ internal sealed class GetLockedGroupsCommand
         }
 
         return new PagedResult<LockedGroupDto>(Items: items, TotalCount: total, Page: page, PageSize: pageSize);
+    }
+
+    private async Task<long> CountAsync(NpgsqlConnection conn, CancellationToken cancellationToken)
+    {
+        await using var countCmd = new NpgsqlCommand(_countSql, conn);
+        return (long)(await countCmd.ExecuteScalarAsync(cancellationToken))!;
     }
 
     internal static LockedGroupDto MapLockedGroupHeader(NpgsqlDataReader reader) => new(

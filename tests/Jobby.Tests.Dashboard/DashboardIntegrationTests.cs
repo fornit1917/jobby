@@ -64,6 +64,11 @@ public class DashboardIntegrationTests
                 Items: [], TotalCount: 0, Page: 1, PageSize: 50));
         }
 
+        public Task<long> GetLockedGroupsCountAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(0L);
+        }
+
         public Task<LockedGroupDetailsDto?> GetLockedGroupByIdAsync(string groupId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult<LockedGroupDetailsDto?>(null);

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added the optional ASP.NET Core Dashboard with an embedded Blazor WebAssembly UI, polling JSON API, and PostgreSQL storage. It provides job and queue views, scheduled-date filtering, recurring definitions, server health, and job and locked-group management. Authorization supports host or inline policies, explicit anonymous access, and the optional `Jobby.Dashboard.Authorization.Basic` package, with separate read and management permissions, server-enforced read-only mode, and antiforgery protection.
+  - Job lists are read through the existing `(queue_name, status, scheduled_start_at)` index, and each application instance shares one per-queue/status count query between open dashboards. `PostgresqlDashboardStorageOptions.CountsCacheDuration` (2 seconds by default) controls how long those counts are reused
 
 ## v1.0.5 (2026-11-01)
 
