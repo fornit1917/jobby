@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>jobby_package_icon.png</PackageIcon>
-    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <GenerateEmbeddedFilesManifest Condition="'$(NoBuild)' != 'true'">true</GenerateEmbeddedFilesManifest>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,7 +30,9 @@
     <None Include="../../README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <Target Name="EmbedJobbyDashboardClient" BeforeTargets="_CalculateEmbeddedFilesManifestInputs">
+  <!-- Packing without building consumes the assets already embedded in the built assembly. -->
+  <Target Name="EmbedJobbyDashboardClient" BeforeTargets="_CalculateEmbeddedFilesManifestInputs"
+          Condition="'$(NoBuild)' != 'true'">
     <PropertyGroup>
       <_JobbyClientPublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'jobbyclient'))</_JobbyClientPublishDir>
     </PropertyGroup>
