@@ -26,27 +26,29 @@
             <span class="crumb-current">@CurrentSection</span>
         </div>
         <MudSpacer />
-        @if (Config.ManagementEnabled)
-        {
-            <MudToggleGroup T="DashboardMode" Value="Mode.Mode" ValueChanged="OnModeChanged"
-                            Size="Size.Small" Color="Color.Primary" CheckMark="false"
-                            data-testid="mode-toggle">
-                <MudToggleItem Value="DashboardMode.Management">
-                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="mr-1" />@L["common.management"]
-                </MudToggleItem>
-                <MudToggleItem Value="DashboardMode.ReadOnly">
-                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Class="mr-1" />@L["common.readOnly"]
-                </MudToggleItem>
-            </MudToggleGroup>
-        }
-        else
-        {
-            <span class="jobby-tag jobby-tag-WaitingPrev" data-testid="readonly-chip">@L["common.readOnly"]</span>
-        }
-        <LanguageSelector />
-        <DateTimeSettings />
-        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                       Color="Color.Inherit" OnClick="ToggleDarkModeAsync" data-testid="theme-toggle" />
+        <div class="jobby-appbar-controls">
+            @if (Config.ManagementEnabled)
+            {
+                <MudToggleGroup T="DashboardMode" Value="Mode.Mode" ValueChanged="OnModeChanged"
+                                Size="Size.Small" Color="Color.Primary" CheckMark="false"
+                                data-testid="mode-toggle">
+                    <MudToggleItem Value="DashboardMode.Management">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="mr-1" />@L["common.management"]
+                    </MudToggleItem>
+                    <MudToggleItem Value="DashboardMode.ReadOnly">
+                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Class="mr-1" />@L["common.readOnly"]
+                    </MudToggleItem>
+                </MudToggleGroup>
+            }
+            else
+            {
+                <span class="jobby-tag jobby-tag-WaitingPrev" data-testid="readonly-chip">@L["common.readOnly"]</span>
+            }
+            <LanguageSelector />
+            <DateTimeSettings />
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit" OnClick="ToggleDarkModeAsync" data-testid="theme-toggle" />
+        </div>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Mini" OpenMiniOnHover="false" Elevation="0" Class="jobby-drawer">
         <MudDrawerHeader Class="pa-0">
@@ -72,7 +74,7 @@
     </MudDrawer>
     <MudMainContent role="main">
         <div id="dashboard-main" tabindex="-1" @ref="_mainFocus"></div>
-        <MudContainer MaxWidth="MaxWidth.False" Class="px-6 py-4" Style="max-width:1480px;">
+        <MudContainer MaxWidth="MaxWidth.False" Class="jobby-main-container px-6 py-4" Style="max-width:1480px;">
             <ErrorBoundary>
                 <ChildContent>@Body</ChildContent>
                 <ErrorContent><MudAlert Severity="Severity.Error">@L["common.somethingWrong"]</MudAlert></ErrorContent>

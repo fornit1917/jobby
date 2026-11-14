@@ -606,6 +606,12 @@
     color: var(--text-2);
 }
 
+.jobby-appbar-controls {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
 .jobby-breadcrumb {
     display: flex;
     align-items: center;
@@ -894,4 +900,134 @@
 .mud-data-grid .mud-table-head .mud-table-cell .column-options .sort-direction-icon.mud-direction-asc,
 .mud-data-grid .mud-table-head .mud-table-cell .column-options .sort-direction-icon.mud-direction-desc {
     color: var(--accent-text);
+}
+
+@media (max-width: 600px) {
+    /* Let the appbar's wrapped controls determine its height and the content offset. */
+    .jobby-appbar.mud-appbar-fixed-top {
+        position: sticky;
+    }
+
+    .jobby-appbar .mud-toolbar {
+        height: auto;
+        min-height: 56px;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 4px 0;
+    }
+
+    .jobby-breadcrumb {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .jobby-breadcrumb > span:not(.crumb-current) {
+        display: none;
+    }
+
+    .jobby-appbar-controls {
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        row-gap: 4px;
+    }
+
+    .jobby-appbar-controls > * {
+        max-width: 100%;
+    }
+
+    .jobby-appbar-controls .mud-toggle-item,
+    .jobby-appbar-controls [data-testid="datetime-pill"] {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .jobby-appbar ~ .mud-main-content {
+        padding-top: 0;
+        min-width: 0;
+    }
+
+    .jobby-main-container {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .jobby-main-container > .d-flex:has(.jobby-page-title) {
+        flex-wrap: wrap;
+    }
+
+    .jobby-main-container > .d-flex:has(.jobby-page-title) > .flex-grow-1 {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .jobby-page-title {
+        overflow-wrap: anywhere;
+    }
+
+    /* Detail values need the full card width for IDs, names, schedules and JSON. */
+    .mud-simple-table:has(.jobby-detail-key) table,
+    .mud-simple-table:has(.jobby-detail-key) table tbody,
+    .mud-simple-table:has(.jobby-detail-key) table tbody > tr,
+    .mud-simple-table:has(.jobby-detail-key) table tbody > tr > td {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .mud-simple-table:has(.jobby-detail-key) table tbody > tr > td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .mud-simple-table:has(.jobby-detail-key) table tbody > tr > .jobby-detail-key {
+        padding-bottom: 2px;
+        border-bottom: 0;
+    }
+
+    .mud-simple-table:has(.jobby-detail-key) table tbody > tr > .jobby-detail-key + td {
+        padding-top: 0;
+    }
+
+    .jobby-filter-bar .jobby-field {
+        min-width: 0 !important;
+        max-width: 100%;
+    }
+
+    /* MudBlazor's mobile flex cells otherwise inherit the longest value's min-width. */
+    .mud-data-grid.mud-xs-table .mud-table-root {
+        table-layout: fixed;
+    }
+
+    .mud-data-grid.mud-xs-table .mud-table-body .mud-table-cell[data-label] {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        align-items: start;
+        gap: 12px;
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .mud-data-grid.mud-xs-table .mud-table-cell[data-label]::before {
+        padding: 0;
+        min-width: 0;
+    }
+
+    .mud-data-grid.mud-xs-table .mud-table-cell[data-label] > * {
+        min-width: 0;
+        max-width: 100%;
+        justify-self: end;
+        white-space: normal;
+    }
+
+    .mud-data-grid .mud-table-pagination-toolbar {
+        height: auto;
+        min-height: 52px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
 }
