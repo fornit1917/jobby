@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 
-namespace Jobby.Dashboard.Authorization;
+namespace Jobby.Dashboard.Authorization.Basic;
 
 public sealed class JobbyDashboardBasicOptions : AuthenticationSchemeOptions
 {

@@ -35,7 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Jobby.Dashboard\Jobby.Dashboard.csproj" />
-    <ProjectReference Include="..\..\src\Jobby.Dashboard.Authorization\Jobby.Dashboard.Authorization.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard.Authorization.Basic\Jobby.Dashboard.Authorization.Basic.csproj" />
     <ProjectReference Include="..\..\src\Jobby.Dashboard.Client\Jobby.Dashboard.Client.csproj" />
   </ItemGroup>
 

@@ -10,9 +10,11 @@
 |---|---|
 | `Jobby.Dashboard` | Интерфейс на Blazor WebAssembly (встроенные статические файлы) + JSON API; `AddJobbyDashboard()` / `MapJobbyDashboard()` |
 | `Jobby.Postgres` | `AddJobbyPostgresDashboardStorage()` - PostgreSQL-хранилище для чтения и команд |
-| `Jobby.Dashboard.Authorization` | Дополнительная встроенная Basic-аутентификация (`AddBasicAuth` / `AddBasicAuthScheme`) и `PasswordHasher` |
+| `Jobby.Dashboard.Authorization.Basic` | Дополнительная встроенная Basic-аутентификация (`AddBasicAuth` / `AddBasicAuthScheme`) и `PasswordHasher` |
 
 `Jobby.Dashboard` зависит от ASP.NET Core. Удаление пакета и соответствующих вызовов регистрации не меняет поведение движка Jobby.
+
+Устанавливайте `Jobby.Dashboard.Authorization.Basic` только если нужны встроенные вспомогательные методы Basic-аутентификации. Дашборд также может работать анонимно для локальной разработки или использовать аутентификацию и авторизацию, уже настроенные в host-приложении.
 
 ## Настройка
 
@@ -127,11 +129,13 @@ builder.Services
     );
 ```
 
-### Вариант 4 - Встроенная Basic-аутентификация (`Jobby.Dashboard.Authorization`)
+### Вариант 4 - Встроенная Basic-аутентификация (`Jobby.Dashboard.Authorization.Basic`)
 
-Для сервисов без собственной системы аутентификации дополнительный пакет `Jobby.Dashboard.Authorization` предоставляет Basic-схему с одной учётной записью, где пароль хранится в виде PBKDF2-хеша.
+Для сервисов без собственной системы аутентификации дополнительный пакет `Jobby.Dashboard.Authorization.Basic` предоставляет Basic-схему с одной учётной записью, где пароль хранится в виде PBKDF2-хеша.
 
 ```csharp
+using Jobby.Dashboard.Authorization.Basic;
+
 builder.Services
     .AddJobbyDashboard()
     .AddBasicAuth(o =>
@@ -148,7 +152,7 @@ app.MapJobbyDashboard("/jobby");
 **Сгенерируйте хеш пароля** (никогда не храните пароль в открытом виде):
 
 ```csharp
-string hash = Jobby.Dashboard.Authorization.PasswordHasher.Hash("ваш-пароль");
+string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("ваш-пароль");
 ```
 
 `PasswordHasher.Hash` возвращает строку вида `JDPBKDF2$v1$...` (PBKDF2-HMAC-SHA256). `AddBasicAuth` выбрасывает исключение при запуске, если переданный `PasswordHash` не является корректной PBKDF2-кодировкой.
@@ -160,6 +164,8 @@ string hash = Jobby.Dashboard.Authorization.PasswordHasher.Hash("ваш-паро
 Используйте `AddBasicAuthScheme`, чтобы зарегистрировать Basic-схему без выбора политики авторизации, а затем вызовите `RequireAuthorization`, чтобы объединить её с Bearer:
 
 ```csharp
+using Jobby.Dashboard.Authorization.Basic;
+
 builder.Services
     .AddJobbyDashboard()
     .AddBasicAuthScheme(o =>

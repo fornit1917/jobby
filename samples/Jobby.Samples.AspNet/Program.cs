@@ -3,7 +3,7 @@ using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services.Observability;
 using Jobby.Dashboard;
-using Jobby.Dashboard.Authorization;
+using Jobby.Dashboard.Authorization.Basic;
 using Jobby.Postgres.ConfigurationExtensions;
 using Jobby.Postgres.Dashboard;
 using Jobby.Samples.AspNet.DashboardDemo;

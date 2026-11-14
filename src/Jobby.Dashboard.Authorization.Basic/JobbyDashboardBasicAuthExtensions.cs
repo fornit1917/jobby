@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Jobby.Dashboard.Authorization;
+namespace Jobby.Dashboard.Authorization.Basic;
 
 public static class JobbyDashboardBasicAuthExtensions
 {

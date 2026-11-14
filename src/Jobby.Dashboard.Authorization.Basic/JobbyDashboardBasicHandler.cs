@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Jobby.Dashboard.Authorization;
+namespace Jobby.Dashboard.Authorization.Basic;
 
 internal sealed class JobbyDashboardBasicHandler : AuthenticationHandler<JobbyDashboardBasicOptions>
 {

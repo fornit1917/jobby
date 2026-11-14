@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Jobby.Dashboard.Authorization;
+namespace Jobby.Dashboard.Authorization.Basic;
 
 /// <summary>
 /// PBKDF2-HMAC-SHA256 password hashing for the built-in dashboard credential.

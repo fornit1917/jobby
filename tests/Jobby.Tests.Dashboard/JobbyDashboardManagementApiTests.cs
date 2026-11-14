@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Jobby.Core.Models.Dashboard;
 using Jobby.Dashboard;
-using Jobby.Dashboard.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;

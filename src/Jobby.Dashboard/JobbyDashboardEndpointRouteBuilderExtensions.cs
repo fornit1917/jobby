@@ -25,7 +25,7 @@ public static class JobbyDashboardEndpointRouteBuilderExtensions
         if (state.Mode == JobbyDashboardAuthMode.Unset)
         {
             throw new InvalidOperationException(
-                "Jobby Dashboard is not secured. Choose one auth model: AddBasicAuth(...) (Jobby.Dashboard.Authorization), " +
+                "Jobby Dashboard is not secured. Choose one auth model: AddBasicAuth(...) (Jobby.Dashboard.Authorization.Basic), " +
                 "RequireHostPolicy(...)/RequireAuthorization(...), or explicitly AllowAnonymous() for local/dev use.");
         }
 

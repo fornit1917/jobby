@@ -21,7 +21,7 @@
     <ProjectReference Include="..\..\src\Jobby.AspNetCore\Jobby.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Jobby.Postgres\Jobby.Postgres.csproj" />
     <ProjectReference Include="..\..\src\Jobby.Dashboard\Jobby.Dashboard.csproj" />
-    <ProjectReference Include="..\..\src\Jobby.Dashboard.Authorization\Jobby.Dashboard.Authorization.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard.Authorization.Basic\Jobby.Dashboard.Authorization.Basic.csproj" />
   </ItemGroup>
 
 </Project>

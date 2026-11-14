@@ -6,7 +6,7 @@ using System.Text;
 using Jobby.Core.Interfaces.Dashboard;
 using Jobby.Core.Models.Dashboard;
 using Jobby.Dashboard;
-using Jobby.Dashboard.Authorization;
+using Jobby.Dashboard.Authorization.Basic;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;

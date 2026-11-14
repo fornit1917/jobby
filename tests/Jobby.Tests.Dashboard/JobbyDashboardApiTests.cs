@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Jobby.Core.Models;
 using Jobby.Core.Models.Dashboard;
 using Jobby.Dashboard;
-using Jobby.Dashboard.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;

@@ -10,9 +10,11 @@ The dashboard is a **Blazor WebAssembly** single-page application served as stat
 |---|---|
 | `Jobby.Dashboard` | Blazor WebAssembly UI (embedded static files) + JSON API endpoints; `AddJobbyDashboard()` / `MapJobbyDashboard()` |
 | `Jobby.Postgres` | `AddJobbyPostgresDashboardStorage()` - PostgreSQL read and command storage |
-| `Jobby.Dashboard.Authorization` | Optional first-party Basic authentication (`AddBasicAuth` / `AddBasicAuthScheme`) and `PasswordHasher` |
+| `Jobby.Dashboard.Authorization.Basic` | Optional first-party Basic authentication (`AddBasicAuth` / `AddBasicAuthScheme`) and `PasswordHasher` |
 
 `Jobby.Dashboard` depends on ASP.NET Core. It does not affect the Jobby engine itself: removing the package and its registration calls leaves the engine behavior unchanged.
+
+Install `Jobby.Dashboard.Authorization.Basic` only when you want to use the built-in Basic authentication helpers. The dashboard can also run anonymously for local development, or use authentication/authorization already configured by the host application.
 
 ## Setup
 
@@ -127,11 +129,13 @@ builder.Services
     );
 ```
 
-### Option 4 - First-party Basic authentication (`Jobby.Dashboard.Authorization`)
+### Option 4 - First-party Basic authentication (`Jobby.Dashboard.Authorization.Basic`)
 
-For services without an existing auth system, the optional `Jobby.Dashboard.Authorization` package provides a single-credential Basic auth scheme backed by a PBKDF2-hashed password.
+For services without an existing auth system, the optional `Jobby.Dashboard.Authorization.Basic` package provides a single-credential Basic auth scheme backed by a PBKDF2-hashed password.
 
 ```csharp
+using Jobby.Dashboard.Authorization.Basic;
+
 builder.Services
     .AddJobbyDashboard()
     .AddBasicAuth(o =>
@@ -148,7 +152,7 @@ app.MapJobbyDashboard("/jobby");
 **Generate the password hash** (never store a plaintext password):
 
 ```csharp
-string hash = Jobby.Dashboard.Authorization.PasswordHasher.Hash("your-password");
+string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("your-password");
 ```
 
 `PasswordHasher.Hash` produces a `JDPBKDF2$v1$...` string (PBKDF2-HMAC-SHA256). `AddBasicAuth` throws at startup if the supplied `PasswordHash` is not a valid PBKDF2 encoding.
@@ -160,6 +164,8 @@ string hash = Jobby.Dashboard.Authorization.PasswordHasher.Hash("your-password")
 Use `AddBasicAuthScheme` to register the Basic scheme without making an auth decision, then call `RequireAuthorization` to combine it with Bearer:
 
 ```csharp
+using Jobby.Dashboard.Authorization.Basic;
+
 builder.Services
     .AddJobbyDashboard()
     .AddBasicAuthScheme(o =>
