@@ -16,6 +16,27 @@ The dashboard is a **Blazor WebAssembly** single-page application served as stat
 
 Install `Jobby.Dashboard.Authorization.Basic` only when you want to use the built-in Basic authentication helpers. The dashboard can also run anonymously for local development, or use authentication/authorization already configured by the host application.
 
+`Jobby.Dashboard.UI` is the WebAssembly implementation project. Its compiled assets are embedded in `Jobby.Dashboard`; consumers do not install it as a separate NuGet package.
+
+## Installation
+
+Install the dashboard and its ASP.NET Core/PostgreSQL dependencies in the host project:
+
+```bash
+dotnet add package Jobby.Core
+dotnet add package Jobby.Postgres
+dotnet add package Jobby.AspNetCore
+dotnet add package Jobby.Dashboard
+```
+
+For the built-in Basic authentication helpers, also install:
+
+```bash
+dotnet add package Jobby.Dashboard.Authorization.Basic
+```
+
+Use the same release version for all Jobby packages. Host policies and inline authorization policies work without the Basic package.
+
 ## Setup
 
 ### 1. Register services (before `builder.Build()`)
@@ -52,10 +73,14 @@ The mount prefix must be a non-root path. The dashboard is then accessible at `/
 
 ### Full example
 
+This example allows anonymous access for local development. Replace `AllowAnonymous()` with a host policy or Basic authentication for a protected deployment. Configure the `Jobby` connection string and register the job handlers from the host assembly.
+
 ```csharp
 using Jobby.AspNetCore;
+using Jobby.Core.Interfaces;
 using Jobby.Dashboard;
 using Jobby.Postgres.ConfigurationExtensions;
+using Jobby.Postgres.Dashboard;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,7 +88,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Jobby")
     ?? throw new InvalidOperationException("Connection string 'Jobby' was not found.");
 
-var dataSource = NpgsqlDataSource.Create(connectionString);
+await using var dataSource = NpgsqlDataSource.Create(connectionString);
 builder.Services.AddSingleton(dataSource);
 
 builder.Services.AddJobbyServerAndClient(jobby =>
@@ -111,6 +136,8 @@ builder.Services.AddJobbyDashboard().AllowAnonymous();
 
 ### Option 2 - Reuse an existing host policy
 
+Keep the host's existing authentication registration and named authorization policies. This option requires only `Jobby.Dashboard`, without the Basic package.
+
 ```csharp
 builder.Services
     .AddJobbyDashboard()
@@ -141,7 +168,8 @@ builder.Services
     .AddBasicAuth(o =>
     {
         o.Username     = "admin";
-        o.PasswordHash = "JDPBKDF2$v1$210000$...$...";
+        o.PasswordHash = builder.Configuration["JobbyDashboard:PasswordHash"]
+            ?? throw new InvalidOperationException("JobbyDashboard:PasswordHash is required.");
     });
 
 app.MapJobbyDashboard("/jobby");
@@ -149,7 +177,7 @@ app.MapJobbyDashboard("/jobby");
 
 `AddBasicAuth` registers the Basic authentication scheme **and** configures dashboard authorization in a single call - do not combine it with any other decision method.
 
-**Generate the password hash** (never store a plaintext password):
+**Generate the password hash** and store it in the host configuration as `JobbyDashboard:PasswordHash` (never store a plaintext password):
 
 ```csharp
 string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("your-password");
@@ -165,13 +193,15 @@ Use `AddBasicAuthScheme` to register the Basic scheme without making an auth dec
 
 ```csharp
 using Jobby.Dashboard.Authorization.Basic;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 builder.Services
     .AddJobbyDashboard()
     .AddBasicAuthScheme(o =>
     {
         o.Username     = "admin";
-        o.PasswordHash = "JDPBKDF2$v1$210000$...$...";
+        o.PasswordHash = builder.Configuration["JobbyDashboard:PasswordHash"]
+            ?? throw new InvalidOperationException("JobbyDashboard:PasswordHash is required.");
     })
     .RequireAuthorization(p =>
         p.AddAuthenticationSchemes(
@@ -179,6 +209,8 @@ builder.Services
                 JwtBearerDefaults.AuthenticationScheme)
          .RequireAuthenticatedUser());
 ```
+
+Register the Bearer scheme in the host before using this composition.
 
 When unauthenticated, the JSON API responds `401` with both `WWW-Authenticate: Basic` and `WWW-Authenticate: Bearer` - browsers act on `Basic`, programmatic clients on `Bearer`.
 
@@ -208,6 +240,8 @@ builder.Services.AddJobbyPostgresDashboardStorage(dataSource, o =>
 Users can change the same settings in the dashboard top bar. Their choice is saved in `localStorage` and takes priority over the server defaults until they reset it.
 
 ```csharp
+using Jobby.Core.Models.Dashboard;
+
 builder.Services
     .AddJobbyDashboard(o =>
     {
@@ -225,7 +259,7 @@ builder.Services
 
 ## Features and API
 
-The dashboard displays:
+The dashboard refreshes data by polling at the configured `RefreshInterval`. It displays:
 
 - **Overview** - live job counts by status and queue.
 - **Jobs** - paginated, filterable, sortable job list.
@@ -235,7 +269,27 @@ The dashboard displays:
 - **Queues** - per-queue status breakdown.
 - **Locked groups** - serializable execution groups blocked by failed or lost jobs.
 
-Management actions are enabled when an `IJobbyDashboardCommandStorage` is registered and `JobbyDashboardOptions.ReadOnly` is `false`. `AddJobbyPostgresDashboardStorage()` registers both read and command storage. If management is disabled, the UI hides management actions and the corresponding API routes return `404`.
+Management actions are enabled when an `IJobbyDashboardCommandStorage` is registered and `JobbyDashboardOptions.ReadOnly` is `false`. `AddJobbyPostgresDashboardStorage()` registers both read and command storage. If management is disabled, the UI hides management actions and the corresponding API routes return `404`. The top-bar Read only mode hides controls for convenience; enforce read-only access on the server with `JobbyDashboardOptions.ReadOnly` or authorization policies.
+
+### Scheduled dates and ordering
+
+The Jobs From/To filters select the scheduled start date in the dashboard's selected time zone. Both calendar days are included; the UI converts their boundaries to UTC, including daylight-saving transitions. A reversed range displays an error and retains the last valid results until corrected. Creation time remains visible and sortable.
+
+Jobs and a queue's All jobs view initially sort by scheduled start ascending, so the earliest scheduled jobs appear first. The queue backlog uses the same order. Users can select another sort column and direction.
+
+The jobs API accepts inclusive UTC timestamp bounds `scheduledFrom` and `scheduledTo`; the corresponding `DashboardJobsQuery` properties are `ScheduledFrom` and `ScheduledTo`. `createdFrom` and `createdTo` are no longer supported. The date range refers to the current scheduled start, including retries and rescheduling, rather than creation time or actual execution time.
+
+### Run scheduled jobs early
+
+Trigger is available only for jobs in `Scheduled` status, including recurring jobs. It advances a future scheduled start to the current time and leaves an already-due timestamp unchanged. A worker executes the job when it can acquire it under the normal queue, server, and serializable-group rules; the HTTP request does not run the handler itself.
+
+For recurring jobs, Trigger uses the same persisted job and ID, without creating a one-off copy. The normal scheduler calculates the next run after execution, so an interval schedule may shift. For example, an hourly job due at 12:00 that is triggered at 11:10 and completes at 11:12 can next run at 12:10 or 12:12, depending on `CalculateNextFromPrev`. A cron schedule uses its next matching time. Repeated trigger requests while the invocation is pending do not queue additional copies; triggering after completion can advance the next invocation.
+
+### Exclusive recurring definitions
+
+The recurring list and job details show `IsExclusive` (`is_exclusive` in storage). An exclusive recurring definition is unique among exclusive definitions with the same job name. Nonexclusive definitions with that name can coexist. This flag controls definition uniqueness, not mutual exclusion of executions; use serializable groups when jobs must execute sequentially.
+
+### Read API
 
 Read endpoints are exposed under the mount prefix:
 
@@ -243,7 +297,7 @@ Read endpoints are exposed under the mount prefix:
 |---|---|
 | `GET /jobby/api/config` | Dashboard configuration fetched by the WASM client at startup |
 | `GET /jobby/api/stats` | Aggregate job statistics |
-| `GET /jobby/api/jobs` | Paginated job list (query params: `status`, `statuses`, `queueName`, `jobNameSearch`, `createdFrom`, `createdTo`, `page`, `pageSize`, `sortBy`, `sortDescending`) |
+| `GET /jobby/api/jobs` | Paginated job list (query params: `status`, `statuses`, `queueName`, `jobNameSearch`, `scheduledFrom`, `scheduledTo`, `page`, `pageSize`, `sortBy`, `sortDescending`) |
 | `GET /jobby/api/jobs/{id}` | Single job detail |
 | `GET /jobby/api/recurrent` | Paginated recurrent job definitions |
 | `GET /jobby/api/servers` | Registered Jobby server instances |
@@ -251,11 +305,13 @@ Read endpoints are exposed under the mount prefix:
 | `GET /jobby/api/locked-groups` | Paginated locked execution groups |
 | `GET /jobby/api/locked-groups/detail?groupId={id}` | Locked group details and affected jobs |
 
+### Management API
+
 Management endpoints validate the antiforgery header and token returned by `/jobby/api/config`:
 
 | Endpoint | Description |
 |---|---|
-| `POST /jobby/api/jobs/{id}/trigger` | Move a scheduled, non-recurrent job to run now |
+| `POST /jobby/api/jobs/{id}/trigger` | Request early execution of a scheduled job, including recurring jobs |
 | `POST /jobby/api/jobs/{id}/retry` | Retry a failed or frozen non-recurrent job |
 | `DELETE /jobby/api/jobs/{id}` | Delete a non-running, non-recurrent job |
 | `DELETE /jobby/api/recurrent/{id}` | Delete a recurrent job definition |
@@ -277,6 +333,26 @@ Normal production concerns still apply:
 - **Reverse proxy / sub-path hosting** - configure `UseForwardedHeaders` and the proxy path base as usual. The dashboard injects the correct `<base href>` at runtime, so sub-path hosting works without manual configuration.
 - **Consistent data** - all reads come from the shared PostgreSQL database, so every replica returns the same cluster-wide view.
 - **Antiforgery / Data Protection** - management requests use ASP.NET Core antiforgery. If management actions are enabled and requests can be routed to different replicas, share ASP.NET Core Data Protection keys across replicas as you would for any antiforgery-enabled ASP.NET Core app.
+
+## Building from source and preparing packages
+
+These prerequisites apply when building this repository, including publishing packages from Windows. Applications consuming the NuGet packages need the .NET/ASP.NET Core 8 runtime; they do not need the WebAssembly build workload.
+
+- Install stable .NET SDK 10.0.401 as selected by `global.json`. It uses `latestPatch` roll-forward within that feature band and disables prereleases. The projects still target `net8.0`; SDK selection does not upgrade the runtime target.
+- Install the .NET 8 and ASP.NET Core 8 runtimes for tests and sample applications. Installing the .NET 8 SDK alongside the pinned SDK also provides these runtimes.
+- Install `wasm-tools-net8` for the selected SDK. The retained `.slnx` solution format requires SDK 9.0.200 or newer; SDK 8 alone cannot build this solution.
+
+Run from the repository root in a terminal or Windows PowerShell. Replace `X.Y.Z` with the intended package version:
+
+```text
+dotnet --version
+dotnet workload install wasm-tools-net8
+dotnet restore
+dotnet build -c Release --no-restore
+dotnet pack -c Release --no-build --output nupkgs -p:PackageVersion=X.Y.Z
+```
+
+The dashboard build publishes the WebAssembly UI and embeds its assets, so the workload is also required for Release builds and packing. Run build, publish, and pack steps sequentially when they share output directories. These commands prepare local packages only. The five public packages are versioned together: `Jobby.Core`, `Jobby.Postgres`, `Jobby.AspNetCore`, `Jobby.Dashboard`, and `Jobby.Dashboard.Authorization.Basic`. The release script `publish-nuget.sh` additionally pushes to NuGet and requires `NUGET_KEY` and a Bash environment; use the commands above to prepare and inspect packages on Windows before publication.
 
 ## What Next
 

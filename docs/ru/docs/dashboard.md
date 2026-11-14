@@ -16,6 +16,27 @@
 
 Устанавливайте `Jobby.Dashboard.Authorization.Basic` только если нужны встроенные вспомогательные методы Basic-аутентификации. Дашборд также может работать анонимно для локальной разработки или использовать аутентификацию и авторизацию, уже настроенные в host-приложении.
 
+`Jobby.Dashboard.UI` - проект реализации интерфейса на WebAssembly. Его собранные ресурсы встроены в `Jobby.Dashboard`; устанавливать его как отдельный NuGet-пакет не требуется.
+
+## Установка
+
+Установите дашборд и зависимости для ASP.NET Core и PostgreSQL в проект хоста:
+
+```bash
+dotnet add package Jobby.Core
+dotnet add package Jobby.Postgres
+dotnet add package Jobby.AspNetCore
+dotnet add package Jobby.Dashboard
+```
+
+Для встроенных вспомогательных методов Basic-аутентификации дополнительно установите:
+
+```bash
+dotnet add package Jobby.Dashboard.Authorization.Basic
+```
+
+Используйте одну версию релиза для всех пакетов Jobby. Политики хоста и политики авторизации, заданные inline, работают без пакета Basic.
+
 ## Настройка
 
 ### 1. Регистрация сервисов (до `builder.Build()`)
@@ -52,10 +73,14 @@ app.MapJobbyDashboard("/jobby");
 
 ### Полный пример
 
+Пример разрешает анонимный доступ для локальной разработки. Для защищённого развёртывания замените `AllowAnonymous()` на политику хоста или Basic-аутентификацию. Задайте строку подключения `Jobby` и зарегистрируйте обработчики задач из сборки хоста.
+
 ```csharp
 using Jobby.AspNetCore;
+using Jobby.Core.Interfaces;
 using Jobby.Dashboard;
 using Jobby.Postgres.ConfigurationExtensions;
+using Jobby.Postgres.Dashboard;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,7 +88,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Jobby")
     ?? throw new InvalidOperationException("Connection string 'Jobby' was not found.");
 
-var dataSource = NpgsqlDataSource.Create(connectionString);
+await using var dataSource = NpgsqlDataSource.Create(connectionString);
 builder.Services.AddSingleton(dataSource);
 
 builder.Services.AddJobbyServerAndClient(jobby =>
@@ -111,6 +136,8 @@ builder.Services.AddJobbyDashboard().AllowAnonymous();
 
 ### Вариант 2 - Повторное использование существующей политики хоста
 
+Сохраните существующую регистрацию аутентификации и именованные политики авторизации хоста. Для этого варианта достаточно `Jobby.Dashboard`, пакет Basic не нужен.
+
 ```csharp
 builder.Services
     .AddJobbyDashboard()
@@ -141,7 +168,8 @@ builder.Services
     .AddBasicAuth(o =>
     {
         o.Username     = "admin";
-        o.PasswordHash = "JDPBKDF2$v1$210000$...$...";
+        o.PasswordHash = builder.Configuration["JobbyDashboard:PasswordHash"]
+            ?? throw new InvalidOperationException("JobbyDashboard:PasswordHash is required.");
     });
 
 app.MapJobbyDashboard("/jobby");
@@ -149,7 +177,7 @@ app.MapJobbyDashboard("/jobby");
 
 `AddBasicAuth` одновременно регистрирует схему Basic-аутентификации **и** настраивает авторизацию дашборда. Не сочетайте его с другими методами выбора авторизации.
 
-**Сгенерируйте хеш пароля** (никогда не храните пароль в открытом виде):
+**Сгенерируйте хеш пароля** и сохраните его в конфигурации хоста как `JobbyDashboard:PasswordHash` (никогда не храните пароль в открытом виде):
 
 ```csharp
 string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("ваш-пароль");
@@ -165,13 +193,15 @@ string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("ваш-п
 
 ```csharp
 using Jobby.Dashboard.Authorization.Basic;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 builder.Services
     .AddJobbyDashboard()
     .AddBasicAuthScheme(o =>
     {
         o.Username     = "admin";
-        o.PasswordHash = "JDPBKDF2$v1$210000$...$...";
+        o.PasswordHash = builder.Configuration["JobbyDashboard:PasswordHash"]
+            ?? throw new InvalidOperationException("JobbyDashboard:PasswordHash is required.");
     })
     .RequireAuthorization(p =>
         p.AddAuthenticationSchemes(
@@ -179,6 +209,8 @@ builder.Services
                 JwtBearerDefaults.AuthenticationScheme)
          .RequireAuthenticatedUser());
 ```
+
+Зарегистрируйте схему Bearer в хосте перед использованием этой комбинации.
 
 При запросе без аутентификации JSON API отвечает `401` с заголовками `WWW-Authenticate: Basic` и `WWW-Authenticate: Bearer` одновременно - браузеры реагируют на `Basic`, программные клиенты - на `Bearer`.
 
@@ -208,6 +240,8 @@ builder.Services.AddJobbyPostgresDashboardStorage(dataSource, o =>
 Пользователь может поменять те же настройки в верхней панели дашборда. Выбор сохраняется в `localStorage` и используется вместо настроек сервера, пока пользователь не сбросит его.
 
 ```csharp
+using Jobby.Core.Models.Dashboard;
+
 builder.Services
     .AddJobbyDashboard(o =>
     {
@@ -225,7 +259,7 @@ builder.Services
 
 ## Возможности и API
 
-Дашборд показывает:
+Дашборд обновляет данные опросом с интервалом `RefreshInterval` и показывает:
 
 - **Обзор** - актуальное количество задач по статусу и очереди.
 - **Задачи** - список задач с пагинацией, фильтрами и сортировкой.
@@ -235,7 +269,27 @@ builder.Services
 - **Очереди** - разбивка по статусам для каждой очереди.
 - **Заблокированные группы** - группы последовательного выполнения, остановленные из-за упавших или потерянных задач.
 
-Управляющие действия доступны, когда зарегистрирован `IJobbyDashboardCommandStorage`, а `JobbyDashboardOptions.ReadOnly` равно `false`. `AddJobbyPostgresDashboardStorage()` регистрирует и хранилище для чтения, и хранилище команд. Если управление отключено, дашборд скрывает соответствующие действия, а API-маршруты управления возвращают `404`.
+Управляющие действия доступны, когда зарегистрирован `IJobbyDashboardCommandStorage`, а `JobbyDashboardOptions.ReadOnly` равно `false`. `AddJobbyPostgresDashboardStorage()` регистрирует и хранилище для чтения, и хранилище команд. Если управление отключено, дашборд скрывает соответствующие действия, а API-маршруты управления возвращают `404`. Режим «Только чтение» в верхней панели скрывает элементы управления для удобства; ограничивайте доступ на сервере через `JobbyDashboardOptions.ReadOnly` или политики авторизации.
+
+### Даты планового запуска и сортировка
+
+Фильтры От/До в списке задач выбирают дату планового запуска в часовом поясе, выбранном в дашборде. Обе календарные даты включены; интерфейс переводит их границы в UTC с учётом переходов на летнее и зимнее время. Если начало диапазона позже конца, интерфейс показывает ошибку и сохраняет последние корректные результаты до исправления. Время создания по-прежнему доступно для просмотра и сортировки.
+
+По умолчанию список задач и вкладка всех задач очереди отсортированы по плановому началу по возрастанию: сначала идут самые ранние задачи. Ожидающие задачи очереди используют тот же порядок. Пользователь может выбрать другой столбец и направление сортировки.
+
+API задач принимает включительные границы UTC `scheduledFrom` и `scheduledTo`; им соответствуют свойства `ScheduledFrom` и `ScheduledTo` в `DashboardJobsQuery`. Параметры `createdFrom` и `createdTo` больше не поддерживаются. Диапазон относится к текущему плановому началу, включая повторы и перепланирование, а не ко времени создания или фактического выполнения.
+
+### Досрочный запуск запланированных задач
+
+Действие запуска доступно только для задач в статусе `Scheduled`, включая периодические. Оно переносит будущее плановое начало на текущее время, а уже наступившее оставляет без изменений. Рабочий сервер выполнит задачу, когда сможет взять её по обычным правилам очередей, серверов и групп последовательного выполнения; HTTP-запрос сам обработчик не выполняет.
+
+Периодическая задача запускается в той же записи с тем же ID, без создания отдельной разовой копии. После выполнения обычный планировщик рассчитывает следующий запуск, поэтому интервальное расписание может сдвинуться. Например, часовая задача с плановым запуском в 12:00, запущенная досрочно в 11:10 и завершившаяся в 11:12, может затем запуститься в 12:10 или 12:12 в зависимости от `CalculateNextFromPrev`. Cron-расписание использует следующее подходящее время. Повторные запросы, пока запуск ожидается, не создают дополнительных копий; запрос после завершения может приблизить следующий запуск.
+
+### Эксклюзивные периодические определения
+
+В списке периодических задач и деталях задачи отображается `IsExclusive` (`is_exclusive` в хранилище). Эксклюзивное определение уникально среди эксклюзивных определений с тем же именем задачи. Неэксклюзивные определения с этим именем могут существовать одновременно. Флаг управляет уникальностью определений, а не взаимным исключением выполнений; для последовательного выполнения используйте serializable-группы.
+
+### API чтения
 
 Маршруты чтения доступны под базовым путём дашборда:
 
@@ -243,7 +297,7 @@ builder.Services
 |---|---|
 | `GET /jobby/api/config` | Конфигурация дашборда, которую клиент запрашивает при старте |
 | `GET /jobby/api/stats` | Агрегированная статистика по задачам |
-| `GET /jobby/api/jobs` | Постраничный список задач (параметры: `status`, `statuses`, `queueName`, `jobNameSearch`, `createdFrom`, `createdTo`, `page`, `pageSize`, `sortBy`, `sortDescending`) |
+| `GET /jobby/api/jobs` | Постраничный список задач (параметры: `status`, `statuses`, `queueName`, `jobNameSearch`, `scheduledFrom`, `scheduledTo`, `page`, `pageSize`, `sortBy`, `sortDescending`) |
 | `GET /jobby/api/jobs/{id}` | Детали одной задачи |
 | `GET /jobby/api/recurrent` | Постраничный список периодических задач |
 | `GET /jobby/api/servers` | Зарегистрированные экземпляры Jobby-сервера |
@@ -251,11 +305,13 @@ builder.Services
 | `GET /jobby/api/locked-groups` | Постраничный список заблокированных групп |
 | `GET /jobby/api/locked-groups/detail?groupId={id}` | Детали заблокированной группы и связанных задач |
 
+### API управления
+
 Маршруты управления проверяют antiforgery-заголовок и токен, полученные из `/jobby/api/config`:
 
 | Маршрут | Описание |
 |---|---|
-| `POST /jobby/api/jobs/{id}/trigger` | Запустить запланированную непериодическую задачу сейчас |
+| `POST /jobby/api/jobs/{id}/trigger` | Запросить досрочный запуск запланированной задачи, включая периодические |
 | `POST /jobby/api/jobs/{id}/retry` | Повторить упавшую или замороженную непериодическую задачу |
 | `DELETE /jobby/api/jobs/{id}` | Удалить непериодическую задачу, которая не выполняется прямо сейчас |
 | `DELETE /jobby/api/recurrent/{id}` | Удалить определение периодической задачи |
@@ -277,6 +333,26 @@ builder.Services
 - **Обратный прокси и хостинг на подпути** - настройте `UseForwardedHeaders` и базовый путь прокси как обычно. Дашборд динамически подставляет корректный `<base href>`, поэтому хостинг на подпути работает без дополнительной ручной настройки.
 - **Согласованность данных** - все данные читаются из общей базы данных PostgreSQL, поэтому каждая реплика возвращает одинаковое актуальное состояние кластера.
 - **Antiforgery / Data Protection** - управляющие запросы используют ASP.NET Core antiforgery. Если управление включено, а запросы могут попадать на разные реплики, настройте общее хранилище ключей ASP.NET Core Data Protection так же, как для любого ASP.NET Core-приложения с antiforgery.
+
+## Сборка из исходников и подготовка пакетов
+
+Эти требования относятся к сборке репозитория, включая подготовку пакетов для публикации в Windows. Приложениям, использующим NuGet-пакеты, нужна среда выполнения .NET/ASP.NET Core 8; workload сборки WebAssembly им не требуется.
+
+- Установите стабильный .NET SDK 10.0.401, выбранный в `global.json`. Политика `latestPatch` разрешает обновления патчей в пределах этой feature band, предварительные версии отключены. Проекты по-прежнему используют `net8.0`; выбор SDK не обновляет целевую среду выполнения.
+- Установите среды выполнения .NET 8 и ASP.NET Core 8 для тестов и примеров. Установка .NET 8 SDK рядом с закреплённым SDK также предоставляет эти среды.
+- Установите `wasm-tools-net8` для выбранного SDK. Формат решения `.slnx` требует SDK 9.0.200 или новее; одного SDK 8 для сборки решения недостаточно.
+
+Выполните команды из корня репозитория в терминале или Windows PowerShell. Замените `X.Y.Z` на выбранную версию пакетов:
+
+```text
+dotnet --version
+dotnet workload install wasm-tools-net8
+dotnet restore
+dotnet build -c Release --no-restore
+dotnet pack -c Release --no-build --output nupkgs -p:PackageVersion=X.Y.Z
+```
+
+При сборке дашборда публикуется WebAssembly-интерфейс и встраиваются его ресурсы, поэтому workload нужен и для Release-сборки, и для упаковки. Выполняйте сборку, публикацию и упаковку последовательно, если они используют общие каталоги вывода. Команды выше только готовят локальные пакеты. Все пять публичных пакетов версионируются вместе: `Jobby.Core`, `Jobby.Postgres`, `Jobby.AspNetCore`, `Jobby.Dashboard` и `Jobby.Dashboard.Authorization.Basic`. Скрипт `publish-nuget.sh` также отправляет пакеты в NuGet, требует `NUGET_KEY` и среду Bash; в Windows используйте команды выше для подготовки и проверки пакетов перед публикацией.
 
 ## Что дальше
 
