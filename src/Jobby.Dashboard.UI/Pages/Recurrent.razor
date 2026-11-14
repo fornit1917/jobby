@@ -51,6 +51,13 @@
                 <span class="jobby-pill">@context.Item.QueueName</span>
             </CellTemplate>
         </PropertyColumn>
+        <TemplateColumn Title="@L["recurrent.exclusive"]" Sortable="false">
+            <CellTemplate>
+                <MudTooltip Text="@L["recurrent.exclusiveHelp"]">
+                    <span data-testid="recurrent-exclusive">@L[context.Item.IsExclusive ? "common.yes" : "common.no"]</span>
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
         <TemplateColumn Title="@L["field.status"]" Sortable="false">
             <CellTemplate>
                 <StatusChip Status="context.Item.Status"/>

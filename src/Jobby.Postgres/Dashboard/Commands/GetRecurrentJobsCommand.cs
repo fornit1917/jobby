@@ -54,7 +54,7 @@ internal sealed class GetRecurrentJobsCommand
         var sql = $"""
 
                                SELECT id, job_name, schedule, scheduler_type, queue_name, status,
-                                      scheduled_start_at, last_started_at, last_finished_at, job_param
+                                      scheduled_start_at, last_started_at, last_finished_at, job_param, is_exclusive
                                FROM {_jobsTable}
                                {whereSql}
                                ORDER BY job_name ASC, id ASC
@@ -82,7 +82,8 @@ internal sealed class GetRecurrentJobsCommand
                     ScheduledStartAt: reader.GetDateTime(reader.GetOrdinal("scheduled_start_at")),
                     LastStartedAt: reader.GetNullableDatetime("last_started_at"),
                     LastFinishedAt: reader.GetNullableDatetime("last_finished_at"),
-                    JobParam: reader.GetNullableString("job_param")));
+                    JobParam: reader.GetNullableString("job_param"),
+                    IsExclusive: reader.GetBoolean(reader.GetOrdinal("is_exclusive"))));
             }
         }
 

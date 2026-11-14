@@ -89,7 +89,8 @@ public sealed record DashboardRecurrentJobDto(
     DateTime ScheduledStartAt,
     DateTime? LastStartedAt,
     DateTime? LastFinishedAt,
-    string? JobParam);
+    string? JobParam,
+    bool IsExclusive);
 
 public sealed record DashboardServerDto(string Id, DateTime HeartbeatTs);
 

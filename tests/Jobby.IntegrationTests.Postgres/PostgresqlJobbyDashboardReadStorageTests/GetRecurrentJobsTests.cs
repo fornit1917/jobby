@@ -11,8 +11,10 @@ public class GetRecurrentJobsTests
     public async Task GetRecurrentJobsAsync_ReturnsOnlyRecurrentTemplates()
     {
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        var exclusive = Recurrent("nightly", "0 0 * * *");
+        exclusive.IsExclusive = true;
         db.Jobs.AddRange(
-            Recurrent("nightly", "0 0 * * *"),
+            exclusive,
             Recurrent("hourly", "0 * * * *"),
             NonRecurrent("one-off"));
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -23,7 +25,8 @@ public class GetRecurrentJobsTests
 
         Assert.Equal(2, page.TotalCount);
         Assert.All(page.Items, i => Assert.False(string.IsNullOrEmpty(i.Schedule)));
-        Assert.Contains(page.Items, i => i.JobName == "nightly" && i.Schedule == "0 0 * * *");
+        Assert.Contains(page.Items, i => i.JobName == "nightly" && i.Schedule == "0 0 * * *" && i.IsExclusive);
+        Assert.Contains(page.Items, i => i.JobName == "hourly" && !i.IsExclusive);
     }
 
     [Fact]

@@ -36,4 +36,22 @@ public class JobDetailTests : DashboardClientTestContext
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid=detail-table]")));
         Assert.Empty(cut.FindAll("[data-testid=detail-locker-note]"));
     }
+
+    [Theory]
+    [InlineData(true, "Yes")]
+    [InlineData(false, "No")]
+    public void Recurrent_ShowsExclusiveStateAndMeaning(bool isExclusive, string expected)
+    {
+        var job = Job(isGroupLocker: false) with { Schedule = "0 * * * *", IsExclusive = isExclusive };
+        SetupApi(req => req.RequestUri!.AbsolutePath.StartsWith("/api/jobs/") ? job : null);
+
+        var cut = Render<JobDetail>(p => p.Add(x => x.Id, job.Id));
+
+        cut.WaitForAssertion(() =>
+        {
+            var row = cut.Find("[data-testid=detail-exclusive]");
+            Assert.Equal(expected, row.QuerySelector("td > span")!.TextContent);
+            Assert.Contains("does not prevent concurrent execution", row.TextContent);
+        });
+    }
 }

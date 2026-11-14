@@ -108,6 +108,16 @@ else
                     <ScheduleDisplay Schedule="@_job.Schedule" SchedulerType="@_job.SchedulerType"/>
                 </td>
             </tr>
+            @if (_job.Schedule is not null)
+            {
+                <tr data-testid="detail-exclusive">
+                    <td class="jobby-detail-key">@L["recurrent.exclusive"]</td>
+                    <td>
+                        <span>@L[_job.IsExclusive ? "common.yes" : "common.no"]</span>
+                        <div class="jobby-text-sm" style="color:var(--text-3);">@L["recurrent.exclusiveHelp"]</div>
+                    </td>
+                </tr>
+            }
             <tr>
                 <td class="jobby-detail-key">@L["jobDetail.param"]</td>
                 <td>
