@@ -1,6 +1,6 @@
 using MudBlazor;
 
-namespace Jobby.Dashboard.Client.Theme;
+namespace Jobby.Dashboard.UI.Theme;
 
 public static class JobbyTheme
 {

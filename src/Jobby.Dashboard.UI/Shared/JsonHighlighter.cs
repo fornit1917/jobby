@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 
-namespace Jobby.Dashboard.Client.Shared;
+namespace Jobby.Dashboard.UI.Shared;
 
 public static class JsonHighlighter
 {

@@ -4,7 +4,7 @@ using System.Globalization;
 using Jobby.Core.Models.Dashboard;
 using Microsoft.AspNetCore.Components;
 
-namespace Jobby.Dashboard.Client;
+namespace Jobby.Dashboard.UI;
 
 public sealed class DashboardApiClient
 {

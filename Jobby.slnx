@@ -18,7 +18,7 @@
     <Project Path="src/Jobby.AspNetCore/Jobby.AspNetCore.csproj" />
     <Project Path="src/Jobby.Core/Jobby.Core.csproj" />
     <Project Path="src/Jobby.Dashboard.Authorization.Basic/Jobby.Dashboard.Authorization.Basic.csproj" />
-    <Project Path="src/Jobby.Dashboard.Client/Jobby.Dashboard.Client.csproj" />
+    <Project Path="src/Jobby.Dashboard.UI/Jobby.Dashboard.UI.csproj" />
     <Project Path="src/Jobby.Dashboard/Jobby.Dashboard.csproj" />
     <Project Path="src/Jobby.Postgres/Jobby.Postgres.csproj" />
   </Folder>

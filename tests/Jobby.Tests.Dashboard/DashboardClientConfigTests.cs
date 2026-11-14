@@ -1,5 +1,5 @@
 using Jobby.Core.Models.Dashboard;
-using Jobby.Dashboard.Client;
+using Jobby.Dashboard.UI;
 using Jobby.Tests.Dashboard.Components;
 
 namespace Jobby.Tests.Dashboard;

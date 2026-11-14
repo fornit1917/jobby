@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Localization;
 using MudBlazor;
 
-namespace Jobby.Dashboard.Client.Localization;
+namespace Jobby.Dashboard.UI.Localization;
 
 public sealed class JobbyMudLocalizer : MudLocalizer
 {

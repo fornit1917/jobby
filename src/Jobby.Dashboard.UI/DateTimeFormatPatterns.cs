@@ -1,7 +1,7 @@
 using System.Globalization;
 using Jobby.Core.Models.Dashboard;
 
-namespace Jobby.Dashboard.Client;
+namespace Jobby.Dashboard.UI;
 
 internal static class DateTimeFormatPatterns
 {

@@ -1,6 +1,6 @@
 using Jobby.Core.Models;
 
-namespace Jobby.Dashboard.Client.Shared;
+namespace Jobby.Dashboard.UI.Shared;
 
 public static class QueueBacklog
 {

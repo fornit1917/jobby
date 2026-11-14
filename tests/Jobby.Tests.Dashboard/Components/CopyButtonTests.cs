@@ -1,5 +1,5 @@
 using Bunit;
-using Jobby.Dashboard.Client.Shared;
+using Jobby.Dashboard.UI.Shared;
 
 namespace Jobby.Tests.Dashboard.Components;
 

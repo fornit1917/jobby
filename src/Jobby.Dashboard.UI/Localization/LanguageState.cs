@@ -4,7 +4,7 @@ using Jobby.Core.Models;
 using Jobby.Core.Models.Dashboard;
 using Microsoft.JSInterop;
 
-namespace Jobby.Dashboard.Client.Localization;
+namespace Jobby.Dashboard.UI.Localization;
 
 public sealed class LanguageState
 {

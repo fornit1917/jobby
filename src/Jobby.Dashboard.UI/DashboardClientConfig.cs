@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using Jobby.Core.Models.Dashboard;
 
-namespace Jobby.Dashboard.Client;
+namespace Jobby.Dashboard.UI;
 
 public enum DashboardClientConfigLoadState
 {

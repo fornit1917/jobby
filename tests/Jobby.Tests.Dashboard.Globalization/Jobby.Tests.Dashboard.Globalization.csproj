@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Jobby.Dashboard.Client\Jobby.Dashboard.Client.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard.UI\Jobby.Dashboard.UI.csproj" />
   </ItemGroup>
 
 </Project>

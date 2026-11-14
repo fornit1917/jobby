@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace Jobby.Dashboard.Client.Localization;
+namespace Jobby.Dashboard.UI.Localization;
 
 public abstract class LocalizedComponentBase : ComponentBase, IDisposable
 {

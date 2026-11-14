@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using CronExpressionDescriptor;
 
-namespace Jobby.Dashboard.Client.Shared;
+namespace Jobby.Dashboard.UI.Shared;
 
 public enum ScheduleKind
 {

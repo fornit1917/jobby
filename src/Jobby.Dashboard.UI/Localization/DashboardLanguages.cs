@@ -1,6 +1,6 @@
 using Jobby.Core.Models.Dashboard;
 
-namespace Jobby.Dashboard.Client.Localization;
+namespace Jobby.Dashboard.UI.Localization;
 
 public static class DashboardLanguages
 {

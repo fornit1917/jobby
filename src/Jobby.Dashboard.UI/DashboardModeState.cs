@@ -1,4 +1,4 @@
-namespace Jobby.Dashboard.Client;
+namespace Jobby.Dashboard.UI;
 
 public enum DashboardMode
 {

@@ -1,8 +1,8 @@
 using Bunit;
 using Jobby.Core.Models.Dashboard;
-using Jobby.Dashboard.Client;
-using Jobby.Dashboard.Client.Localization;
-using Jobby.Dashboard.Client.Shared;
+using Jobby.Dashboard.UI;
+using Jobby.Dashboard.UI.Localization;
+using Jobby.Dashboard.UI.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 

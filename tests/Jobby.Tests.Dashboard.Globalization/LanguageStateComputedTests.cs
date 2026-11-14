@@ -1,7 +1,7 @@
 using Jobby.Core.Models;
 using Jobby.Core.Models.Dashboard;
-using Jobby.Dashboard.Client;
-using Jobby.Dashboard.Client.Localization;
+using Jobby.Dashboard.UI;
+using Jobby.Dashboard.UI.Localization;
 
 namespace Jobby.Tests.Dashboard.Globalization;
 

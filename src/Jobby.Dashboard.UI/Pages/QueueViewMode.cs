@@ -1,4 +1,4 @@
-namespace Jobby.Dashboard.Client.Pages;
+namespace Jobby.Dashboard.UI.Pages;
 
 public enum QueueViewMode
 {

@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Jobby.Core\Jobby.Core.csproj" />
-    <ProjectReference Include="..\Jobby.Dashboard.Client\Jobby.Dashboard.Client.csproj"
+    <ProjectReference Include="..\Jobby.Dashboard.UI\Jobby.Dashboard.UI.csproj"
                       ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" Private="false" />
   </ItemGroup>
 
@@ -34,7 +34,7 @@
     <PropertyGroup>
       <_JobbyClientPublishDir>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'jobbyclient'))</_JobbyClientPublishDir>
     </PropertyGroup>
-    <MSBuild Projects="..\Jobby.Dashboard.Client\Jobby.Dashboard.Client.csproj"
+    <MSBuild Projects="..\Jobby.Dashboard.UI\Jobby.Dashboard.UI.csproj"
              Targets="Publish"
              Properties="Configuration=$(Configuration);PublishDir=$(_JobbyClientPublishDir)" />
     <Error Condition="!Exists('$(_JobbyClientPublishDir)wwwroot/_framework/blazor.boot.json')"

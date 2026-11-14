@@ -1,7 +1,7 @@
 using Bunit;
 using Jobby.Core.Models;
 using Jobby.Core.Models.Dashboard;
-using Jobby.Dashboard.Client.Shared;
+using Jobby.Dashboard.UI.Shared;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 
@@ -103,8 +103,8 @@ public class JobActionsMenuTests : DashboardClientTestContext
     public async Task ReadOnlyView_HidesMenu_EvenWhenManagementEnabled()
     {
         await SetupManagementAsync();
-        Services.GetRequiredService<Jobby.Dashboard.Client.DashboardModeState>().Mode =
-            Jobby.Dashboard.Client.DashboardMode.ReadOnly;
+        Services.GetRequiredService<Jobby.Dashboard.UI.DashboardModeState>().Mode =
+            Jobby.Dashboard.UI.DashboardMode.ReadOnly;
 
         var cut = Render<JobActionsMenu>(p => p
             .Add(x => x.Id, Guid.NewGuid())

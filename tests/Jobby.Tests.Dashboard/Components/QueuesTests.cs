@@ -1,7 +1,7 @@
 using Bunit;
 using Jobby.Core.Models;
 using Jobby.Core.Models.Dashboard;
-using Jobby.Dashboard.Client.Pages;
+using Jobby.Dashboard.UI.Pages;
 
 namespace Jobby.Tests.Dashboard.Components;
 

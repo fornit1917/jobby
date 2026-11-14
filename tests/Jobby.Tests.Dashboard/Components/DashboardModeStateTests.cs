@@ -1,4 +1,4 @@
-using Jobby.Dashboard.Client;
+using Jobby.Dashboard.UI;
 
 namespace Jobby.Tests.Dashboard.Components;
 

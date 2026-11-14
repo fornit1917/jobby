@@ -2,7 +2,7 @@ using System.Text.Json;
 using Jobby.Core.Models.Dashboard;
 using Microsoft.JSInterop;
 
-namespace Jobby.Dashboard.Client;
+namespace Jobby.Dashboard.UI;
 
 public enum DstResolution
 {
