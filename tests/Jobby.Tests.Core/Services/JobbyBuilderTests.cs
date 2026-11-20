@@ -1,12 +1,15 @@
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Diagnostics;
 using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Interfaces.ServerModules.PermanentLockedGroupsCheck;
 using Jobby.Core.Services;
+using Jobby.Core.Services.Observability;
 using Jobby.TestsUtils;
 using Jobby.TestsUtils.Jobs;
+using Jobby.TestsUtils.Tracing;
 using Moq;
 
 namespace Jobby.Tests.Core.Services;
@@ -129,6 +132,103 @@ public class JobbyBuilderTests
         var builder = new JobbyBuilder();
 
         Assert.Throws<InvalidBuilderConfigException>(() => builder.CreateJobbyClient());
+    }
+
+    [Fact]
+    public void UseTracing_WithRestoreTraceIdSetting_FactoryCreatedAfterUseTracingCapturesTraceparent()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId });
+
+        var activity = TestTracingContext.StartAmbientActivity("builder-test");
+        try
+        {
+            var job = builder.CreateJobsFactory().Create(new TestJobCommand());
+
+            Assert.Equal(TestTracingContext.ToTraceparent(activity), job.Traceparent);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
+    }
+
+    [Fact]
+    public void UseTracing_CalledTwice_LastSettingsWin()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId });
+        builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.CreateNewTraceId });
+
+        TestTracingContext.StartAmbientActivity("builder-test");
+        try
+        {
+            var job = builder.CreateJobsFactory().Create(new TestJobCommand());
+
+            Assert.Null(job.Traceparent);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
+    }
+
+    [Fact]
+    public void UseTracing_WithoutSettings_FactoryDoesNotCaptureTraceparent()
+    {
+        var builder = new JobbyBuilder();
+        builder.UseTracing();
+
+        var activity = TestTracingContext.StartAmbientActivity("builder-test");
+        try
+        {
+            var job = builder.CreateJobsFactory().Create(new TestJobCommand());
+
+            Assert.Null(job.Traceparent);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
+    }
+
+    [Fact]
+    public void UseTracing_NotCalled_FactoryDoesNotCaptureTraceparent()
+    {
+        var builder = new JobbyBuilder();
+
+        var activity = TestTracingContext.StartAmbientActivity("builder-test");
+        try
+        {
+            var job = builder.CreateJobsFactory().Create(new TestJobCommand());
+
+            Assert.Null(job.Traceparent);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
+    }
+
+    [Fact]
+    public void UseTracing_FactoryCreatedBeforeUseTracing_FactoryDoesNotCaptureTraceId()
+    {
+        var builder = new JobbyBuilder();
+        // factory is created and cached before UseTracing is called — settings are not applied to it
+        var factory = builder.CreateJobsFactory();
+        builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId });
+
+        var activity = TestTracingContext.StartAmbientActivity("builder-test");
+        try
+        {
+            var job = factory.Create(new TestJobCommand());
+
+            Assert.Null(job.Traceparent);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
     }
 
     [Fact]

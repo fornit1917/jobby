@@ -57,6 +57,8 @@ internal class JobExecutionService : IJobExecutionService
                 IsLastAttempt = !job.IsRecurrent && retryPolicy.IsLastAttempt(job),
                 JobName = job.JobName,
                 StartedCount = job.StartedCount,
+                Traceparent = job.Traceparent,
+                TracingMode = job.TracingMode,
             };
 
             await jobExecutor.Execute(job, ctx, scope, _serializer, _pipelineBuilder);

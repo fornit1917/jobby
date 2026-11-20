@@ -1,9 +1,12 @@
 ﻿using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
 using Jobby.Core.Services;
+using Jobby.Core.Services.Observability;
 using Jobby.IntegrationTests.Postgres.Helpers;
 using Jobby.TestsUtils.Jobs;
+using Jobby.TestsUtils.Tracing;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
@@ -434,6 +437,67 @@ public class InsertTests
         Assert.Equal(job.Id, actualJob.Id);
         Assert.Equal("*/20 * * * *", actualJob.Schedule);
         Assert.Equal(secondStartTime, actualJob.ScheduledStartAt, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public async Task InsertAsync_TracingModeRestore_SavesTraceparentAndModeToDb()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+
+        var builder = new JobbyBuilder();
+        builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId });
+        var factory = builder.CreateJobsFactory();
+
+        var activity = TestTracingContext.StartAmbientActivity("insert-test");
+        try
+        {
+            var job = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
+                new JobOpts { StartTime = DateTime.UtcNow.AddDays(1) });
+            var expectedTraceparent = TestTracingContext.ToTraceparent(activity);
+            Assert.Equal(expectedTraceparent, job.Traceparent);
+
+            var storage = DbHelper.CreateJobbyStorage();
+            await storage.InsertJobAsync(job);
+
+            var actualJob = await dbContext.Jobs.AsNoTracking()
+                .FirstAsync(x => x.Id == job.Id, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.Equal(expectedTraceparent, actualJob.Traceparent);
+            Assert.Equal(JobbyTracingMode.RestoreTraceId, actualJob.TracingMode);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
+    }
+
+    [Fact]
+    public async Task InsertAsync_TracingModeCreateNewViaOpts_SavesNullTraceparent()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+
+        var builder = new JobbyBuilder();
+        builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId });
+        var factory = builder.CreateJobsFactory();
+
+        // ambient activity exists, but tracing context capture is disabled for this job via JobOpts
+        var activity = TestTracingContext.StartAmbientActivity("insert-test");
+        try
+        {
+            var job = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
+                new JobOpts { StartTime = DateTime.UtcNow.AddDays(1), TracingMode = JobbyTracingMode.CreateNewTraceId });
+
+            var storage = DbHelper.CreateJobbyStorage();
+            await storage.InsertJobAsync(job);
+
+            var actualJob = await dbContext.Jobs.AsNoTracking()
+                .FirstAsync(x => x.Id == job.Id, cancellationToken: TestContext.Current.CancellationToken);
+            Assert.Null(actualJob.Traceparent);
+            Assert.Equal(JobbyTracingMode.CreateNewTraceId, actualJob.TracingMode);
+        }
+        finally
+        {
+            Activity.Current = null;
+        }
     }
 
     private IJobsFactory CreateJobsFactory()

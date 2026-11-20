@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS jobby_jobs (
         )
     ) STORED,
     is_exclusive BOOLEAN NOT NULL DEFAULT FALSE,
-    scheduler_type TEXT DEFAULT NULL
+    scheduler_type TEXT DEFAULT NULL,
+    traceparent TEXT DEFAULT NULL,
+    tracing_mode int NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS jobby_jobs_queue_name_status_scheduled_start_at_idx
@@ -70,7 +72,10 @@ CREATE INDEX IF NOT EXISTS jobby_unlocking_groups_created_at_idx
 
 -- Functions
 
-CREATE OR REPLACE FUNCTION jobby_take_to_processing(p_queue TEXT, p_batch_size int, p_server_id TEXT)
+-- return type changes compared to previous versions (traceparent and tracing_mode columns added), so CREATE OR REPLACE is not enough
+DROP FUNCTION IF EXISTS jobby_take_to_processing(TEXT, int, TEXT);
+
+CREATE FUNCTION jobby_take_to_processing(p_queue TEXT, p_batch_size int, p_server_id TEXT)
 RETURNS TABLE (
     id uuid,
     job_name TEXT,
@@ -80,7 +85,9 @@ RETURNS TABLE (
     next_job_id uuid,
     scheduled_start_at timestamptz,
     server_id TEXT,
-    scheduler_type TEXT
+    scheduler_type TEXT,
+    traceparent TEXT,
+    tracing_mode int
 )
 LANGUAGE plpgsql
 AS $$
@@ -189,7 +196,9 @@ BEGIN
                         t.next_job_id AS r_next_job_id,
                         t.scheduled_start_at AS r_scheduled_start_at,
                         t.server_id AS r_server_id,
-                        t.scheduler_type AS r_scheduler_type
+                        t.scheduler_type AS r_scheduler_type,
+                        t.traceparent AS r_traceparent,
+                        t.tracing_mode AS r_tracing_mode
                     INTO result_rec;    
                 
                     IF FOUND THEN
@@ -201,7 +210,9 @@ BEGIN
                         next_job_id := result_rec.r_next_job_id;
                         scheduled_start_at := result_rec.r_scheduled_start_at;
                         server_id := result_rec.r_server_id;
-                        scheduler_type := result_rec.r_scheduler_type;                        
+                        scheduler_type := result_rec.r_scheduler_type;
+                        traceparent := result_rec.r_traceparent;
+                        tracing_mode := result_rec.r_tracing_mode;
                         RETURN NEXT;
                     
                         taken_count := taken_count + 1;
