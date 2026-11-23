@@ -4,19 +4,17 @@ namespace Jobby.Dashboard;
 
 public sealed class JobbyDashboardOptions
 {
-    private TimeZoneInfo _defaultTimeZone = TimeZoneInfo.Utc;
-
     public TimeSpan? RefreshInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     public int StaleServerThresholdSeconds { get; set; } = 300;
 
     public bool ReadOnly { get; set; }
 
-    public TimeZoneInfo DefaultTimeZone
-    {
-        get => _defaultTimeZone;
-        set => _defaultTimeZone = value ?? throw new ArgumentNullException(nameof(value));
-    }
+    /// <summary>
+    /// Time zone in which timestamps are displayed until the user selects another one in the dashboard.
+    /// <c>null</c> (default) displays them in the time zone of the user's browser.
+    /// </summary>
+    public TimeZoneInfo? DefaultTimeZone { get; set; }
 
     public DashboardDateStyle DefaultDateStyle { get; set; } = DashboardDateStyle.Iso;
 

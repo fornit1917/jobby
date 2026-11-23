@@ -41,8 +41,8 @@ public class JobsDateTimeTests : DashboardClientTestContext
         var cut = Render<Jobs>();
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("10.06.2026 14:30", cut.Markup);
-            Assert.Contains("10.06.2026 13:00", cut.Markup);
+            Assert.Contains("10.06.2026 14:30 UTC+1", cut.Markup);
+            Assert.Contains("10.06.2026 13:00 UTC+1", cut.Markup);
         });
     }
 

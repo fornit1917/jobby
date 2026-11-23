@@ -30,6 +30,18 @@ public class DateTimeFormatPatternsTests
             sample.ToString(DateTimeFormatPatterns.TimePattern(style), CultureInfo.InvariantCulture));
     }
 
+    [Theory]
+    [InlineData(0, 0, "UTC")]
+    [InlineData(2, 0, "UTC+2")]
+    [InlineData(-8, 0, "UTC-8")]
+    [InlineData(5, 30, "UTC+5:30")]
+    [InlineData(-3, -30, "UTC-3:30")]
+    [InlineData(12, 45, "UTC+12:45")]
+    public void OffsetLabel_RendersExpected(int hours, int minutes, string expected)
+    {
+        Assert.Equal(expected, DateTimeFormatPatterns.OffsetLabel(new TimeSpan(hours, minutes, 0)));
+    }
+
     [Fact]
     public void Combined_DefaultMatchesTodaysFormat()
     {

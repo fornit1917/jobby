@@ -59,22 +59,8 @@
 
     private DateTime LocalNow => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Dt.TimeZone);
 
-    private string PillLabel => Dt.TimeZone.Id == "UTC" ? "UTC" : $"{Dt.TimeZone.Id} - {OffsetLabel}";
-
-    private string OffsetLabel
-    {
-        get
-        {
-            var off = Dt.TimeZone.GetUtcOffset(DateTime.UtcNow);
-            if (off == TimeSpan.Zero)
-            {
-                return "UTC";
-            }
-
-            var minutes = Math.Abs(off.Minutes);
-            return $"UTC{(off < TimeSpan.Zero ? "-" : "+")}{Math.Abs(off.Hours)}{(minutes != 0 ? $":{minutes:D2}" : "")}";
-        }
-    }
+    private string PillLabel =>
+        Dt.TimeZone.Id == "UTC" ? "UTC" : $"{Dt.TimeZone.Id} - {Dt.OffsetLabel(DateTime.UtcNow)}";
 
     private string Preview => Dt.FormatAbsolute(DateTime.UtcNow);
 
@@ -83,28 +69,6 @@
         Dt.Changed += OnChanged;
         L.Changed += OnChanged;
         SyncFromState();
-        _zoneIds = BuildZoneList(null);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        string? browserTz = null;
-        try
-        {
-            browserTz = await Js.InvokeAsync<string?>("jobbyDashboard.getTimeZone");
-        }
-        catch
-        {
-            // ignored
-        }
-
-        _zoneIds = BuildZoneList(browserTz);
-        StateHasChanged();
     }
 
     private void OnChanged()
@@ -118,6 +82,7 @@
         _tz = Dt.TimeZone.Id;
         _date = Dt.DateStyle;
         _time = Dt.TimeStyle;
+        _zoneIds = BuildZoneList(Dt.BrowserTimeZoneId);
     }
 
     private async Task OnTimeZoneChanged(string? tz)
@@ -128,19 +93,19 @@
         }
 
         _tz = tz;
-        await Dt.SetAsync(Js, _tz, _date, _time);
+        await Dt.SetTimeZoneAsync(Js, tz);
     }
 
     private async Task OnDateChanged(DashboardDateStyle date)
     {
         _date = date;
-        await Dt.SetAsync(Js, _tz, _date, _time);
+        await Dt.SetDateStyleAsync(Js, date);
     }
 
     private async Task OnTimeChanged(DashboardTimeStyle time)
     {
         _time = time;
-        await Dt.SetAsync(Js, _tz, _date, _time);
+        await Dt.SetTimeStyleAsync(Js, time);
     }
 
     private Task ResetAsync() => Dt.ResetAsync(Js);

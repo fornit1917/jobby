@@ -35,15 +35,23 @@ public sealed class DateTimeDisplayState
     public DashboardDateStyle DateStyle { get; private set; } = DashboardDateStyle.Iso;
     public DashboardTimeStyle TimeStyle { get; private set; } = DashboardTimeStyle.H24WithSeconds;
 
+    // Known after InitializeAsync; null when the browser does not report a zone.
+    public string? BrowserTimeZoneId { get; private set; }
+
     public bool HasUserOverrides =>
         _overrideTimeZoneId is not null || _overrideDateStyle is not null || _overrideTimeStyle is not null;
 
+    // Every timestamp carries the offset it is displayed in, e.g. "2026-06-10 14:30:05 UTC+1".
     public string FormatAbsolute(DateTime utc)
     {
         var instant = DateTime.SpecifyKind(utc, DateTimeKind.Utc);
         var local = TimeZoneInfo.ConvertTimeFromUtc(instant, TimeZone);
-        return DateTimeFormatPatterns.Format(local, DateStyle, TimeStyle);
+        return $"{DateTimeFormatPatterns.Format(local, DateStyle, TimeStyle)} {OffsetLabel(instant)}";
     }
+
+    // Offset of the selected time zone at the given instant: "UTC", "UTC+2", "UTC-3:30".
+    public string OffsetLabel(DateTime utc) =>
+        DateTimeFormatPatterns.OffsetLabel(TimeZone.GetUtcOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc)));
 
     // Preserves date-range bounds across DST folds and gaps.
     public DateTime ToUtc(DateTime wallClock, DstResolution resolution)
@@ -84,6 +92,15 @@ public sealed class DateTimeDisplayState
             // ignored
         }
 
+        try
+        {
+            BrowserTimeZoneId = await js.InvokeAsync<string?>("jobbyDashboard.getTimeZone");
+        }
+        catch
+        {
+            // ignored
+        }
+
         if (TryParse(stored, out var prefs))
         {
             _overrideTimeZoneId = string.IsNullOrWhiteSpace(prefs.Tz) ? null : prefs.Tz;
@@ -95,11 +112,28 @@ public sealed class DateTimeDisplayState
         Changed?.Invoke();
     }
 
-    public async Task SetAsync(IJSRuntime js, string timeZoneId, DashboardDateStyle date, DashboardTimeStyle time)
+    public Task SetTimeZoneAsync(IJSRuntime js, string timeZoneId)
     {
         _overrideTimeZoneId = timeZoneId;
+        return ApplyOverridesAsync(js);
+    }
+
+    public Task SetDateStyleAsync(IJSRuntime js, DashboardDateStyle date)
+    {
         _overrideDateStyle = date;
+        return ApplyOverridesAsync(js);
+    }
+
+    public Task SetTimeStyleAsync(IJSRuntime js, DashboardTimeStyle time)
+    {
         _overrideTimeStyle = time;
+        return ApplyOverridesAsync(js);
+    }
+
+    // Only the setting the user changed is stored; the others keep following the defaults, so choosing
+    // a date format does not pin the time zone the browser happened to have.
+    private async Task ApplyOverridesAsync(IJSRuntime js)
+    {
         Recompute();
         await SaveAsync(js);
         Changed?.Invoke();
@@ -154,20 +188,17 @@ public sealed class DateTimeDisplayState
 
     private void Recompute()
     {
-        TimeZone = ResolveTimeZone(_overrideTimeZoneId ?? _config.DefaultTimeZoneId);
+        // A zone the browser cannot resolve is skipped rather than turned into UTC.
+        TimeZone = FindTimeZone(_overrideTimeZoneId)
+                   ?? FindTimeZone(_config.DefaultTimeZoneId)
+                   ?? FindTimeZone(BrowserTimeZoneId)
+                   ?? TimeZoneInfo.Utc;
         DateStyle = _overrideDateStyle ?? _config.DefaultDateStyle;
         TimeStyle = _overrideTimeStyle ?? _config.DefaultTimeStyle;
     }
 
-    private static TimeZoneInfo ResolveTimeZone(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return TimeZoneInfo.Utc;
-        }
-
-        return TimeZoneInfo.TryFindSystemTimeZoneById(id, out var tz) ? tz : TimeZoneInfo.Utc;
-    }
+    private static TimeZoneInfo? FindTimeZone(string? id) =>
+        !string.IsNullOrWhiteSpace(id) && TimeZoneInfo.TryFindSystemTimeZoneById(id, out var tz) ? tz : null;
 
     internal static bool TryParse(string? json, out StoredPrefs prefs)
     {

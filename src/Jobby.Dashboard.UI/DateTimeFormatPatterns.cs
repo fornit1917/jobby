@@ -28,4 +28,16 @@ internal static class DateTimeFormatPatterns
 
     public static string Format(DateTime local, DashboardDateStyle date, DashboardTimeStyle time)
         => local.ToString(Combined(date, time), CultureInfo.InvariantCulture);
+
+    public static string OffsetLabel(TimeSpan offset)
+    {
+        if (offset == TimeSpan.Zero)
+        {
+            return "UTC";
+        }
+
+        var sign = offset < TimeSpan.Zero ? "-" : "+";
+        var abs = offset.Duration();
+        return abs.Minutes == 0 ? $"UTC{sign}{abs.Hours}" : $"UTC{sign}{abs.Hours}:{abs.Minutes:D2}";
+    }
 }

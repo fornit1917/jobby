@@ -12,12 +12,13 @@ namespace Jobby.Tests.Dashboard;
 
 public class JobbyDashboardApiTests
 {
-    private static async Task<WebApplication> StartAsync(FakeDashboardDataReader reader)
+    private static async Task<WebApplication> StartAsync(FakeDashboardDataReader reader,
+        JobbyDashboardOptions? options = null)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
-        builder.Services.AddSingleton(new JobbyDashboardOptions { StaleServerThresholdSeconds = 123 });
+        builder.Services.AddSingleton(options ?? new JobbyDashboardOptions { StaleServerThresholdSeconds = 123 });
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
         builder.Services.AddScoped<IDashboardDataReader>(_ => reader);
         var state = new JobbyDashboardAuthState();
@@ -132,11 +133,27 @@ public class JobbyDashboardApiTests
         var dto = await app.GetTestClient()
             .GetFromJsonAsync<JobbyDashboardClientConfigDto>("/api/config");
 
-        Assert.Equal(TimeZoneInfo.Utc.Id, dto!.DefaultTimeZoneId);
+        // No zone is configured by default: the client then uses the browser's time zone.
+        Assert.Null(dto!.DefaultTimeZoneId);
         Assert.Equal(DashboardDateStyle.Iso, dto.DefaultDateStyle);
         Assert.Equal(DashboardTimeStyle.H24WithSeconds, dto.DefaultTimeStyle);
 
         Assert.InRange(dto.ServerTimeUtc, before.AddSeconds(-5), DateTime.UtcNow.AddSeconds(5));
+    }
+
+    [Fact]
+    public async Task Config_IncludesConfiguredDefaultTimeZone()
+    {
+        var options = new JobbyDashboardOptions
+        {
+            DefaultTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/London"),
+        };
+        await using var app = await StartAsync(new FakeDashboardDataReader(), options);
+
+        var dto = await app.GetTestClient()
+            .GetFromJsonAsync<JobbyDashboardClientConfigDto>("/api/config", TestContext.Current.CancellationToken);
+
+        Assert.Equal("Europe/London", dto!.DefaultTimeZoneId);
     }
 
     [Fact]

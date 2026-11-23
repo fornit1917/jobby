@@ -41,6 +41,26 @@ public class DateTimeSettingsTests : MudTestContext
     }
 
     [Fact]
+    public async Task Pill_FollowsTheBrowserZoneOnceTheStateIsInitialized()
+    {
+        var config = new DashboardClientConfig();
+        var state = new DateTimeDisplayState(config);
+        Services.AddSingleton(config);
+        Services.AddSingleton(state);
+        JSInterop.Setup<string?>("jobbyDashboard.getTimeZone").SetResult("Asia/Kolkata");
+        var cut = Render<DateTimeSettings>();
+
+        await cut.InvokeAsync(() => state.InitializeAsync(JSInterop.JSRuntime));
+
+        cut.WaitForAssertion(() =>
+        {
+            var pill = cut.Find("[data-testid=datetime-pill]");
+            Assert.Contains("Asia/Kolkata", pill.TextContent);
+            Assert.Contains("UTC+5:30", pill.TextContent);
+        });
+    }
+
+    [Fact]
     public void Clicking_ThePillOpensTheSettingsPopover()
     {
         var config = new DashboardClientConfig();

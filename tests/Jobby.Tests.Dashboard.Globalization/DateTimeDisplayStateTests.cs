@@ -25,7 +25,7 @@ public class DateTimeDisplayStateTests
     {
         var state = StateWith("Europe/London", DashboardDateStyle.DayFirstDot, DashboardTimeStyle.H24);
         var utc = new DateTime(2026, 6, 10, 13, 30, 0, DateTimeKind.Utc);
-        Assert.Equal("10.06.2026 14:30", state.FormatAbsolute(utc));
+        Assert.Equal("10.06.2026 14:30 UTC+1", state.FormatAbsolute(utc));
     }
 
     [Fact]
@@ -33,7 +33,106 @@ public class DateTimeDisplayStateTests
     {
         var state = StateWith(null, DashboardDateStyle.Iso, DashboardTimeStyle.H24WithSeconds);
         var utc = new DateTime(2026, 6, 10, 14, 30, 5, DateTimeKind.Utc);
-        Assert.Equal("2026-06-10 14:30:05", state.FormatAbsolute(utc));
+        Assert.Equal("2026-06-10 14:30:05 UTC", state.FormatAbsolute(utc));
+    }
+
+    [Fact]
+    public void FormatAbsolute_SuffixIsTheOffsetOfTheFormattedInstant()
+    {
+        var state = StateWith("Europe/London", DashboardDateStyle.Iso, DashboardTimeStyle.H24);
+
+        Assert.Equal("2026-01-10 13:30 UTC",
+            state.FormatAbsolute(new DateTime(2026, 1, 10, 13, 30, 0, DateTimeKind.Utc)));
+        Assert.Equal("2026-07-10 14:30 UTC+1",
+            state.FormatAbsolute(new DateTime(2026, 7, 10, 13, 30, 0, DateTimeKind.Utc)));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WithoutOverride_UsesBrowserTimeZone()
+    {
+        var state = new DateTimeDisplayState(new DashboardClientConfig());
+
+        await state.InitializeAsync(new StubJsRuntime { ["jobbyDashboard.getTimeZone"] = "Asia/Tokyo" });
+
+        Assert.Equal("Asia/Tokyo", state.TimeZone.Id);
+        Assert.Equal("Asia/Tokyo", state.BrowserTimeZoneId);
+        Assert.False(state.HasUserOverrides);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_StoredOverrideWinsOverBrowserTimeZone()
+    {
+        var state = new DateTimeDisplayState(new DashboardClientConfig());
+
+        await state.InitializeAsync(new StubJsRuntime
+        {
+            ["jobbyDashboard.getTimeZone"] = "Asia/Tokyo",
+            ["localStorage.getItem"] = """{"v":1,"tz":"Europe/London","date":"Iso","time":"H24"}""",
+        });
+
+        Assert.Equal("Europe/London", state.TimeZone.Id);
+        Assert.True(state.HasUserOverrides);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_StoredZoneThatCannotBeResolved_FallsBackToBrowserTimeZone()
+    {
+        var state = new DateTimeDisplayState(new DashboardClientConfig());
+
+        await state.InitializeAsync(new StubJsRuntime
+        {
+            ["jobbyDashboard.getTimeZone"] = "Asia/Tokyo",
+            ["localStorage.getItem"] = """{"v":1,"tz":"Not/A_Zone"}""",
+        });
+
+        Assert.Equal("Asia/Tokyo", state.TimeZone.Id);
+    }
+
+    [Fact]
+    public async Task SetDateStyleAsync_StoresOnlyTheDateStyle_SoTheTimeZoneKeepsFollowingTheBrowser()
+    {
+        var js = new StubJsRuntime { ["jobbyDashboard.getTimeZone"] = "Asia/Tokyo" };
+        var state = new DateTimeDisplayState(new DashboardClientConfig());
+        await state.InitializeAsync(js);
+
+        await state.SetDateStyleAsync(js, DashboardDateStyle.DayFirstDot);
+
+        Assert.Equal("Asia/Tokyo", state.TimeZone.Id);
+        var stored = (string)js.Calls.Single(call => call.Identifier == "localStorage.setItem").Args![1]!;
+        // The same browser profile opened later in another time zone.
+        var later = new DateTimeDisplayState(new DashboardClientConfig());
+        await later.InitializeAsync(new StubJsRuntime
+        {
+            ["jobbyDashboard.getTimeZone"] = "Europe/London",
+            ["localStorage.getItem"] = stored,
+        });
+        Assert.Equal("Europe/London", later.TimeZone.Id);
+        Assert.Equal(DashboardDateStyle.DayFirstDot, later.DateStyle);
+    }
+
+    [Fact]
+    public async Task SetTimeZoneAsync_KeepsTheChosenZoneWhateverTheBrowserReports()
+    {
+        var js = new StubJsRuntime { ["jobbyDashboard.getTimeZone"] = "Asia/Tokyo" };
+        var state = new DateTimeDisplayState(new DashboardClientConfig());
+        await state.InitializeAsync(js);
+
+        await state.SetTimeZoneAsync(js, "Europe/London");
+
+        Assert.Equal("Europe/London", state.TimeZone.Id);
+        Assert.True(state.HasUserOverrides);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Not/A_Zone")]
+    public async Task InitializeAsync_UnusableBrowserTimeZone_FallsBackToUtc(string? browserTimeZone)
+    {
+        var state = new DateTimeDisplayState(new DashboardClientConfig());
+
+        await state.InitializeAsync(new StubJsRuntime { ["jobbyDashboard.getTimeZone"] = browserTimeZone });
+
+        Assert.Equal(TimeZoneInfo.Utc, state.TimeZone);
     }
 
     [Fact]

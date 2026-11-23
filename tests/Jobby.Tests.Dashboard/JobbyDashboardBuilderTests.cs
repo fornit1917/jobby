@@ -33,14 +33,6 @@ public class JobbyDashboardBuilderTests
     }
 
     [Fact]
-    public void DefaultTimeZone_RejectsNull()
-    {
-        var options = new JobbyDashboardOptions();
-
-        Assert.Throws<ArgumentNullException>(() => options.DefaultTimeZone = null!);
-    }
-
-    [Fact]
     public void AllowAnonymous_SetsAnonymousMode()
     {
         var b = NewBuilder(out _);
