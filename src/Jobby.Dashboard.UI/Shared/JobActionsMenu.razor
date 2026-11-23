@@ -27,7 +27,7 @@
         }
         else
         {
-            @if (Status is (JobStatus.Failed or JobStatus.Frozen) && !IsGroupLocker)
+            @if (Status == JobStatus.Failed && !IsGroupLocker)
             {
                 <MudMenuItem Icon="@Icons.Material.Filled.Replay"
                              OnClick="RetryAsync" data-testid="action-retry">@L["common.retry"]</MudMenuItem>

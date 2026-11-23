@@ -24,10 +24,14 @@
 {
     <MudAlert Severity="Severity.Info" Class="mb-4" data-testid="detail-locker-note">
         @L["jobDetail.lockerNote"]
-        <MudLink
-            Href="@($"locked-groups/detail?groupId={Uri.EscapeDataString(_job.SerializableGroupId ?? string.Empty)}")">
-            @L["jobDetail.viewGroupRecovery"]
-        </MudLink>
+        <MudLink Href="@GroupHref(_job)">@L["jobDetail.viewGroupRecovery"]</MudLink>
+    </MudAlert>
+}
+else if (_job is { Status: JobStatus.Frozen })
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4" data-testid="detail-frozen-note">
+        @L["jobDetail.frozenNote"]
+        <MudLink Href="@GroupHref(_job)">@L["jobDetail.viewGroupRecovery"]</MudLink>
     </MudAlert>
 }
 
@@ -201,6 +205,9 @@ else
     }
 
     private string Fmt(DateTime? value) => value is { } v ? Dt.FormatAbsolute(v) : "-";
+
+    private static string GroupHref(DashboardJobDetailsDto job) =>
+        $"locked-groups/detail?groupId={Uri.EscapeDataString(job.SerializableGroupId ?? string.Empty)}";
 
     private static string? FormatJson(string? raw)
     {

@@ -23,11 +23,12 @@ internal sealed class RetryJobsCommand
                 last_started_at = NULL,
                 last_finished_at = NULL
             WHERE id = ANY($1)
-              AND (status = {(int)JobStatus.Failed} OR status = {(int)JobStatus.Frozen})
+              -- Frozen jobs are not retried: their group is still locked, so they would only be frozen
+              -- again. They continue after the group unlock is requested.
+              AND status = {(int)JobStatus.Failed}
               AND schedule IS NULL
               -- Never retry the job that is actively locking a serializable group: requeuing it would
-              -- unlock the group while its frozen siblings stay Frozen forever. Frozen siblings
-              -- themselves are not lockers, so they remain retryable (and are simply re-frozen).
+              -- unlock the group while its frozen siblings stay Frozen forever.
               AND is_group_locker = FALSE";
     }
 

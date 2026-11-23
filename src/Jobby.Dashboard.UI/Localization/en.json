@@ -120,6 +120,7 @@
   "jobDetail.detail": "Details",
   "jobDetail.title": "Job details",
   "jobDetail.lockerNote": "This job locks a serializable group; it can't be retried or deleted directly.",
+  "jobDetail.frozenNote": "This job is frozen because its serializable group is locked; it can't be retried directly. Use Request Unlock on the group to let it run.",
   "jobDetail.viewGroupRecovery": "View group recovery status",
   "jobDetail.notFound": "Job {0} was not found.",
   "jobDetail.copyId": "Copy ID",
@@ -187,7 +188,7 @@
   "lockedGroupDetail.notLocked": "This group is not locked (it may already be recovered).",
   "lockedGroupDetail.stuckSince": "Stuck since",
   "lockedGroupDetail.pendingSince": "Requested - pending since {0}",
-  "lockedGroupDetail.blockedNote": "This group is blocked. Retry/Delete on the locker are disabled by design - the only safe recovery is Request Unlock.",
+  "lockedGroupDetail.blockedNote": "This group is blocked. Retry/Delete on the locker and Retry on frozen jobs are disabled by design - the only safe recovery is Request Unlock.",
   "lockedGroupDetail.role": "Role",
   "lockedGroupDetail.detailsLink": "details ->",
   "lockedGroupDetail.loadError": "Failed to load group."

@@ -77,6 +77,17 @@ public class JobActionsMenuTests : DashboardClientTestContext
     }
 
     [Fact]
+    public async Task NonLockerFrozen_ShowsDeleteWithoutRetry()
+    {
+        await SetupManagementAsync();
+        var cut = RenderMenu(JobStatus.Frozen, isGroupLocker: false);
+
+        await cut.Find("[data-testid=job-actions] button").ClickAsync();
+        await cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll("[data-testid=action-delete]")));
+        Assert.Empty(cut.FindAll("[data-testid=action-retry]"));
+    }
+
+    [Fact]
     public async Task RecurrentGroupLocker_ShowsNoMenu()
     {
         await SetupManagementAsync();

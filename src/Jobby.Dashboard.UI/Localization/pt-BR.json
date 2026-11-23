@@ -120,6 +120,7 @@
   "jobDetail.detail": "Detalhes",
   "jobDetail.title": "Detalhes da tarefa",
   "jobDetail.lockerNote": "Esta tarefa bloqueia um grupo serializável; não é possível executá-la novamente nem excluí-la diretamente.",
+  "jobDetail.frozenNote": "Esta tarefa está congelada porque seu grupo serializável está bloqueado; não é possível executá-la novamente diretamente. Use Solicitar desbloqueio no grupo para que ela seja executada.",
   "jobDetail.viewGroupRecovery": "Ver status de recuperação do grupo",
   "jobDetail.notFound": "A tarefa {0} não foi encontrada.",
   "jobDetail.copyId": "Copiar ID",
@@ -187,7 +188,7 @@
   "lockedGroupDetail.notLocked": "Este grupo não está bloqueado (pode já ter sido recuperado).",
   "lockedGroupDetail.stuckSince": "Travado desde",
   "lockedGroupDetail.pendingSince": "Solicitado - pendente desde {0}",
-  "lockedGroupDetail.blockedNote": "Este grupo está bloqueado. Repetir/Excluir o bloqueador estão desativados intencionalmente - a única recuperação segura é Solicitar desbloqueio.",
+  "lockedGroupDetail.blockedNote": "Este grupo está bloqueado. Repetir/Excluir o bloqueador e Repetir tarefas congeladas estão desativados intencionalmente - a única recuperação segura é Solicitar desbloqueio.",
   "lockedGroupDetail.role": "Função",
   "lockedGroupDetail.detailsLink": "detalhes ->",
   "lockedGroupDetail.loadError": "Falha ao carregar o grupo."

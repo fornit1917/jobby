@@ -6,15 +6,13 @@ namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyDashboardCommandStorage
 [Collection(PostgresqlTestsCollection.Name)]
 public class RetryJobsTests
 {
-    [Theory]
-    [InlineData(JobStatus.Failed)]
-    [InlineData(JobStatus.Frozen)]
-    public async Task RetryJobsAsync_FailedOrFrozenJob_ResetsToFreshScheduledAndReturns1(JobStatus status)
+    [Fact]
+    public async Task RetryJobsAsync_FailedJob_ResetsToFreshScheduledAndReturns1()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
         var id = Guid.NewGuid();
-        var job = TriggerJobsTests.NewJob(id, status, scheduledStartAt: DateTime.UtcNow.AddMinutes(-5));
+        var job = TriggerJobsTests.NewJob(id, JobStatus.Failed, scheduledStartAt: DateTime.UtcNow.AddMinutes(-5));
         job.StartedCount = 3;
         job.Error = "boom";
         job.ServerId = "server-1";
@@ -73,7 +71,7 @@ public class RetryJobsTests
     }
 
     [Fact]
-    public async Task RetryJobsAsync_FrozenSiblingInLockedGroup_IsRequeuedAndReturns1()
+    public async Task RetryJobsAsync_FrozenSiblingInLockedGroup_LeavesItFrozenAndReturns0()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var db = await DbHelper.CreateContextAndClearDbAsync();
@@ -89,8 +87,8 @@ public class RetryJobsTests
 
         var affected = await DbHelper.CreateDashboardCommandStorage().RetryJobsAsync([siblingId], DateTime.UtcNow, cancellationToken);
 
-        Assert.Equal(1, affected);
+        Assert.Equal(0, affected);
         var reread = await DbHelper.CreateDashboardReadStorage().GetJobByIdAsync(siblingId, cancellationToken);
-        Assert.Equal(JobStatus.Scheduled, reread!.Status);
+        Assert.Equal(JobStatus.Frozen, reread!.Status);
     }
 }

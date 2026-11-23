@@ -35,6 +35,24 @@ public class JobDetailTests : DashboardClientTestContext
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid=detail-table]")));
         Assert.Empty(cut.FindAll("[data-testid=detail-locker-note]"));
+        Assert.Empty(cut.FindAll("[data-testid=detail-frozen-note]"));
+    }
+
+    [Fact]
+    public void Frozen_ShowsUnlockNoteWithGroupLink()
+    {
+        var job = Job(isGroupLocker: false) with { Status = JobStatus.Frozen, SerializableGroupId = "g1" };
+        SetupApi(req => req.RequestUri!.AbsolutePath.StartsWith("/api/jobs/") ? job : null);
+
+        var cut = Render<JobDetail>(p => p.Add(x => x.Id, job.Id));
+
+        cut.WaitForAssertion(() =>
+        {
+            var note = cut.Find("[data-testid=detail-frozen-note]");
+            Assert.Contains("Request Unlock", note.TextContent);
+            Assert.Contains("locked-groups/detail?groupId=g1", note.InnerHtml);
+        });
+        Assert.Empty(cut.FindAll("[data-testid=detail-locker-note]"));
     }
 
     [Theory]
