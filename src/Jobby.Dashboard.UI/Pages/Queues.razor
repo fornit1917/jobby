@@ -36,6 +36,7 @@ else if (_queues is not null)
                 <th>@L["field.queue"]</th>
                 <th>@L["queues.statusCounts"]</th>
                 <th style="width:220px;">@L["queues.distribution"]</th>
+                <th class="text-end" style="width:90px;">@L["queues.backlog"]</th>
                 <th class="text-end" style="width:90px;">@L["queues.total"]</th>
             </tr>
             </thead>
@@ -71,16 +72,20 @@ else if (_queues is not null)
                         <StackedStatusBar Counts="q.StatusCounts"/>
                     </td>
                     <td class="text-end jobby-mono" style="color:var(--text-1);font-weight:600;"
+                        data-testid="@($"queue-backlog-{TestToken(q.QueueName)}")">@QueueBacklog.Count(q.StatusCounts)</td>
+                    <td class="text-end jobby-mono" style="color:var(--text-1);font-weight:600;"
                         data-testid="@($"queue-total-{TestToken(q.QueueName)}")">@q.StatusCounts.Sum(c => c.Count)</td>
                 </tr>
                 @if (open)
                 {
                     <tr class="jobby-row-open" data-testid="@($"queue-preview-{TestToken(q.QueueName)}")">
                         <td></td>
-                        <td colspan="4" style="padding-bottom:14px;">
+                        <td colspan="5" style="padding-bottom:14px;">
                             @{
                                 var preview = _previews.GetValueOrDefault(q.QueueName);
                             }
+                            <div class="jobby-state-sub" style="padding:8px 0 4px;"
+                                 data-testid="preview-backlog-note">@L["queues.backlogOnly"]</div>
                             @if (preview is null || preview.Loading)
                             {
                                 <MudProgressCircular Indeterminate="true" Size="Size.Small"

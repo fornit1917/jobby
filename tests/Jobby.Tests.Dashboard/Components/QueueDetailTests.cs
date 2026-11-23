@@ -37,6 +37,19 @@ public class QueueDetailTests : DashboardClientTestContext
     }
 
     [Fact]
+    public void StatusToggle_IsPartOfTheFilterPanel()
+    {
+        SetupApi(_ => EmptyJobs());
+        NavigateToQueue("emails");
+
+        var cut = Render<QueueDetail>();
+
+        var filters = cut.Find("[data-testid=queue-filters]");
+        Assert.NotNull(filters.QuerySelector("[data-testid=queue-mode-backlog]"));
+        Assert.NotNull(filters.QuerySelector("[data-testid=queue-mode-all]"));
+    }
+
+    [Fact]
     public void Switching_ToAllRemovesTheStatusFilterAndResetsSort()
     {
         SetupApi(_ => EmptyJobs());

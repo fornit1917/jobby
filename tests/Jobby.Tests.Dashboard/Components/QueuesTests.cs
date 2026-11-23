@@ -38,6 +38,50 @@ public class QueuesTests : DashboardClientTestContext
     }
 
     [Fact]
+    public void Table_ShowsBacklogNextToTotal()
+    {
+        SetupApi(req => req.RequestUri!.AbsolutePath switch
+        {
+            "/api/queues" => new List<DashboardQueueDto>
+            {
+                new(QueueName: "emails", StatusCounts:
+                [
+                    new DashboardStatusCount(JobStatus.Scheduled, 3),
+                    new DashboardStatusCount(JobStatus.Completed, 5),
+                    new DashboardStatusCount(JobStatus.Failed, 2),
+                ]),
+            },
+            _ => null,
+        });
+
+        var cut = Render<Queues>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal("3", cut.Find("[data-testid=queue-backlog-emails]").TextContent));
+        Assert.Equal("10", cut.Find("[data-testid=queue-total-emails]").TextContent);
+    }
+
+    [Fact]
+    public void Expanding_AQueueSaysThatOnlyTheBacklogIsListed()
+    {
+        SetupApi(req => req.RequestUri!.AbsolutePath switch
+        {
+            "/api/queues" => OneQueue(),
+            "/api/jobs" => OneBacklogJob(),
+            _ => null,
+        });
+
+        var cut = Render<Queues>();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid=queues-table]")));
+        Assert.Empty(cut.FindAll("[data-testid=preview-backlog-note]"));
+
+        cut.Find("[data-testid=queue-toggle-emails]").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Backlog only",
+            cut.Find("[data-testid=queue-preview-emails] [data-testid=preview-backlog-note]").TextContent));
+    }
+
+    [Fact]
     public void Expanding_AnEmptyQueueShowsNoJobsMessage()
     {
         SetupApi(req => req.RequestUri!.AbsolutePath switch

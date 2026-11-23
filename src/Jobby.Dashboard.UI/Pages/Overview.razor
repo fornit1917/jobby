@@ -55,7 +55,7 @@ else if (_stats is not null)
     <MudGrid Class="mt-4" Spacing="3">
         <MudItem xs="12" md="4">
             <MudPaper Outlined="true" Class="pa-4" Style="height:100%;">
-                <div class="jobby-panel-title mb-3">@L["overview.queueBacklog"]</div>
+                <div class="jobby-panel-title mb-3">@L["nav.queues"]</div>
                 <div data-testid="overview-queues">
                     @if (_queues.Count == 0)
                     {
@@ -70,9 +70,17 @@ else if (_stats is not null)
                             <div class="d-flex flex-column" style="cursor:pointer;padding:7px 0;"
                                  @onclick="@(() => Nav.NavigateTo(QueueHref(q.QueueName)))"
                                  data-testid="@($"overview-queue-{q.QueueName}")">
-                                <div class="d-flex align-center justify-space-between">
-                                    <span style="color:var(--text-1);font-size:13px;">@q.QueueName</span>
-                                    <span class="jobby-mono" style="font-size:13px;color:var(--text-2);">@total</span>
+                                <div class="d-flex align-center justify-space-between gap-3">
+                                    <span style="color:var(--text-1);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@q.QueueName</span>
+                                    <span class="jobby-text-xs" style="color:var(--text-3);white-space:nowrap;">
+                                        @L["queues.backlog"]
+                                        <span class="jobby-mono" style="font-size:13px;color:var(--text-1);"
+                                              data-testid="@($"overview-queue-backlog-{q.QueueName}")">@QueueBacklog.Count(q.StatusCounts)</span>
+                                        <span class="mx-1">/</span>
+                                        @L["queues.total"]
+                                        <span class="jobby-mono" style="font-size:13px;color:var(--text-2);"
+                                              data-testid="@($"overview-queue-total-{q.QueueName}")">@total</span>
+                                    </span>
                                 </div>
                                 <div class="mt-2">
                                     <StackedStatusBar Counts="q.StatusCounts"/>

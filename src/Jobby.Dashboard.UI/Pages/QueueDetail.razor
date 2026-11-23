@@ -12,16 +12,6 @@
                            data-testid="back-to-queues"/>
         </MudTooltip>
         <AutoRefresh OnRefresh="ReloadAsync" Interval="Options.RefreshInterval"/>
-        @if (!string.IsNullOrEmpty(Name))
-        {
-            <MudToggleGroup T="QueueViewMode" Value="_mode" ValueChanged="OnModeChanged"
-                            SelectionMode="SelectionMode.SingleSelection" Size="Size.Small"
-                            Color="Color.Primary" CheckMark="false" data-testid="queue-mode-toggle">
-                <MudToggleItem Value="QueueViewMode.Backlog" Text="@L["queueDetail.backlog"]"
-                               data-testid="queue-mode-backlog"/>
-                <MudToggleItem Value="QueueViewMode.All" Text="@L["jobs.allStatuses"]" data-testid="queue-mode-all"/>
-            </MudToggleGroup>
-        }
     </Actions>
 </PageHeader>
 
@@ -31,6 +21,22 @@
 }
 else
 {
+    <MudPaper Outlined="true" Elevation="0" Class="pa-3 mb-4">
+        <div class="jobby-filter-bar" data-testid="queue-filters">
+            <div class="jobby-field">
+                <span class="jobby-field-label">@L["field.status"]</span>
+                <MudToggleGroup T="QueueViewMode" Value="_mode" ValueChanged="OnModeChanged"
+                                SelectionMode="SelectionMode.SingleSelection" Size="Size.Small"
+                                Color="Color.Primary" CheckMark="false" data-testid="queue-mode-toggle">
+                    <MudToggleItem Value="QueueViewMode.Backlog" Text="@L["queues.backlog"]"
+                                   data-testid="queue-mode-backlog"/>
+                    <MudToggleItem Value="QueueViewMode.All" Text="@L["jobs.allStatuses"]"
+                                   data-testid="queue-mode-all"/>
+                </MudToggleGroup>
+            </div>
+        </div>
+    </MudPaper>
+
     @if (_error is not null)
     {
         <MudAlert Severity="Severity.Error" Class="mb-3" data-testid="queue-jobs-error">@_error</MudAlert>
