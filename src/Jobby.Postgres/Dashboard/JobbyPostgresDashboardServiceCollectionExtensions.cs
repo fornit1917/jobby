@@ -13,6 +13,21 @@ public static class JobbyPostgresDashboardServiceCollectionExtensions
         NpgsqlDataSource dataSource,
         Action<PostgresqlDashboardStorageOptions>? configure = null)
     {
+        ArgumentNullException.ThrowIfNull(dataSource);
+        return services.AddJobbyPostgresDashboardStorage(_ => dataSource, configure);
+    }
+
+    /// <summary>
+    /// Takes the data source from the application's services, for example
+    /// <c>sp => sp.GetRequiredService&lt;NpgsqlDataSource&gt;()</c> for a data source registered in the container.
+    /// </summary>
+    public static IServiceCollection AddJobbyPostgresDashboardStorage(
+        this IServiceCollection services,
+        Func<IServiceProvider, NpgsqlDataSource> dataSourceFactory,
+        Action<PostgresqlDashboardStorageOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(dataSourceFactory);
+
         var options = new PostgresqlDashboardStorageOptions();
         configure?.Invoke(options);
 
@@ -22,14 +37,25 @@ public static class JobbyPostgresDashboardServiceCollectionExtensions
             TablesPrefix = options.TablesPrefix,
         };
 
-        // One instance for both storages: management actions drop the counts they have just changed.
-        var countsCache = new QueueStatusCountsCache(dataSource, settings, options.CountsCacheDuration);
+        // The factory runs once: a factory that creates the data source must not open a connection pool per storage.
+        services.AddSingleton(sp =>
+        {
+            var dataSource = dataSourceFactory(sp);
 
-        services.AddSingleton<IJobbyDashboardReadStorage>(_ =>
-            new PostgresqlJobbyDashboardReadStorage(dataSource, settings, countsCache));
+            // One instance for both storages: management actions drop the counts they have just changed.
+            var countsCache = new QueueStatusCountsCache(dataSource, settings, options.CountsCacheDuration);
 
-        services.AddSingleton<IJobbyDashboardCommandStorage>(_ =>
-            new PostgresqlJobbyDashboardCommandStorage(dataSource, settings, countsCache));
+            return new Storages(
+                new PostgresqlJobbyDashboardReadStorage(dataSource, settings, countsCache),
+                new PostgresqlJobbyDashboardCommandStorage(dataSource, settings, countsCache));
+        });
+
+        services.AddSingleton<IJobbyDashboardReadStorage>(sp => sp.GetRequiredService<Storages>().Read);
+        services.AddSingleton<IJobbyDashboardCommandStorage>(sp => sp.GetRequiredService<Storages>().Command);
         return services;
     }
+
+    private sealed record Storages(
+        PostgresqlJobbyDashboardReadStorage Read,
+        PostgresqlJobbyDashboardCommandStorage Command);
 }
