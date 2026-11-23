@@ -104,8 +104,8 @@ else if (_stats is not null)
                                 <div class="flex-grow-1" style="min-width:0;">
                                     <div class="jobby-mono jobby-text-xs"
                                          style="color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@s.Id</div>
-                                    <div class="jobby-text-xs"
-                                         style="color:var(--text-3);">@L.Relative(s.HeartbeatTs, allowFuture: false)</div>
+                                    <div class="jobby-text-xs" style="color:var(--text-3);"
+                                         title="@Dt.FormatAbsolute(s.HeartbeatTs)">@L.Relative(s.HeartbeatTs, allowFuture: false)</div>
                                 </div>
                                 <ServerStateChip Alive="alive"/>
                             </div>

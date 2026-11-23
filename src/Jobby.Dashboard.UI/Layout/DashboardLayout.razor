@@ -59,9 +59,8 @@
         </MudDrawerHeader>
         <MudNavMenu>
             <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">@L["nav.overview"]</MudNavLink>
-            <MudNavLink Href="jobs" Icon="@Icons.Material.Filled.WorkOutline">@L["nav.jobs"]</MudNavLink>
             <MudNavLink Href="recurrent" Icon="@Icons.Material.Filled.Schedule">@L["nav.recurrent"]</MudNavLink>
-            <MudNavLink Href="servers" Icon="@Icons.Material.Filled.Dns">@L["nav.servers"]</MudNavLink>
+            <MudNavLink Href="jobs" Icon="@Icons.Material.Filled.WorkOutline">@L["nav.jobs"]</MudNavLink>
             <MudNavLink Href="queues" Icon="@Icons.Material.Filled.Layers">@L["nav.queues"]</MudNavLink>
             <MudNavLink Href="locked-groups" Icon="@Icons.Material.Filled.Lock" Class="jobby-nav-locked">
                 <span class="jobby-nav-label">@L["nav.lockedGroups"]</span>
@@ -106,7 +105,6 @@
                 "" => L["nav.overview"],
                 _ when path.StartsWith("jobs") => L["nav.jobs"],
                 _ when path.StartsWith("recurrent") => L["nav.recurrent"],
-                _ when path.StartsWith("servers") => L["nav.servers"],
                 _ when path.StartsWith("queue") => L["nav.queues"],
                 _ when path.StartsWith("locked-group") => L["nav.lockedGroups"],
                 _ => L["nav.overview"],
@@ -133,7 +131,6 @@
                 "jobs" => L["nav.jobs"],
                 _ when path.StartsWith("jobs/") => L["route.jobDetails"],
                 "recurrent" => L["route.recurrentJobs"],
-                "servers" => L["nav.servers"],
                 "queues" => L["nav.queues"],
                 _ when path.StartsWith("queue") => L["route.queueDetails"],
                 "locked-groups" => L["nav.lockedGroups"],

@@ -21,6 +21,18 @@ public class DashboardLayoutTests : DashboardClientTestContext
     }
 
     [Fact]
+    public void Navigation_ListsRecurrentBeforeTheSectionsOfNonRecurrentJobs()
+    {
+        SetupApi(_ => null);
+
+        var cut = Render<DashboardLayout>();
+
+        Assert.Equal(
+            ["Overview", "Recurrent", "Jobs", "Queues", "Locked Groups"],
+            cut.FindAll("nav .mud-nav-link-text").Select(link => link.TextContent.Trim()));
+    }
+
+    [Fact]
     public void Toggle_FlipsDrawerOpenStateAndBack()
     {
         SetupApi(req => req.RequestUri!.AbsolutePath == "/api/locked-groups/count"
