@@ -14,13 +14,13 @@ Jobby is a high-performance .NET library for background tasks (queued, scheduled
 - `src/Jobby.Core` — core library: job models, interfaces, scheduling, retry policies, middlewares, server/client services.
 - `src/Jobby.Postgres` — PostgreSQL storage provider (uses Npgsql, Evolve for migrations).
 - `src/Jobby.AspNetCore` — ASP.NET Core / DI integration.
-- `src/Jobby.Dashboard` - ASP.NET Core Dashboard JSON API and embedded UI assets.
-- `src/Jobby.Dashboard.UI` - internal Blazor WebAssembly implementation, not a public NuGet package.
-- `src/Jobby.Dashboard.Authorization.Basic` - optional Basic authentication helpers.
+- `src/Jobby.Dashboard` — ASP.NET Core Dashboard JSON API and embedded UI assets.
+- `src/Jobby.Dashboard.UI` — internal Blazor WebAssembly implementation, not a public NuGet package.
+- `src/Jobby.Dashboard.Authorization.Basic` — optional Basic authentication helpers.
 - `tests/Jobby.Tests.Core`, `tests/Jobby.Tests.Postgres`, `tests/Jobby.Tests.AspNetCore` — unit tests (xunit.v3, Moq).
-- `tests/Jobby.Tests.Dashboard` - Dashboard API, authorization, and UI component tests.
-- `tests/Jobby.Tests.Dashboard.Globalization` - Dashboard UI checks with invariant globalization enabled.
-- `tests/Jobby.IntegrationTests.Postgres` - integration tests, including Dashboard storage, require a running PostgreSQL.
+- `tests/Jobby.Tests.Dashboard` — Dashboard API, authorization, and UI component tests.
+- `tests/Jobby.Tests.Dashboard.Globalization` — Dashboard UI checks with invariant globalization enabled.
+- `tests/Jobby.IntegrationTests.Postgres` — integration tests, including Dashboard storage, require a running PostgreSQL.
 - `tests/Jobby.TestsUtils` — shared test utilities.
 - `samples` — runnable example applications.
 - `benchmarks/Jobby.Benchmarks` — BenchmarkDotNet benchmarks.
@@ -165,7 +165,7 @@ npm run docs:build   # build docs
 ## Conventions
 
 - User-facing docs exist in both English (`docs/docs`) and Russian (`docs/ru`); keep both in sync when changing documentation.
-- Release notes are maintained in `versions.md` (one `## vX.Y.Z (YYYY-MM-DD)` section per release; use `## Unreleased` for changes without a published version/date).
+- Release notes are maintained in `versions.md` (one `## vX.Y.Z (YYYY-MM-DD)` section per release; the release in progress is headed `## vX.Y.Z (unreleased)`).
 - NuGet publishing is done via `./publish-nuget.sh <VERSION>` (requires `NUGET_KEY` and Bash, including on Windows); all five public packages are versioned together. The script pushes to NuGet; use the Release/pack commands above for preparation without publication.
 - Breaking or notable API changes should be reflected in `versions.md`.
 

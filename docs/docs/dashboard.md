@@ -1,80 +1,80 @@
 # Dashboard
 
-Jobby includes an optional dashboard UI for observing and managing background jobs in any ASP.NET Core host - Web API, MVC, or Blazor.
+Jobby has an optional web dashboard for watching and managing background jobs. You add it to an ASP.NET Core application, and it opens in the browser at a path of your choice, for example `/jobby`.
 
-The dashboard is a **Blazor WebAssembly** single-page application served as static files from the host, backed by a **stateless JSON API** (`/jobby/api/*`). It has no SignalR circuit, no server-side component state, and no session affinity requirement.
+With the dashboard you can:
 
-## Packages
+- see how many jobs are in each status, how full the queues are and which servers are alive;
+- browse, filter and sort jobs, and open the parameters and the error of any job;
+- view recurrent jobs with their schedules and next run time;
+- start a scheduled job right away, retry a failed job, cancel or delete jobs;
+- create jobs and recurrent jobs;
+- find sequential execution groups blocked by a failed job and unlock them.
 
-| Package | Purpose |
-|---|---|
-| `Jobby.Dashboard` | Blazor WebAssembly UI (embedded static files) + JSON API endpoints; `AddJobbyDashboard()` / `MapJobbyDashboard()` |
-| `Jobby.Postgres` | `AddJobbyPostgresDashboardStorage()` - PostgreSQL read and command storage |
-| `Jobby.Dashboard.Authorization.Basic` | Optional first-party Basic authentication (`AddBasicAuth` / `AddBasicAuthScheme`) and `PasswordHasher` |
-
-`Jobby.Dashboard` targets .NET 8 and depends on ASP.NET Core 8. Applications consuming the NuGet packages do not need a WebAssembly build workload. It does not affect the Jobby engine itself: removing the package and its registration calls leaves the engine behavior unchanged.
-
-Install `Jobby.Dashboard.Authorization.Basic` only when you want to use the built-in Basic authentication helpers. The dashboard can also run anonymously for local development, or use authentication/authorization already configured by the host application.
-
-`Jobby.Dashboard.UI` is the WebAssembly implementation project. Its compiled assets are embedded in `Jobby.Dashboard`; consumers do not install it as a separate NuGet package.
+The interface is available in English, Russian and Brazilian Portuguese, with light and dark themes.
 
 ## Installation
 
-Install the dashboard and its ASP.NET Core/PostgreSQL dependencies in the host project:
+Add the dashboard package to the application that will show the dashboard:
 
 ```bash
-dotnet add package Jobby.Core
-dotnet add package Jobby.Postgres
-dotnet add package Jobby.AspNetCore
 dotnet add package Jobby.Dashboard
 ```
 
-For the built-in Basic authentication helpers, also install:
+The dashboard reads jobs from the Jobby storage, so the application also needs the `Jobby.Postgres` package. Use the same version for all Jobby packages.
+
+If you want to protect the dashboard with the built-in login and password check, also install:
 
 ```bash
 dotnet add package Jobby.Dashboard.Authorization.Basic
 ```
 
-Use the same release version for all Jobby packages. Host policies and inline authorization policies work without the Basic package.
-
 ## Setup
 
-### 1. Register services (before `builder.Build()`)
-
-`AddJobbyDashboard()` returns an `IJobbyDashboardBuilder`. You **must** make exactly one authorization decision on the returned builder before calling `MapJobbyDashboard` (see [Security](#security)).
+Three calls are required: add the dashboard and decide who may open it, point it at the job storage, and choose its address.
 
 ```csharp
-IJobbyDashboardBuilder dashboardBuilder = builder.Services.AddJobbyDashboard(o =>
-{
-    o.RefreshInterval            = TimeSpan.FromSeconds(5);
-    o.StaleServerThresholdSeconds = 300;
-    o.ReadOnly                   = false;
-});
+using Jobby.Dashboard;
+using Jobby.Postgres.Dashboard;
 
-dashboardBuilder.AllowAnonymous();
+// 1. Add the dashboard and decide who may open it (see "Access control")
+builder.Services
+    .AddJobbyDashboard()
+    .AllowAnonymous();
 
-// Schema and prefix MUST match the engine's PostgreSQL settings (see below).
-builder.Services.AddJobbyPostgresDashboardStorage(npgsqlDataSource, o =>
-{
-    o.SchemaName   = "";          // empty string -> public schema (default)
-    o.TablesPrefix = "jobby_";
-    o.CountsCacheDuration = TimeSpan.FromSeconds(2);   // default; see "Job counts" below
-});
-```
+// 2. Point the dashboard at the storage with the jobs
+builder.Services.AddJobbyPostgresDashboardStorage(dataSource);
 
-`ReadOnly = false` allows management actions when the storage provider also registers command storage. Set it to `true` when the dashboard should only expose monitoring views.
+var app = builder.Build();
 
-### 2. Map the dashboard endpoint (after `app.Build()`)
-
-```csharp
+// 3. Choose the address of the dashboard
 app.MapJobbyDashboard("/jobby");
 ```
 
-The mount prefix must be a non-root path. The dashboard is then accessible at `/jobby`.
+The dashboard is now available at `/jobby`. Any path except the site root (`/`) can be used.
+
+If Jobby is configured with a custom schema or table prefix, pass the same values to the dashboard storage, otherwise the dashboard will look for the jobs in the wrong tables:
+
+```csharp
+// Jobby configuration
+config.UsePostgresql(pg =>
+{
+    pg.UseDataSource(dataSource);
+    pg.UseSchemaName("jobs");
+    pg.UseTablesPrefix("jobby_");
+});
+
+// Dashboard storage: the same schema and prefix
+builder.Services.AddJobbyPostgresDashboardStorage(dataSource, o =>
+{
+    o.SchemaName   = "jobs";
+    o.TablesPrefix = "jobby_";
+});
+```
 
 ### Full example
 
-This example allows anonymous access for local development. Replace `AllowAnonymous()` with a host policy or Basic authentication for a protected deployment. Configure the `Jobby` connection string and register the job handlers from the host assembly.
+An application that runs Jobby and shows the dashboard without authentication, which is suitable for local development only:
 
 ```csharp
 using Jobby.AspNetCore;
@@ -105,11 +105,7 @@ builder.Services
     .AddJobbyDashboard()
     .AllowAnonymous();
 
-builder.Services.AddJobbyPostgresDashboardStorage(dataSource, o =>
-{
-    o.SchemaName   = "";
-    o.TablesPrefix = "jobby_";
-});
+builder.Services.AddJobbyPostgresDashboardStorage(dataSource);
 
 var app = builder.Build();
 
@@ -119,47 +115,50 @@ app.MapJobbyDashboard("/jobby");
 app.Run();
 ```
 
-## Security
+## Access control
 
-**The dashboard is secure by default.** `MapJobbyDashboard` throws at application startup unless exactly one authorization decision has been made on the `IJobbyDashboardBuilder`. Calling two decisions, or none, both result in a startup exception.
+The dashboard shows job parameters and can change jobs, so you have to state explicitly who may use it. Choose exactly one of the options below when adding the dashboard. If no option is chosen, or more than one, the application fails at startup.
 
-The static Blazor WebAssembly application and framework assets are **always public** - they contain no secrets and must be downloadable by the browser before the app boots. Only the JSON API (`/jobby/api/*`) is gated by the chosen policy. This architecture holds even when the host sets a global `AuthorizationOptions.FallbackPolicy`: the static assets carry explicit `AllowAnonymous`; the API carries `RequireAuthorization`.
+There are two levels of access:
 
-> **Authentication/authorization middleware is required.** The dashboard protects its API with endpoint authorization metadata (`RequireAuthorization`); it does not insert middleware into your pipeline. With the standard minimal hosting model this works out of the box: `AddJobbyDashboard` registers the authentication/authorization services and `WebApplication` adds `UseAuthentication`/`UseAuthorization` automatically. If you build the middleware pipeline manually (for example with `UseRouting`/`UseEndpoints`), you **must** call `app.UseAuthentication()` and `app.UseAuthorization()` before the dashboard endpoints - without the authorization middleware the API's authorization metadata is not enforced.
+- **read** - open the dashboard and view everything in it;
+- **manage** - also perform actions: trigger, retry, cancel, delete and create jobs, unlock groups.
 
-Choose exactly one of the following:
+When only one rule is given, it is used for both levels.
 
-### Option 1 - Anonymous (local dev only)
+### Anonymous access
+
+Everyone who can reach the address can view and manage jobs. Use it only for local development.
 
 ```csharp
 builder.Services.AddJobbyDashboard().AllowAnonymous();
 ```
 
-### Option 2 - Reuse an existing host policy
+### Authorization policy of the application
 
-Keep the host's existing authentication registration and named authorization policies. This option requires only `Jobby.Dashboard`, without the Basic package.
+If the application already has authentication and named authorization policies, reuse them. The second policy is optional and applies to management actions.
 
 ```csharp
 builder.Services
     .AddJobbyDashboard()
-    .RequireHostPolicy("MyReadPolicy");
-    // optional overload: .RequireHostPolicy("MyReadPolicy", "MyManagePolicy")
+    .RequireHostPolicy("JobsRead", "JobsManage");
 ```
 
-### Option 3 - Define the policy inline
+### Policy defined in place
+
+The requirements can also be written next to the dashboard, without registering named policies:
 
 ```csharp
 builder.Services
     .AddJobbyDashboard()
     .RequireAuthorization(
-        read    => read.RequireRole("jobby-read"),
-        manage  => manage.RequireRole("jobby-manage")
-    );
+        read   => read.RequireRole("jobby-read"),
+        manage => manage.RequireRole("jobby-manage"));
 ```
 
-### Option 4 - First-party Basic authentication (`Jobby.Dashboard.Authorization.Basic`)
+### Login and password
 
-For services without an existing auth system, the optional `Jobby.Dashboard.Authorization.Basic` package provides a single-credential Basic auth scheme backed by a PBKDF2-hashed password.
+For an application without its own authentication, the `Jobby.Dashboard.Authorization.Basic` package adds a login and password check (HTTP Basic authentication). The browser asks for them when the dashboard is opened.
 
 ```csharp
 using Jobby.Dashboard.Authorization.Basic;
@@ -172,25 +171,19 @@ builder.Services
         o.PasswordHash = builder.Configuration["JobbyDashboard:PasswordHash"]
             ?? throw new InvalidOperationException("JobbyDashboard:PasswordHash is required.");
     });
-
-app.MapJobbyDashboard("/jobby");
 ```
 
-`AddBasicAuth` registers the Basic authentication scheme **and** configures dashboard authorization in a single call - do not combine it with any other decision method.
-
-**Generate the password hash** and store it in the host configuration as `JobbyDashboard:PasswordHash` (never store a plaintext password):
+The password is never stored as plain text. Generate its hash once and put the hash into the application configuration:
 
 ```csharp
 string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("your-password");
 ```
 
-`PasswordHasher.Hash` produces a `JDPBKDF2$v1$...` string (PBKDF2-HMAC-SHA256). `AddBasicAuth` throws at startup if the supplied `PasswordHash` is not a valid PBKDF2 encoding.
+Basic authentication sends the password with every request, so serve the dashboard over HTTPS.
 
-> **HTTPS required:** Basic auth transmits credentials base64-encoded. Always serve the dashboard over HTTPS in production.
+### Login and password together with another scheme
 
-### Option 5 - Basic + JWT composition (advanced)
-
-Use `AddBasicAuthScheme` to register the Basic scheme without making an auth decision, then call `RequireAuthorization` to combine it with Bearer:
+To accept the dashboard login and password and, for example, JWT tokens of the application, register the Basic scheme with `AddBasicAuthScheme` and list both schemes in the policy:
 
 ```csharp
 using Jobby.Dashboard.Authorization.Basic;
@@ -204,41 +197,21 @@ builder.Services
         o.PasswordHash = builder.Configuration["JobbyDashboard:PasswordHash"]
             ?? throw new InvalidOperationException("JobbyDashboard:PasswordHash is required.");
     })
-    .RequireAuthorization(p =>
-        p.AddAuthenticationSchemes(
-                JobbyDashboardBasicDefaults.Scheme,
-                JwtBearerDefaults.AuthenticationScheme)
-         .RequireAuthenticatedUser());
+    .RequireAuthorization(p => p
+        .AddAuthenticationSchemes(
+            JobbyDashboardBasicDefaults.Scheme,
+            JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser());
 ```
 
-Register the Bearer scheme in the host before using this composition.
+### Good to know
 
-When unauthenticated, the JSON API responds `401` with both `WWW-Authenticate: Basic` and `WWW-Authenticate: Bearer` - browsers act on `Basic`, programmatic clients on `Bearer`.
+- The access rules protect the data and the actions. The page itself can be downloaded without authentication, but it shows nothing until the rules are satisfied.
+- In an application created with `WebApplication.CreateBuilder` everything works out of the box. If you build the request pipeline manually, call `app.UseAuthentication()` and `app.UseAuthorization()` before the dashboard is mapped, otherwise the access rules are not applied.
 
-## Schema / prefix matching
+## Settings
 
-The storage options (`SchemaName`, `TablesPrefix`) passed to `AddJobbyPostgresDashboardStorage` **must match** the corresponding settings passed to `UsePostgresql(...)` in the engine configuration. A mismatch causes the dashboard to query the wrong (or non-existent) tables.
-
-```csharp
-config.UsePostgresql(pg =>
-{
-    pg.UseDataSource(dataSource);
-    pg.UseSchemaName("jobs");
-    pg.UseTablesPrefix("jobby_");
-});
-
-builder.Services.AddJobbyPostgresDashboardStorage(dataSource, o =>
-{
-    o.SchemaName   = "jobs";
-    o.TablesPrefix = "jobby_";
-});
-```
-
-## Display settings
-
-`JobbyDashboardOptions` can set the initial time zone, date/time format, and UI language. The client reads these values from `GET /jobby/api/config` when it starts.
-
-Users can change the same settings in the dashboard top bar. Their choice is saved in `localStorage` and takes priority over the server defaults until they reset it.
+`AddJobbyDashboard` accepts the settings of the dashboard:
 
 ```csharp
 using Jobby.Core.Models.Dashboard;
@@ -246,103 +219,106 @@ using Jobby.Core.Models.Dashboard;
 builder.Services
     .AddJobbyDashboard(o =>
     {
-        o.DefaultTimeZone   = TimeZoneInfo.Utc;
-        o.DefaultDateStyle  = DashboardDateStyle.Iso;
-        o.DefaultTimeStyle  = DashboardTimeStyle.H24WithSeconds;
-        o.DefaultLanguage   = DashboardLanguage.English;
+        o.RefreshInterval = TimeSpan.FromSeconds(10);
+        o.ReadOnly        = true;
+        o.DefaultLanguage = DashboardLanguage.Russian;
     })
-    .AllowAnonymous();
+    .RequireHostPolicy("JobsRead");
 ```
 
-`DefaultTimeZone` is `TimeZoneInfo.Utc` by default. Use `TimeZoneInfo.FindSystemTimeZoneById(...)` if you want another zone. The API returns timestamps in UTC. The UI converts them to the selected time zone for display, and converts date filters back to UTC before sending requests.
+| Setting | Default | Description |
+|---|---|---|
+| `RefreshInterval` | 5 seconds | How often open pages reload their data. `null` turns automatic refresh off; the **Refresh now** button still works. |
+| `StaleServerThresholdSeconds` | 300 | A server is shown as stale when it has not sent a heartbeat for this number of seconds. |
+| `ReadOnly` | `false` | When `true`, the dashboard only displays data: all actions are hidden and rejected. |
+| `DefaultTimeZone` | `null` | Time zone of the displayed timestamps. `null` means the time zone of the user's browser. |
+| `DefaultDateStyle` | `Iso` | Date format: `Iso` (2026-11-24), `DayFirstSlash` (24/11/2026), `DayFirstDot` (24.11.2026), `MonthFirstSlash` (11/24/2026). |
+| `DefaultTimeStyle` | `H24WithSeconds` | Time format: `H24`, `H24WithSeconds`, `H12`, `H12WithSeconds`. |
+| `DefaultLanguage` | `English` | Interface language: `English`, `Russian`, `PortugueseBrazil`. |
 
-`/api/config` also includes `ServerTimeUtc`. The client uses it for relative values such as "5 minutes ago", so those labels do not depend on the browser clock.
+The time zone, the date and time formats and the language are only defaults. Every user can change them in the top bar of the dashboard; the choice is remembered in the browser.
 
-## Features and API
+Every timestamp is shown together with its UTC offset, for example `2026-11-24 12:10:16 UTC+2`, so it is always clear which time zone it is in.
 
-The dashboard refreshes data by polling at the configured `RefreshInterval`. It displays:
+## Working with the dashboard
 
-- **Overview** - live job counts by status and queue.
-- **Jobs** - paginated, filterable, sortable job list.
-- **Job detail** - full job record including parameters, error detail, and timestamps.
-- **Recurrent jobs** - scheduled job definitions.
-- **Servers** - connected Jobby server instances and heartbeat health.
-- **Queues** - per-queue status breakdown.
-- **Locked groups** - serializable execution groups blocked by failed or lost jobs.
+### Overview
 
-Management actions are enabled when an `IJobbyDashboardCommandStorage` is registered and `JobbyDashboardOptions.ReadOnly` is `false`. `AddJobbyPostgresDashboardStorage()` registers both read and command storage. If management is disabled, the UI hides management actions and the corresponding API routes return `404`. The top-bar Read only mode hides controls for convenience; enforce read-only access on the server with `JobbyDashboardOptions.ReadOnly` or authorization policies.
+The start page summarizes the current state:
 
-### Scheduled dates and ordering
+- the number of jobs in each status; a click opens the list of these jobs;
+- **Queues** - for every queue, its backlog (jobs that are not finished yet) and the total number of jobs;
+- **Server health** - Jobby servers and the time of their last heartbeat;
+- **Recurrent jobs** - how many recurrent jobs are waiting for their next run and how many are running now;
+- **Needs attention** - failed and frozen jobs.
 
-The Jobs From/To filters select the scheduled start date in the dashboard's selected time zone. Both calendar days are included; the UI converts their boundaries to UTC, including daylight-saving transitions. A reversed range displays an error and retains the entire last valid result until corrected. Changes to status, queue, or search filters made while the range is invalid apply once the range is corrected. Creation time is visible and sortable.
+### Recurrent
 
-Jobs and a queue's All jobs view initially sort by scheduled start ascending, so the earliest scheduled jobs appear first. The queue backlog uses the same order. Users can select another sort column and direction.
+The list of recurrent jobs (see [Scheduled Jobs](./jobs-schedule)) with their schedule in a readable form, queue, status, next run and last finish time. A recurrent job can be started ahead of its schedule or deleted, and new recurrent jobs can be created.
 
-The jobs API accepts inclusive UTC timestamp bounds `scheduledFrom` and `scheduledTo`; the corresponding `DashboardJobsQuery` properties are `ScheduledFrom` and `ScheduledTo`. The date range refers to the current scheduled start, including retries and rescheduling, rather than creation time or actual execution time.
+### Jobs
 
-### Job counts
+The list of ordinary (non-recurrent) jobs. It can be filtered by status, queue, job name and scheduled date, and sorted by name, status, scheduled time or creation time. A click on a job opens its details: identifier, timestamps, number of attempts, server, parameters and error text.
 
-Counting jobs per queue and status reads the whole jobs table, so one application instance runs that query once and reuses the result for `CountsCacheDuration` (2 seconds by default) for every open dashboard. The Overview statistics and queue cards always use these shared counts. The total of a job list filtered only by queue and status reuses them while they are loaded and is counted directly otherwise; totals for name search and scheduled-date filters are always counted directly. Job rows, job details, recurrent jobs, locked groups and management actions are never cached.
+### Queues
 
-A count can therefore be up to `CountsCacheDuration` old. Retrying or deleting a job from the dashboard discards the counts of the instance that handled the request. Keep the duration shorter than `RefreshInterval`, otherwise a dashboard can receive the same counts on consecutive refreshes. `TimeSpan.Zero` shares the counts only between requests that arrive while the query is running.
+For every queue the page shows the number of jobs in each status, the backlog and the total. A queue can be expanded to preview its backlog, and opened to see either the backlog or all of its jobs.
 
-By default, job lists are read through the existing `(queue_name, status, scheduled_start_at)` index. Sorting by another column, name search, scheduled-date filters and very deep pages scan the table instead and are slower on large tables.
+### Locked groups
 
-### Run scheduled jobs early
+When a job of a [sequential execution group](./sequential-execution#group-locking-on-error) fails for good, the group can become locked and its remaining jobs are frozen. The page lists such groups with the job that locks them. **Request Unlock** removes the locking job, after which the frozen jobs of the group are scheduled to run again.
 
-Trigger is available only for jobs in `Scheduled` status, including recurring jobs. It advances a future scheduled start to the current time and leaves an already-due timestamp unchanged. A worker executes the job when it can acquire it under the normal queue, server, and serializable-group rules; the HTTP request does not run the handler itself.
+### Actions
 
-For recurring jobs, Trigger uses the same persisted job and ID, without creating a one-off copy. The normal scheduler calculates the next run after execution, so an interval schedule may shift. For example, an hourly job due at 12:00 that is triggered at 11:10 and completes at 11:12 can next run at 12:10 or 12:12, depending on `CalculateNextFromPrev`. A cron schedule uses its next matching time. Repeated trigger requests while the invocation is pending do not queue additional copies; triggering after completion can advance the next invocation.
+Actions are available to users with the manage level of access when `ReadOnly` is off. A user can also switch their own dashboard to the read-only view with the toggle in the top bar, to avoid accidental clicks.
 
-### Exclusive recurring definitions
+| Action | Available for | Result |
+|---|---|---|
+| Trigger now | Scheduled jobs, including recurrent ones | The job is started as soon as a server can take it, without waiting for its scheduled time. |
+| Retry | Failed jobs | The job is scheduled again with its attempt counter reset. |
+| Cancel | Scheduled and waiting jobs | The job is deleted before it has started. |
+| Delete | Completed, failed and frozen jobs; recurrent jobs | The job is deleted. A deleted recurrent job stops running. |
+| Create job, Create recurrent job | - | A new job is added, see below. |
+| Request Unlock | Locked groups | The group is unlocked and its frozen jobs are scheduled to run again. |
 
-The recurring list and job details show `IsExclusive` (`is_exclusive` in storage). An exclusive recurring definition is unique among exclusive definitions with the same job name. Non-exclusive definitions with that name can coexist. This flag controls definition uniqueness, not mutual exclusion of executions; use serializable groups when jobs must execute sequentially.
+A frozen job cannot be retried on its own, because its group is still locked: request the unlock of the group instead (**Request Unlock**). The job that locks a group cannot be retried or deleted either.
 
-### Read API
+Triggering a recurrent job does not create a copy of it: the job simply runs earlier, and its next run is then calculated by its schedule as usual.
 
-Read endpoints are exposed under the mount prefix:
+### Creating jobs
 
-| Endpoint | Description |
-|---|---|
-| `GET /jobby/api/config` | Dashboard configuration fetched by the WASM client at startup |
-| `GET /jobby/api/stats` | Aggregate job statistics |
-| `GET /jobby/api/jobs` | Paginated job list (query params: `status`, `statuses`, `queueName`, `jobNameSearch`, `scheduledFrom`, `scheduledTo`, `page`, `pageSize`, `sortBy`, `sortDescending`) |
-| `GET /jobby/api/jobs/{id}` | Single job detail |
-| `GET /jobby/api/recurrent` | Paginated recurrent job definitions |
-| `GET /jobby/api/servers` | Registered Jobby server instances |
-| `GET /jobby/api/queues` | Per-queue statistics |
-| `GET /jobby/api/locked-groups` | Paginated locked execution groups |
-| `GET /jobby/api/locked-groups/count` | Number of locked execution groups |
-| `GET /jobby/api/locked-groups/detail?groupId={id}` | Locked group details and affected jobs |
+The **Create job** button on the Jobs page and the **Create recurrent job** button on the Recurrent page open a form with the following fields:
 
-### Management API
+- **Job** - one of the jobs registered in the application;
+- **Parameters** - the job command as JSON, for example `{"Email": "user@example.com"}`. The JSON is parsed by the same serializer that Jobby uses when the job runs, and the form shows an error if it cannot be parsed. With the default settings property names are case-sensitive and unknown properties are ignored, so check the names carefully;
+- **Queue** - optional; when empty, the job goes to the queue it uses by default;
+- **Cron expression** - for a recurrent job;
+- **Exclusive** - for a recurrent job. With the box checked the job is created as exclusive: if an exclusive recurrent job with the same name already exists, it is updated instead of a new one being created. Clear the box to add one more, independent schedule. See [Exclusivity](./jobs-schedule#exclusivity).
 
-Management endpoints validate the antiforgery header and token returned by `/jobby/api/config`:
+A job created in the dashboard is the same as a job created from code with `IJobbyClient`.
 
-| Endpoint | Description |
-|---|---|
-| `POST /jobby/api/jobs/{id}/trigger` | Request early execution of a scheduled job, including recurring jobs |
-| `POST /jobby/api/jobs/{id}/retry` | Retry a failed or frozen non-recurrent job |
-| `DELETE /jobby/api/jobs/{id}` | Delete a non-running, non-recurrent job |
-| `DELETE /jobby/api/recurrent/{id}` | Delete a recurrent job definition |
-| `POST /jobby/api/locked-groups/unlock-request` | Request unlock and unfreeze for a locked execution group |
+Jobs can be created only when the application that shows the dashboard also registers Jobby (`AddJobbyServerAndClient` or `AddJobbyClient`) together with its jobs (`AddJob` or `AddJobsFromAssemblies`). Otherwise the buttons are not shown.
 
-Unknown paths under `/jobby/api/*` return `404`.
+## Large job tables
 
-## Production hosting - Kubernetes / multi-replica
+Counting jobs by queue and status requires reading the whole jobs table. To keep the load on the database low when many people have the dashboard open, the counts are cached for a short time. The time is set with `CountsCacheDuration` of the dashboard storage (2 seconds by default):
 
-The dashboard is a **stateless** Blazor WebAssembly application backed by a **stateless** JSON API. Because it is served as static WebAssembly files rather than an interactive server-side Blazor app:
+```csharp
+builder.Services.AddJobbyPostgresDashboardStorage(dataSource, o =>
+{
+    o.CountsCacheDuration = TimeSpan.FromSeconds(4);
+});
+```
 
-- **No SignalR circuit.** There is no WebSocket connection to maintain.
-- **No sticky sessions / session affinity.** Requests can be freely load-balanced across replicas.
-- **No server-side component state.** The dashboard does not keep UI state in the ASP.NET Core process.
+The numbers on the Overview and Queues pages can therefore lag behind by this time. Keep the value smaller than `RefreshInterval`. Job lists and job details are always read directly from the storage.
 
-Normal production concerns still apply:
+On very large tables the Jobs page works fastest with its default order (by scheduled time). Sorting by another column, searching by name and filtering by date are slower.
 
-- **HTTPS** - required when using Basic authentication (credentials are base64-encoded, not encrypted).
-- **Reverse proxy / sub-path hosting** - configure `UseForwardedHeaders` and the proxy path base as usual. The dashboard injects the correct `<base href>` at runtime, so sub-path hosting works without manual configuration.
-- **Consistent data** - all reads come from the shared PostgreSQL database, so every replica returns the same cluster-wide view. The only in-memory data is each replica's copy of the [job counts](#job-counts), reused for `CountsCacheDuration`: replicas can report counts that differ by the changes of the last few seconds, and a retry or delete refreshes the counts only on the replica that handled it. Job rows and management actions always go to the database.
-- **Antiforgery / Data Protection** - management requests use ASP.NET Core antiforgery. If management actions are enabled and requests can be routed to different replicas, share ASP.NET Core Data Protection keys across replicas as you would for any antiforgery-enabled ASP.NET Core app.
+## Running several instances
+
+The dashboard does not keep user sessions on the server, so the application can run in any number of instances behind a load balancer without sticky sessions.
+
+One thing has to be configured when actions are enabled: the instances must share their [ASP.NET Core Data Protection keys](https://learn.microsoft.com/aspnet/core/security/data-protection/configuration/overview), as for any ASP.NET Core application with forms. Otherwise an action sent to another instance is rejected.
 
 ## What Next
 

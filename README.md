@@ -45,7 +45,7 @@ dotnet add package Jobby.AspNetCore
 
 ### Dashboard
 
-The optional ASP.NET Core dashboard shows jobs, recurring definitions, queues, servers, and locked groups. It supports filtering and sorting, early execution of scheduled jobs, retries, deletion, and group unlock requests. The Blazor WebAssembly UI uses a JSON API and polling. Configure an existing host authorization policy or install the optional Basic authentication package.
+The optional ASP.NET Core dashboard shows jobs, recurrent jobs, queues, servers, and locked groups. It supports filtering and sorting, creating jobs, early execution of scheduled jobs, retries, deletion, and group unlock requests. Access is controlled by an authorization policy of the application or by the optional Basic authentication package.
 
 See [Dashboard installation and configuration](https://fornit1917.github.io/jobby/docs/dashboard.html).
 

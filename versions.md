@@ -13,6 +13,8 @@
     - Job execution spans are now named after the job name (e.g. `DemoJob`) instead of the fixed `JobExecution`, and the `job_name` span tag is removed — the job name is carried by the span name itself. Queries, dashboards or alerts filtering on `name = "JobExecution"` or on the `job_name` tag must be updated to filter on the span name
 
 - Added the optional ASP.NET Core Dashboard with an embedded Blazor WebAssembly UI, polling JSON API, and PostgreSQL storage. It provides job and queue views, scheduled-date filtering, recurring definitions, server health, and job and locked-group management. Authorization supports host or inline policies, explicit anonymous access, and the optional `Jobby.Dashboard.Authorization.Basic` package, with separate read and management permissions, server-enforced read-only mode, and antiforgery protection.
+  - Jobs and recurrent jobs (cron schedules) can be created from the Dashboard for the jobs registered in the host application. They are created through the host's `IJobbyClient`, with the parameters read by the serializer configured for Jobby
+  - Timestamps are displayed in the time zone of the browser unless `JobbyDashboardOptions.DefaultTimeZone` is set, and always include their UTC offset
   - Job lists are read through the existing `(queue_name, status, scheduled_start_at)` index, and each application instance shares one per-queue/status count query between open dashboards. `PostgresqlDashboardStorageOptions.CountsCacheDuration` (2 seconds by default) controls how long those counts are reused
 
 ## v1.0.5 (2026-11-01)
