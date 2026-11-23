@@ -36,6 +36,12 @@ public sealed class RecordingHttpMessageHandler(Func<HttpRequestMessage, object?
         }
 
         var body = router(request);
+        if (body is HttpResponseMessage response)
+        {
+            // A router that needs another status code builds the whole response itself.
+            return Task.FromResult(response);
+        }
+
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(body),

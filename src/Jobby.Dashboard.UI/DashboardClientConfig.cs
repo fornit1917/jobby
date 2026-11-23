@@ -17,6 +17,7 @@ public sealed class DashboardClientConfig
     public int StaleServerThresholdSeconds { get; private set; } = 300;
     public bool ReadOnly { get; private set; }
     public bool ManagementEnabled { get; private set; }
+    public IReadOnlyList<string> CreatableJobNames { get; private set; } = [];
     public string? ManagementRequestHeaderName { get; private set; }
     public string? ManagementRequestToken { get; private set; }
     public int Version { get; private set; }
@@ -76,6 +77,7 @@ public sealed class DashboardClientConfig
         StaleServerThresholdSeconds = dto.StaleServerThresholdSeconds;
         ReadOnly = dto.ReadOnly;
         ManagementEnabled = dto.ManagementEnabled;
+        CreatableJobNames = dto.CreatableJobNames;
         ManagementRequestHeaderName = dto.ManagementRequestHeaderName;
         ManagementRequestToken = dto.ManagementRequestToken;
         DefaultTimeZoneId = dto.DefaultTimeZoneId;

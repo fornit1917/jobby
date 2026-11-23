@@ -122,4 +122,27 @@ internal sealed class FakeDashboardDataReader : IDashboardDataReader
         LastUnlockGroupId = groupId;
         return Task.FromResult(UnlockInserted ? 1 : 0);
     }
+
+    public IReadOnlyList<string> CreatableJobNames { get; set; } = [];
+
+    public Guid CreatedJobId { get; set; } = Guid.NewGuid();
+
+    // When set, both creation methods fail with it instead of returning CreatedJobId.
+    public DashboardJobCreationException? CreationError { get; set; }
+
+    public CreateJobRequest? LastCreateJobRequest { get; private set; }
+
+    public CreateRecurrentJobRequest? LastCreateRecurrentJobRequest { get; private set; }
+
+    public Task<Guid> CreateJobAsync(CreateJobRequest request)
+    {
+        LastCreateJobRequest = request;
+        return CreationError is null ? Task.FromResult(CreatedJobId) : Task.FromException<Guid>(CreationError);
+    }
+
+    public Task<Guid> CreateRecurrentJobAsync(CreateRecurrentJobRequest request)
+    {
+        LastCreateRecurrentJobRequest = request;
+        return CreationError is null ? Task.FromResult(CreatedJobId) : Task.FromException<Guid>(CreationError);
+    }
 }

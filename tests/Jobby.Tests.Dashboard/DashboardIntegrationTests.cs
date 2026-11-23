@@ -3,8 +3,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Jobby.Core.Interfaces;
 using Jobby.Core.Interfaces.Dashboard;
 using Jobby.Core.Models.Dashboard;
+using Jobby.Core.Services;
 using Jobby.Dashboard;
 using Jobby.Dashboard.Authorization.Basic;
 using Microsoft.AspNetCore.Authentication;
@@ -73,6 +75,25 @@ public class DashboardIntegrationTests
         {
             return Task.FromResult<LockedGroupDetailsDto?>(null);
         }
+    }
+
+    // Its presence enables management; the tests using it never run a management action.
+    private sealed class FakeCommandStorage : IJobbyDashboardCommandStorage
+    {
+        public Task<int> TriggerJobsAsync(IReadOnlyList<Guid> ids, DateTime now,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<int> RetryJobsAsync(IReadOnlyList<Guid> ids, DateTime now,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<int> DeleteJobsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<int> DeleteRecurrentJobsAsync(IReadOnlyList<Guid> ids,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<int> RequestGroupUnlockAsync(string groupId, DateTime now,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private static async Task<WebApplication> StartAsync(Action<IJobbyDashboardBuilder> configureAuth)
@@ -220,6 +241,32 @@ public class DashboardIntegrationTests
     {
         await using var app = await StartAsync(b => b.AllowAnonymous());
         Assert.Equal(HttpStatusCode.OK, (await app.GetTestClient().GetAsync("/jobby/api/stats")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false, new[] { "SendReport" })]
+    [InlineData(true, new string[0])]
+    public async Task Config_ListsJobsOfTheHostAsCreatableUnlessTheDashboardIsReadOnly(bool readOnly,
+        string[] expected)
+    {
+        var jobby = new JobbyBuilder();
+        jobby.AddJob<SendReportCommand, SendReportHandler>();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<IJobbyDashboardReadStorage>(new FakeReadStorage());
+        builder.Services.AddSingleton<IJobbyDashboardCommandStorage>(new FakeCommandStorage());
+        builder.Services.AddSingleton(jobby);
+        builder.Services.AddSingleton<IJobbyClient>(new InMemoryJobbyClient(jobby.CreateJobsFactory()));
+        builder.Services.AddJobbyDashboard(o => o.ReadOnly = readOnly).AllowAnonymous();
+        await using var app = builder.Build();
+        app.MapJobbyDashboard("/jobby");
+        await app.StartAsync(TestContext.Current.CancellationToken);
+
+        var dto = await app.GetTestClient().GetFromJsonAsync<JobbyDashboardClientConfigDto>(
+            "/jobby/api/config", TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, dto!.CreatableJobNames);
     }
 
     [Fact]

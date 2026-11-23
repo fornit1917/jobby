@@ -1,0 +1,137 @@
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Api
+@inject DashboardClientConfig Config
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex flex-column gap-4" data-testid="create-job-form">
+            <div class="jobby-field">
+                <span class="jobby-field-label">@L["field.job"]</span>
+                <MudAutocomplete T="string" @bind-Value="_jobName" SearchFunc="SearchJobs"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 ResetValueOnEmptyText="false" CoerceValue="false" MaxItems="50"
+                                 aria-label="@L["field.job"]" data-testid="create-job-name"/>
+            </div>
+            <div class="jobby-field">
+                <span class="jobby-field-label">@L["jobDetail.param"]</span>
+                <MudTextField T="string" @bind-Value="_jobParam" Immediate="true" Lines="8"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="jobby-code-input"
+                              HelperText="@L["createJob.paramHelp"]"
+                              aria-label="@L["jobDetail.param"]" data-testid="create-job-param"/>
+            </div>
+            @if (Recurrent)
+            {
+                <div class="jobby-field">
+                    <span class="jobby-field-label">@L["createJob.cron"]</span>
+                    <MudTextField T="string" @bind-Value="_cron" Immediate="true"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="jobby-code-input"
+                                  Placeholder="0 6 * * *" HelperText="@ScheduleFormatter.DescribeCron(_cron)"
+                                  aria-label="@L["createJob.cron"]" data-testid="create-job-cron"/>
+                </div>
+            }
+            <div class="jobby-field">
+                <span class="jobby-field-label">@L["field.queue"]</span>
+                <MudTextField T="string" @bind-Value="_queueName"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="@L["createJob.queueDefault"]"
+                              aria-label="@L["field.queue"]" data-testid="create-job-queue"/>
+            </div>
+            @if (Recurrent)
+            {
+                <div>
+                    <MudCheckBox T="bool" @bind-Value="_isExclusive" Label="@L["recurrent.exclusive"]"
+                                 Color="Color.Primary" Dense="true" data-testid="create-job-exclusive"/>
+                    <div class="jobby-text-sm" style="color:var(--text-3);">@L["createJob.exclusiveHelp"]</div>
+                </div>
+            }
+            @if (_error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" data-testid="create-job-error">@_error</MudAlert>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => MudDialog.Cancel())" data-testid="create-job-cancel">@L["common.cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!CanSubmit)"
+                   OnClick="SubmitAsync" data-testid="create-job-submit">@L["createJob.create"]</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public bool Recurrent { get; set; }
+
+    private string? _jobName;
+    private string? _jobParam = "{}";
+    private string? _cron;
+    private string? _queueName;
+    private bool _isExclusive = true;
+    private string? _error;
+    private bool _submitting;
+    private readonly CancellationTokenSource _cts = new();
+
+    // The server checks the values against the job itself; here only the mandatory fields are required.
+    private bool CanSubmit => !_submitting
+                              && !string.IsNullOrWhiteSpace(_jobName)
+                              && !string.IsNullOrWhiteSpace(_jobParam)
+                              && (!Recurrent || !string.IsNullOrWhiteSpace(_cron));
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (Config.CreatableJobNames.Count == 1)
+        {
+            _jobName = Config.CreatableJobNames[0];
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchJobs(string? value, CancellationToken cancellationToken)
+    {
+        var result = string.IsNullOrWhiteSpace(value) || string.Equals(value, _jobName, StringComparison.Ordinal)
+            ? Config.CreatableJobNames
+            : Config.CreatableJobNames.Where(name => name.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(result);
+    }
+
+    private async Task SubmitAsync()
+    {
+        _submitting = true;
+        _error = null;
+        try
+        {
+            var result = Recurrent
+                ? await Api.CreateRecurrentJobAsync(
+                    new CreateRecurrentJobRequest(_jobName!, _jobParam, _cron!.Trim(), _queueName, _isExclusive),
+                    _cts.Token)
+                : await Api.CreateJobAsync(new CreateJobRequest(_jobName!, _jobParam, _queueName), _cts.Token);
+
+            if (result.Error is null)
+            {
+                MudDialog.Close(DialogResult.Ok(result.JobId));
+                return;
+            }
+
+            _error = result.Error;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception)
+        {
+            _error = L["actions.failed"];
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

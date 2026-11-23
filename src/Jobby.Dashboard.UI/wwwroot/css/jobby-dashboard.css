@@ -851,6 +851,11 @@
     margin: 0 !important;
 }
 
+/* MudBlazor inputs take their font from the .mud-input wrapper. */
+.jobby-code-input .mud-input {
+    font-family: var(--font-mono);
+}
+
 .mud-input-slot,
 .mud-input-root input,
 .mud-input-root textarea {

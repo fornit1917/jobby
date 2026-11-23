@@ -50,6 +50,7 @@ internal static class JobbyDashboardApi
                     StaleServerThresholdSeconds = opts.StaleServerThresholdSeconds,
                     ReadOnly = opts.ReadOnly,
                     ManagementEnabled = reader.ManagementEnabled,
+                    CreatableJobNames = reader.CreatableJobNames,
                     ManagementRequestHeaderName = tokens.HeaderName,
                     ManagementRequestToken = tokens.RequestToken,
                     DefaultTimeZoneId = defaultTimeZoneId,
@@ -136,18 +137,9 @@ internal static class JobbyDashboardApi
             async (UnlockGroupRequest body, HttpContext http, IDashboardDataReader reader,
                 IAntiforgery antiforgery, CancellationToken cancellationToken) =>
             {
-                if (!reader.ManagementEnabled)
+                if (await RejectAsync(http, reader.ManagementEnabled, antiforgery) is { } rejection)
                 {
-                    return Results.NotFound();
-                }
-
-                try
-                {
-                    await antiforgery.ValidateRequestAsync(http);
-                }
-                catch (AntiforgeryValidationException)
-                {
-                    return Results.StatusCode(StatusCodes.Status403Forbidden);
+                    return rejection;
                 }
 
                 if (string.IsNullOrWhiteSpace(body.GroupId))
@@ -158,6 +150,15 @@ internal static class JobbyDashboardApi
                 var affected = await reader.RequestGroupUnlockAsync(body.GroupId, cancellationToken);
                 return Results.Ok(new RequestGroupUnlockResultDto(affected > 0));
             }), state);
+
+        Manage(api.MapPost("jobs",
+            (CreateJobRequest body, HttpContext http, IDashboardDataReader reader, IAntiforgery antiforgery) =>
+                CreateAsync(http, reader, antiforgery, () => reader.CreateJobAsync(body))), state);
+
+        Manage(api.MapPost("recurrent",
+            (CreateRecurrentJobRequest body, HttpContext http, IDashboardDataReader reader,
+                    IAntiforgery antiforgery) =>
+                CreateAsync(http, reader, antiforgery, () => reader.CreateRecurrentJobAsync(body))), state);
     }
 
     [SuppressMessage("ReSharper", "UnusedMethodReturnValue.Local")]
@@ -167,7 +168,36 @@ internal static class JobbyDashboardApi
     private static async Task<IResult> RunAsync(HttpContext http, IDashboardDataReader reader,
         IAntiforgery antiforgery, Func<Task<int>> action)
     {
-        if (!reader.ManagementEnabled)
+        if (await RejectAsync(http, reader.ManagementEnabled, antiforgery) is { } rejection)
+        {
+            return rejection;
+        }
+
+        return await action() > 0 ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static async Task<IResult> CreateAsync(HttpContext http, IDashboardDataReader reader,
+        IAntiforgery antiforgery, Func<Task<Guid>> create)
+    {
+        if (await RejectAsync(http, reader.CreatableJobNames.Count > 0, antiforgery) is { } rejection)
+        {
+            return rejection;
+        }
+
+        try
+        {
+            return Results.Ok(new CreateJobResultDto(await create()));
+        }
+        catch (DashboardJobCreationException e)
+        {
+            return Results.BadRequest(new DashboardErrorDto(e.Message));
+        }
+    }
+
+    // Returns the response that turns a management request down, or null when the action may run.
+    private static async Task<IResult?> RejectAsync(HttpContext http, bool enabled, IAntiforgery antiforgery)
+    {
+        if (!enabled)
         {
             return Results.NotFound();
         }
@@ -181,7 +211,7 @@ internal static class JobbyDashboardApi
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        return await action() > 0 ? Results.NoContent() : Results.NotFound();
+        return null;
     }
 
     private static DashboardJobsQuery ParseJobsQuery(IQueryCollection query)

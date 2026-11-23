@@ -25,6 +25,7 @@ public static class JobbyDashboardServiceCollectionExtensions
         services.AddAuthorization();
 
         services.AddAntiforgery();
+        services.AddSingleton<DashboardJobCreator>();
         services.AddScoped<IDashboardDataReader, DashboardDataReader>();
 
         return new JobbyDashboardBuilder(services, authState);

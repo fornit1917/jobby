@@ -5,6 +5,17 @@ namespace Jobby.Tests.Dashboard;
 public class ScheduleFormatterTests
 {
     [Theory]
+    [InlineData("0 */2 * * *", "Every 2 hours")]
+    [InlineData("  0 */2 * * *  ", "Every 2 hours")]
+    [InlineData("every morning", null)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    public void DescribeCron_DescribesOnlyParsableExpressions(string? cron, string? expected)
+    {
+        Assert.Equal(expected, ScheduleFormatter.DescribeCron(cron));
+    }
+
+    [Theory]
     [InlineData(null, "JOBBY_CRON")]
     [InlineData("", "JOBBY_CRON")]
     [InlineData("   ", "JOBBY_INTERVAL")]

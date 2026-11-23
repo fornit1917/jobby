@@ -169,3 +169,17 @@ public sealed record LockedGroupDetailsDto(
 public sealed record UnlockGroupRequest(string GroupId);
 
 public sealed record RequestGroupUnlockResultDto(bool Inserted);
+
+// JobParam is the JSON of the job command. A null QueueName keeps the queue the job uses by default.
+public sealed record CreateJobRequest(string JobName, string? JobParam, string? QueueName);
+
+public sealed record CreateRecurrentJobRequest(
+    string JobName,
+    string? JobParam,
+    string Cron,
+    string? QueueName,
+    bool IsExclusive);
+
+public sealed record CreateJobResultDto(Guid Id);
+
+public sealed record DashboardErrorDto(string Message);

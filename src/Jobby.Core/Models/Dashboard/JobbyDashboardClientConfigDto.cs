@@ -10,6 +10,9 @@ public sealed record JobbyDashboardClientConfigDto
 
     public bool ManagementEnabled { get; init; }
 
+    // Jobs that can be created from the dashboard; empty when creation is not available.
+    public IReadOnlyList<string> CreatableJobNames { get; init; } = [];
+
     public string? ManagementRequestHeaderName { get; init; }
 
     public string? ManagementRequestToken { get; init; }

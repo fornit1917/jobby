@@ -74,6 +74,107 @@ public class JobbyDashboardManagementApiTests
         return app;
     }
 
+    private static FakeDashboardDataReader CreationReader() =>
+        new() { ManagementEnabled = true, CreatableJobNames = ["SendReport"] };
+
+    private static Action<HttpRequestMessage> JsonBody(object body) =>
+        request =>
+        {
+            // The same callback also runs for the config request, which must stay a plain GET.
+            if (request.Method == HttpMethod.Post)
+            {
+                request.Content = JsonContent.Create(body);
+            }
+        };
+
+    [Fact]
+    public async Task CreateJob_ReturnsIdAndForwardsRequest()
+    {
+        var reader = CreationReader();
+        await using var app = await StartAsync(reader);
+        var body = new CreateJobRequest(JobName: "SendReport", JobParam: """{"Recipient":"a"}""", QueueName: "q");
+
+        var resp = await SendManageAsync(app, HttpMethod.Post, "/api/jobs", JsonBody(body));
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var created = await resp.Content.ReadFromJsonAsync<CreateJobResultDto>(TestContext.Current.CancellationToken);
+        Assert.Equal(reader.CreatedJobId, created!.Id);
+        Assert.Equal(body, reader.LastCreateJobRequest);
+    }
+
+    [Fact]
+    public async Task CreateRecurrentJob_ReturnsIdAndForwardsRequest()
+    {
+        var reader = CreationReader();
+        await using var app = await StartAsync(reader);
+        var body = new CreateRecurrentJobRequest(JobName: "SendReport", JobParam: "{}", Cron: "0 6 * * *",
+            QueueName: null, IsExclusive: true);
+
+        var resp = await SendManageAsync(app, HttpMethod.Post, "/api/recurrent", JsonBody(body));
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var created = await resp.Content.ReadFromJsonAsync<CreateJobResultDto>(TestContext.Current.CancellationToken);
+        Assert.Equal(reader.CreatedJobId, created!.Id);
+        Assert.Equal(body, reader.LastCreateRecurrentJobRequest);
+    }
+
+    [Fact]
+    public async Task CreateJob_RejectedValues_Return400WithTheReason()
+    {
+        var reader = CreationReader();
+        reader.CreationError = new DashboardJobCreationException("Parameters do not match job 'SendReport': oops");
+        await using var app = await StartAsync(reader);
+
+        var resp = await SendManageAsync(app, HttpMethod.Post, "/api/jobs",
+            JsonBody(new CreateJobRequest(JobName: "SendReport", JobParam: "{oops", QueueName: null)));
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var error = await resp.Content.ReadFromJsonAsync<DashboardErrorDto>(TestContext.Current.CancellationToken);
+        Assert.Equal("Parameters do not match job 'SendReport': oops", error!.Message);
+    }
+
+    [Theory]
+    [InlineData("/api/jobs")]
+    [InlineData("/api/recurrent")]
+    public async Task Create_WhenNoJobCanBeCreated_Returns404AndDoesNotAct(string url)
+    {
+        var reader = new FakeDashboardDataReader { ManagementEnabled = true, CreatableJobNames = [] };
+        await using var app = await StartAsync(reader);
+
+        var resp = await SendManageAsync(app, HttpMethod.Post, url,
+            JsonBody(new CreateRecurrentJobRequest(JobName: "SendReport", JobParam: "{}", Cron: "0 6 * * *",
+                QueueName: null, IsExclusive: true)));
+
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+        Assert.Null(reader.LastCreateJobRequest);
+        Assert.Null(reader.LastCreateRecurrentJobRequest);
+    }
+
+    [Fact]
+    public async Task CreateJob_WithoutCsrfHeader_IsRejectedAndDoesNotAct()
+    {
+        var reader = CreationReader();
+        await using var app = await StartAsync(reader);
+
+        var resp = await app.GetTestClient().PostAsJsonAsync("/api/jobs",
+            new CreateJobRequest(JobName: "SendReport", JobParam: "{}", QueueName: null),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, resp.StatusCode);
+        Assert.Null(reader.LastCreateJobRequest);
+    }
+
+    [Fact]
+    public async Task Config_ListsCreatableJobNames()
+    {
+        await using var app = await StartAsync(CreationReader());
+
+        var dto = await app.GetTestClient()
+            .GetFromJsonAsync<JobbyDashboardClientConfigDto>("/api/config", TestContext.Current.CancellationToken);
+
+        Assert.Equal(["SendReport"], dto!.CreatableJobNames);
+    }
+
     [Fact]
     public async Task Trigger_WhenManagementEnabledAndJobAffected_Returns204AndForwardsId()
     {

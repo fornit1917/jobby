@@ -29,4 +29,14 @@ public interface IDashboardDataReader
     Task<int> DeleteRecurrentJobsAsync(IReadOnlyList<Guid> ids, CancellationToken cancellationToken = default);
 
     Task<int> RequestGroupUnlockAsync(string groupId, CancellationToken cancellationToken = default);
+
+    // Job creation. The names are empty when jobs cannot be created: management is disabled, or the host
+    // application registers no Jobby client or jobs. Both methods return the id of the job and throw
+    // DashboardJobCreationException when the submitted values cannot be turned into a job.
+
+    IReadOnlyList<string> CreatableJobNames { get; }
+
+    Task<Guid> CreateJobAsync(CreateJobRequest request);
+
+    Task<Guid> CreateRecurrentJobAsync(CreateRecurrentJobRequest request);
 }

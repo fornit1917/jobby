@@ -47,6 +47,10 @@ public static class ScheduleFormatter
         };
     }
 
+    // Plain-language description of a cron expression, or null when it is empty or cannot be parsed.
+    public static string? DescribeCron(string? cron) =>
+        string.IsNullOrWhiteSpace(cron) ? null : FormatCron(cron.Trim()).Description;
+
     private static ScheduleDisplayModel FormatCron(string schedule)
     {
         var cron = ExtractCronExpression(schedule);

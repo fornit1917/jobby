@@ -99,21 +99,42 @@ public sealed class DashboardApiClient
     public async Task<RequestGroupUnlockResultDto> RequestGroupUnlockAsync(string groupId,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_config.ManagementRequestHeaderName) ||
-            string.IsNullOrWhiteSpace(_config.ManagementRequestToken))
+        using var request = CreateManagementRequest(HttpMethod.Post, "api/locked-groups/unlock-request");
+        request.Content = JsonContent.Create(new UnlockGroupRequest(groupId));
+        using var resp = await _http.SendAsync(request, cancellationToken);
+        resp.EnsureSuccessStatusCode();
+        return await resp.Content.ReadFromJsonAsync<RequestGroupUnlockResultDto>(cancellationToken)
+               ?? throw new InvalidOperationException("The unlock-request endpoint returned an empty response.");
+    }
+
+    public Task<JobCreationResult> CreateJobAsync(CreateJobRequest job, CancellationToken cancellationToken = default)
+        => SendCreateAsync("api/jobs", job, cancellationToken);
+
+    public Task<JobCreationResult> CreateRecurrentJobAsync(CreateRecurrentJobRequest job,
+        CancellationToken cancellationToken = default)
+        => SendCreateAsync("api/recurrent", job, cancellationToken);
+
+    private async Task<JobCreationResult> SendCreateAsync<TJob>(string uri, TJob job,
+        CancellationToken cancellationToken)
+    {
+        using var request = CreateManagementRequest(HttpMethod.Post, uri);
+        request.Content = JsonContent.Create(job);
+        using var resp = await _http.SendAsync(request, cancellationToken);
+
+        if (resp.StatusCode == HttpStatusCode.BadRequest)
         {
-            throw new InvalidOperationException("Dashboard management request token has not been loaded.");
+            var error = await resp.Content.ReadFromJsonAsync<DashboardErrorDto>(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(error?.Message))
+            {
+                return new JobCreationResult(JobId: null, Error: error.Message);
+            }
         }
 
-        using (var request = new HttpRequestMessage(HttpMethod.Post, "api/locked-groups/unlock-request"))
-        {
-            request.Content = JsonContent.Create(new UnlockGroupRequest(groupId));
-            request.Headers.Add(_config.ManagementRequestHeaderName, _config.ManagementRequestToken);
-            using var resp = await _http.SendAsync(request, cancellationToken);
-            resp.EnsureSuccessStatusCode();
-            return await resp.Content.ReadFromJsonAsync<RequestGroupUnlockResultDto>(cancellationToken)
-                   ?? throw new InvalidOperationException("The unlock-request endpoint returned an empty response.");
-        }
+        // Also fails a 400 that came without the reason, e.g. from a proxy, instead of reporting success.
+        resp.EnsureSuccessStatusCode();
+        var created = await resp.Content.ReadFromJsonAsync<CreateJobResultDto>(cancellationToken)
+                      ?? throw new InvalidOperationException("The create endpoint returned an empty response.");
+        return new JobCreationResult(created.Id, Error: null);
     }
 
     public Task<bool> TriggerJobAsync(Guid id, CancellationToken cancellationToken = default)
@@ -130,14 +151,7 @@ public sealed class DashboardApiClient
 
     private async Task<bool> SendActionAsync(HttpMethod method, string uri, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(method, uri);
-        if (string.IsNullOrWhiteSpace(_config.ManagementRequestHeaderName) ||
-            string.IsNullOrWhiteSpace(_config.ManagementRequestToken))
-        {
-            throw new InvalidOperationException("Dashboard management request token has not been loaded.");
-        }
-
-        request.Headers.Add(_config.ManagementRequestHeaderName, _config.ManagementRequestToken);
+        using var request = CreateManagementRequest(method, uri);
         using var resp = await _http.SendAsync(request, cancellationToken);
 
         if (resp.StatusCode == HttpStatusCode.NotFound)
@@ -147,6 +161,20 @@ public sealed class DashboardApiClient
 
         resp.EnsureSuccessStatusCode();
         return true;
+    }
+
+    // Management endpoints accept a request only with the antiforgery token issued together with the config.
+    private HttpRequestMessage CreateManagementRequest(HttpMethod method, string uri)
+    {
+        if (string.IsNullOrWhiteSpace(_config.ManagementRequestHeaderName) ||
+            string.IsNullOrWhiteSpace(_config.ManagementRequestToken))
+        {
+            throw new InvalidOperationException("Dashboard management request token has not been loaded.");
+        }
+
+        var request = new HttpRequestMessage(method, uri);
+        request.Headers.Add(_config.ManagementRequestHeaderName, _config.ManagementRequestToken);
+        return request;
     }
 
     private string JobsUri(DashboardJobsQuery query)

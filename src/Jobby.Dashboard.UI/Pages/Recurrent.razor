@@ -6,6 +6,7 @@
 
 <PageHeader Title="@L["nav.recurrent"]" Subtitle="@Subtitle">
     <Actions>
+        <CreateJobButton Recurrent="true" OnCreated="ReloadAsync"/>
         <AutoRefresh OnRefresh="ReloadAsync" Interval="Options.RefreshInterval"/>
     </Actions>
 </PageHeader>

@@ -56,6 +56,77 @@ public class DashboardApiClientTests
         Assert.Contains("sortDescending=True", query);
     }
 
+    private static async Task<DashboardApiClient> ManagementClientAsync(RecordingHttpMessageHandler handler)
+    {
+        var http = new HttpClient(handler) { BaseAddress = new Uri("http://localhost/") };
+        var config = new DashboardClientConfig();
+        await config.LoadAsync(http, TestContext.Current.CancellationToken);
+        return new DashboardApiClient(http, new TestNavigationManager(), config);
+    }
+
+    private static JobbyDashboardClientConfigDto ManagementConfig() => new()
+    {
+        ManagementEnabled = true,
+        ManagementRequestHeaderName = "X-Jobby-Dashboard",
+        ManagementRequestToken = "tok",
+    };
+
+    [Fact]
+    public async Task CreateJobAsync_SendsTheManagementTokenAndReturnsTheJobId()
+    {
+        var id = Guid.NewGuid();
+        var handler = new RecordingHttpMessageHandler(req => req.RequestUri!.AbsolutePath == "/api/config"
+            ? ManagementConfig()
+            : new CreateJobResultDto(id));
+        var client = await ManagementClientAsync(handler);
+
+        var result = await client.CreateJobAsync(
+            new CreateJobRequest(JobName: "SendReport", JobParam: "{}", QueueName: null),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new JobCreationResult(id, Error: null), result);
+        var request = Assert.Single(handler.RequestsTo("/api/jobs"));
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("tok", Assert.Single(request.Headers.GetValues("X-Jobby-Dashboard")));
+    }
+
+    [Fact]
+    public async Task CreateRecurrentJobAsync_RejectedValues_ReturnTheServerReason()
+    {
+        var handler = new RecordingHttpMessageHandler(req => req.RequestUri!.AbsolutePath == "/api/config"
+            ? ManagementConfig()
+            : new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+            {
+                Content = System.Net.Http.Json.JsonContent.Create(
+                    new DashboardErrorDto("Could not parse cron expression 'soon'")),
+            });
+        var client = await ManagementClientAsync(handler);
+
+        var result = await client.CreateRecurrentJobAsync(
+            new CreateRecurrentJobRequest(JobName: "SendReport", JobParam: "{}", Cron: "soon", QueueName: null,
+                IsExclusive: true),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(new JobCreationResult(JobId: null, "Could not parse cron expression 'soon'"), result);
+        Assert.Single(handler.RequestsTo("/api/recurrent"));
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_BadRequestWithoutAReason_FailsInsteadOfReportingSuccess()
+    {
+        var handler = new RecordingHttpMessageHandler(req => req.RequestUri!.AbsolutePath == "/api/config"
+            ? ManagementConfig()
+            : new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest)
+            {
+                Content = System.Net.Http.Json.JsonContent.Create(new { title = "Bad Request", status = 400 }),
+            });
+        var client = await ManagementClientAsync(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.CreateJobAsync(
+            new CreateJobRequest(JobName: "SendReport", JobParam: "{}", QueueName: null),
+            TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task GetLockedGroupsAsync_ForwardsPaging()
     {

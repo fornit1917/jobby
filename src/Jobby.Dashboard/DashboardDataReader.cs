@@ -7,15 +7,18 @@ internal sealed class DashboardDataReader : IDashboardDataReader
 {
     private readonly IJobbyDashboardReadStorage _readStorage;
     private readonly IJobbyDashboardCommandStorage? _commandStorage;
+    private readonly DashboardJobCreator _jobCreator;
     private readonly JobbyDashboardOptions _options;
 
     public DashboardDataReader(
         IJobbyDashboardReadStorage readStorage,
         IEnumerable<IJobbyDashboardCommandStorage> commandStorage,
+        DashboardJobCreator jobCreator,
         JobbyDashboardOptions options)
     {
         _readStorage = readStorage;
         _commandStorage = commandStorage.FirstOrDefault();
+        _jobCreator = jobCreator;
         _options = options;
     }
 
@@ -93,6 +96,20 @@ internal sealed class DashboardDataReader : IDashboardDataReader
     public Task<int> RequestGroupUnlockAsync(string groupId, CancellationToken cancellationToken = default)
     {
         return RequireManagement().RequestGroupUnlockAsync(groupId, DateTime.UtcNow, cancellationToken);
+    }
+
+    public IReadOnlyList<string> CreatableJobNames => ManagementEnabled ? _jobCreator.JobNames : [];
+
+    public Task<Guid> CreateJobAsync(CreateJobRequest request)
+    {
+        RequireManagement();
+        return _jobCreator.EnqueueAsync(request);
+    }
+
+    public Task<Guid> CreateRecurrentJobAsync(CreateRecurrentJobRequest request)
+    {
+        RequireManagement();
+        return _jobCreator.ScheduleRecurrentAsync(request);
     }
 
     private IJobbyDashboardCommandStorage RequireManagement()
