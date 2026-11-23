@@ -31,7 +31,9 @@ public static class JobbyTheme
         PaletteDark = new PaletteDark
         {
             Primary = "#a07cf5",
+            PrimaryContrastText = "#0d0f13",
             Secondary = "#a07cf5",
+            SecondaryContrastText = "#0d0f13",
             Background = "#0d0f13",
             BackgroundGray = "#1a1e25",
             Surface = "#14171c",
@@ -56,11 +58,16 @@ public static class JobbyTheme
             Info = "#4ea6f5",
             Warning = "#e8a13c",
             Error = "#ef6b6b",
+            // The dark palette's colours are bright, so text on them (filled buttons, snackbars) is dark.
+            SuccessContrastText = "#0d0f13",
+            InfoContrastText = "#0d0f13",
+            WarningContrastText = "#0d0f13",
+            ErrorContrastText = "#0d0f13",
         },
         PaletteLight = new PaletteLight
         {
-            Primary = "#a07cf5",
-            Secondary = "#a07cf5",
+            Primary = "#7151cc",
+            Secondary = "#7151cc",
             Background = "#f4f5f7",
             BackgroundGray = "#f7f8fa",
             Surface = "#ffffff",
@@ -81,10 +88,10 @@ public static class JobbyTheme
             TableLines = "rgba(17,24,39,0.09)",
             TableStriped = "#f7f8fa",
             TableHover = "#f7f8fa",
-            Success = "#1f9d63",
-            Info = "#2b86d6",
-            Warning = "#c2810f",
-            Error = "#d64545",
+            Success = "#187a4c",
+            Info = "#236eaf",
+            Warning = "#96630a",
+            Error = "#c53a3a",
         },
     };
 }

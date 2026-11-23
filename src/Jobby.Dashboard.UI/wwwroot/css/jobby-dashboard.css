@@ -111,10 +111,11 @@
     --border-strong: rgba(255, 255, 255, 0.12);
     --text-1: #e7e9ee;
     --text-2: #99a0ab;
-    --text-3: #6b7280;
+    --text-3: #868e9b;
     --accent: #a07cf5;
     --accent-dim: color-mix(in srgb, var(--accent) 15%, transparent);
     --accent-text: color-mix(in srgb, var(--accent) 68%, #fff);
+    --on-status: #0d0f13;
     --st-scheduled: #9b8cf0;
     --st-processing: #4ea6f5;
     --st-completed: #46c08a;
@@ -136,20 +137,21 @@
     --border-strong: rgba(17, 24, 39, 0.16);
     --text-1: #1a1d23;
     --text-2: #5b626e;
-    --text-3: #8b93a1;
-    --accent: #a07cf5;
+    --text-3: #646b78;
+    --accent: #7151cc;
     --accent-dim: color-mix(in srgb, var(--accent) 11%, transparent);
     --accent-text: color-mix(in srgb, var(--accent) 82%, #000);
+    --on-status: #fff;
     --st-scheduled: #6f5fd6;
-    --st-processing: #2b86d6;
-    --st-completed: #1f9d63;
-    --st-failed: #d64545;
-    --st-frozen: #c2810f;
+    --st-processing: #236eaf;
+    --st-completed: #187a4c;
+    --st-failed: #c53a3a;
+    --st-frozen: #96630a;
     --st-waiting: #6b7280;
-    --st-alive: #1f9d63;
-    --st-stale: #c2810f;
-    --st-failed-bg: rgba(214, 69, 69, 0.1);
-    --st-frozen-bg: rgba(194, 129, 15, 0.12);
+    --st-alive: #187a4c;
+    --st-stale: #96630a;
+    --st-failed-bg: rgba(197, 58, 58, 0.1);
+    --st-frozen-bg: rgba(150, 99, 10, 0.12);
 }
 
 .jobby-mono {
@@ -185,7 +187,7 @@
     padding: 3px 7px;
     border-radius: var(--r-md);
     white-space: nowrap;
-    color: #fff;
+    color: var(--on-status);
 }
 
 .jobby-tag-Scheduled {
@@ -329,7 +331,7 @@
     line-height: 1;
     border-radius: 9px;
     background: var(--st-failed);
-    color: #fff;
+    color: var(--on-status);
 }
 
 .jobby-brand {
