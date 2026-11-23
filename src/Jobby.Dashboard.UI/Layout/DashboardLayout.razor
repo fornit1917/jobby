@@ -6,6 +6,7 @@
 @inject DashboardApiClient Api
 @inject DateTimeDisplayState Dt
 @inject LanguageState L
+@inject IBrowserViewportService BrowserViewport
 @implements IDisposable
 @using Jobby.Dashboard.UI.Theme
 
@@ -152,13 +153,46 @@
 
     protected override void OnInitialized()
     {
-        Nav.LocationChanged += (_, _) => InvokeAsync(StateHasChanged);
+        Nav.LocationChanged += OnLocationChanged;
         L.Changed += OnLanguageChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(OnNavigatedAsync);
+
+    private async Task OnNavigatedAsync()
+    {
+        await CloseDrawerOnSmallScreenAsync();
+        StateHasChanged();
+    }
+
+    // Below the drawer's breakpoint an open drawer covers most of the page, so it closes once a link is followed.
+    private async Task CloseDrawerOnSmallScreenAsync()
+    {
+        if (!_drawerOpen)
+        {
+            return;
+        }
+
+        try
+        {
+            if (await BrowserViewport.GetCurrentBreakpointAsync() < Breakpoint.Md)
+            {
+                _drawerOpen = false;
+            }
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => L.Changed -= OnLanguageChanged;
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        L.Changed -= OnLanguageChanged;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

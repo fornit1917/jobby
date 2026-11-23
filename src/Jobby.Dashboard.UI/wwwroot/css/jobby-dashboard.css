@@ -704,8 +704,9 @@
     color: var(--accent-text);
 }
 
-@media (max-width: 600px) {
-    /* Let the appbar's wrapped controls determine its height and the content offset. */
+/* Below MudBlazor's md breakpoint the appbar controls do not fit beside the breadcrumb in every language:
+   they wrap onto their own row, and the appbar's height determines the content offset. */
+@media (max-width: 959.98px) {
     .jobby-appbar.mud-appbar-fixed-top {
         position: sticky;
     }
@@ -714,7 +715,8 @@
         height: auto;
         min-height: 56px;
         flex-wrap: wrap;
-        padding: 8px 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         gap: 4px 0;
     }
 
@@ -724,15 +726,27 @@
         overflow-wrap: anywhere;
     }
 
-    .jobby-breadcrumb > span:not(.crumb-current) {
-        display: none;
-    }
-
     .jobby-appbar-controls {
         flex: 1 1 100%;
         flex-wrap: wrap;
         justify-content: flex-end;
         row-gap: 4px;
+    }
+
+    .jobby-appbar ~ .mud-main-content {
+        padding-top: 0;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .jobby-appbar .mud-toolbar {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .jobby-breadcrumb > span:not(.crumb-current) {
+        display: none;
     }
 
     .jobby-appbar-controls > * {
@@ -744,11 +758,6 @@
         min-width: 0;
         white-space: normal;
         overflow-wrap: anywhere;
-    }
-
-    .jobby-appbar ~ .mud-main-content {
-        padding-top: 0;
-        min-width: 0;
     }
 
     .jobby-main-container > .d-flex:has(.jobby-page-title) {
