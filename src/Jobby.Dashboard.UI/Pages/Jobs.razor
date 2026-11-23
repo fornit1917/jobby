@@ -182,6 +182,13 @@ else if (_error is not null)
         var n => L.Format(HasFilters ? "jobs.subtitleFiltered" : "jobs.subtitle", n),
     };
 
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Applied before the first render, so the grid's first request is already filtered.
+        ApplyStatusQuery();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         Dt.Changed += OnDisplayChanged;
@@ -193,6 +200,10 @@ else if (_error is not null)
         catch (OperationCanceledException)
         {
         }
+        catch (Exception)
+        {
+            // The queue filter stays empty; the grid reports its own load errors.
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -202,22 +213,16 @@ else if (_error is not null)
             return;
         }
 
+        ApplyStatusQuery();
+        await ApplyFiltersAsync();
+    }
+
+    private void ApplyStatusQuery()
+    {
         _appliedStatusQuery = StatusQuery;
-
-        var parsed = Enum.TryParse<JobStatus>(StatusQuery, ignoreCase: true, out var status) && Enum.IsDefined(status)
+        _status = Enum.TryParse<JobStatus>(StatusQuery, ignoreCase: true, out var status) && Enum.IsDefined(status)
             ? status
-            : (JobStatus?)null;
-
-        if (parsed is null)
-        {
-            return;
-        }
-
-        _status = parsed;
-        if (_grid is not null)
-        {
-            await ApplyFiltersAsync();
-        }
+            : null;
     }
 
     private async Task<GridData<DashboardJobListItemDto>> LoadGridDataAsync(GridState<DashboardJobListItemDto> state, CancellationToken cancellationToken)

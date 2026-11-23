@@ -188,12 +188,14 @@ else
         }
 
         _loadedGroupId = GroupId;
+        _details = null;
         return LoadAsync();
     }
 
     private async Task LoadAsync()
     {
-        if (string.IsNullOrEmpty(GroupId))
+        var groupId = GroupId;
+        if (string.IsNullOrEmpty(groupId))
         {
             _details = null;
             return;
@@ -203,7 +205,11 @@ else
         {
             _loading = true;
             _error = null;
-            _details = await Reader.GetLockedGroupAsync(GroupId, _cts.Token);
+            var details = await Reader.GetLockedGroupAsync(groupId, _cts.Token);
+            if (groupId == GroupId)
+            {
+                _details = details;
+            }
         }
         catch (OperationCanceledException)
         {

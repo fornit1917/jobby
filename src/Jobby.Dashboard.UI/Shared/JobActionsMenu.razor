@@ -59,8 +59,6 @@
 
     [Parameter] public EventCallback OnChanged { get; set; }
 
-    private readonly CancellationTokenSource _cts = new();
-
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -74,24 +72,26 @@
                                || (!IsGroupLocker && Status is JobStatus.WaitingPrev or JobStatus.Failed or JobStatus.Frozen or JobStatus.Completed);
 
     private Task TriggerAsync() =>
-        RunAsync(cancellationToken => Api.TriggerJobAsync(Id, cancellationToken), L["actions.scheduled"], confirm: null);
+        RunAsync(() => Api.TriggerJobAsync(Id), L["actions.scheduled"], confirm: null);
 
     private Task RetryAsync() =>
-        RunAsync(cancellationToken => Api.RetryJobAsync(Id, cancellationToken), L["actions.queuedRetry"], confirm: null);
+        RunAsync(() => Api.RetryJobAsync(Id), L["actions.queuedRetry"], confirm: null);
 
     private Task CancelAsync() =>
-        RunAsync(cancellationToken => Api.DeleteJobAsync(Id, cancellationToken), L["actions.cancelled"],
+        RunAsync(() => Api.DeleteJobAsync(Id), L["actions.cancelled"],
             confirm: L["actions.confirmCancel"]);
 
     private Task DeleteAsync() =>
-        RunAsync(cancellationToken => Api.DeleteJobAsync(Id, cancellationToken), L["actions.jobDeleted"],
+        RunAsync(() => Api.DeleteJobAsync(Id), L["actions.jobDeleted"],
             confirm: L["actions.confirmDeleteJob"]);
 
     private Task DeleteRecurrentAsync() =>
-        RunAsync(cancellationToken => Api.DeleteRecurrentJobAsync(Id, cancellationToken), L["actions.recurrentDeleted"],
+        RunAsync(() => Api.DeleteRecurrentJobAsync(Id), L["actions.recurrentDeleted"],
             confirm: L["actions.confirmDeleteRecurrent"]);
 
-    private async Task RunAsync(Func<CancellationToken, Task<bool>> action, string successMessage, string? confirm)
+    // The request is not tied to this component's lifetime: a grid refresh may re-create the row
+    // (and this menu with it) while the confirmation dialog is still open.
+    private async Task RunAsync(Func<Task<bool>> action, string successMessage, string? confirm)
     {
         if (confirm is not null)
         {
@@ -104,7 +104,7 @@
 
         try
         {
-            if (await action(_cts.Token))
+            if (await action())
             {
                 Snackbar.Add(successMessage, Severity.Success);
             }
@@ -114,9 +114,6 @@
             }
 
             await OnChanged.InvokeAsync();
-        }
-        catch (OperationCanceledException)
-        {
         }
         catch (Exception)
         {
@@ -128,8 +125,6 @@
     {
         base.Dispose();
         Mode.Changed -= OnModeChanged;
-        _cts.Cancel();
-        _cts.Dispose();
     }
 
 }

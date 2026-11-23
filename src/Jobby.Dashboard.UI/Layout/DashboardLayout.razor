@@ -76,7 +76,7 @@
     <MudMainContent role="main">
         <div id="dashboard-main" tabindex="-1" @ref="_mainFocus"></div>
         <MudContainer MaxWidth="MaxWidth.False" Class="jobby-main-container px-3 px-sm-6 py-4" Style="max-width:1480px;">
-            <ErrorBoundary>
+            <ErrorBoundary @ref="_errorBoundary">
                 <ChildContent>@Body</ChildContent>
                 <ErrorContent><MudAlert Severity="Severity.Error">@L["common.somethingWrong"]</MudAlert></ErrorContent>
             </ErrorBoundary>
@@ -93,6 +93,7 @@
     private bool _isDarkMode = true;
     private bool _drawerOpen = true;
     private int _lockedCount;
+    private ErrorBoundary? _errorBoundary;
 
     private string LockedCountLabel =>
         _lockedCount > MaxLockedCountInBadge ? $"{MaxLockedCountInBadge}+" : _lockedCount.ToString();
@@ -157,12 +158,16 @@
         L.Changed += OnLanguageChanged;
     }
 
+    // A page that failed to render must not leave its error on screen after the user navigates away.
+    protected override void OnParametersSet() => _errorBoundary?.Recover();
+
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(OnNavigatedAsync);
 
     private async Task OnNavigatedAsync()
     {
         await CloseDrawerOnSmallScreenAsync();
         StateHasChanged();
+        await LoadLockedCountAsync();
     }
 
     // Below the drawer's breakpoint an open drawer covers most of the page, so it closes once a link is followed.
@@ -220,10 +225,19 @@
 
         await L.InitializeAsync(Js);
 
+        await LoadLockedCountAsync();
+    }
+
+    private async Task LoadLockedCountAsync()
+    {
         try
         {
-            _lockedCount = (int)Math.Min(await Api.GetLockedGroupsCountAsync(), int.MaxValue);
-            StateHasChanged();
+            var count = (int)Math.Min(await Api.GetLockedGroupsCountAsync(), int.MaxValue);
+            if (count != _lockedCount)
+            {
+                _lockedCount = count;
+                StateHasChanged();
+            }
         }
         catch
         {

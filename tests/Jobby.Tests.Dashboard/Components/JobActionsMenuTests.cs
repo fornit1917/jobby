@@ -144,6 +144,45 @@ public class JobActionsMenuTests : DashboardClientTestContext
         Assert.Equal("tok", Assert.Single(request.Headers.GetValues("X-Jobby-Dashboard")));
     }
 
+    [Fact]
+    public async Task ConfirmedDelete_IsSentEvenIfARefreshRemovedTheMenuMeanwhile()
+    {
+        await SetupManagementAsync();
+        var id = Guid.NewGuid();
+        RenderFragment Content(bool withMenu) => builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<MudDialogProvider>(1);
+            builder.CloseComponent();
+            if (withMenu)
+            {
+                builder.OpenComponent<JobActionsMenu>(2);
+                builder.AddAttribute(3, nameof(JobActionsMenu.Id), id);
+                builder.AddAttribute(4, nameof(JobActionsMenu.Status), JobStatus.Completed);
+                builder.CloseComponent();
+            }
+        };
+        // The host only exists so that the menu can be taken out of the render tree, as a grid refresh does.
+        var cut = Render<CascadingValue<bool>>(parameters => parameters
+            .Add(host => host.Value, true)
+            .Add(host => host.ChildContent, Content(withMenu: true)));
+        await cut.Find("[data-testid=job-actions] button").ClickAsync();
+        await cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll("[data-testid=action-delete]")));
+        var deleteClick = cut.Find("[data-testid=action-delete]").ClickAsync();
+        await cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll("div.mud-dialog")));
+
+        cut.Render(parameters => parameters
+            .Add(host => host.Value, true)
+            .Add(host => host.ChildContent, Content(withMenu: false)));
+        Assert.Empty(cut.FindAll("[data-testid=job-actions]"));
+        await cut.FindAll("div.mud-dialog button").First(button => button.TextContent.Contains("Yes")).ClickAsync();
+        await deleteClick;
+
+        var request = Assert.Single(Handler.RequestsTo($"/api/jobs/{id}"));
+        Assert.Equal(HttpMethod.Delete, request.Method);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

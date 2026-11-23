@@ -1,6 +1,8 @@
 using Bunit;
 using Jobby.Core.Models.Dashboard;
 using Jobby.Dashboard.UI.Layout;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobby.Tests.Dashboard.Components;
 
@@ -67,5 +69,37 @@ public class DashboardLayoutTests : DashboardClientTestContext
         cut.Find("[data-testid=drawer-toggle]").Click();
         Assert.Equal(initiallyClosed,
             cut.Find("aside.mud-drawer").ClassName!.Contains("mud-drawer--closed"));
+    }
+
+    [Fact]
+    public void LockedGroupsBadge_IsReloadedAfterNavigation()
+    {
+        var count = 3L;
+        SetupApi(req => req.RequestUri!.AbsolutePath == "/api/locked-groups/count"
+            ? new LockedGroupsCountDto(count)
+            : null);
+        var cut = Render<DashboardLayout>();
+        cut.WaitForAssertion(() =>
+            Assert.Equal("3", cut.Find("[data-testid=locked-count-badge]").TextContent));
+
+        count = 0;
+        Services.GetRequiredService<NavigationManager>().NavigateTo("queues");
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid=locked-count-badge]")));
+    }
+
+    [Fact]
+    public void PageThatFailedToRender_DoesNotKeepItsErrorAfterNavigation()
+    {
+        SetupApi(_ => null);
+        var cut = Render<DashboardLayout>(parameters => parameters
+            .Add(layout => layout.Body, _ => throw new InvalidOperationException("broken page")));
+        Assert.Contains("Something went wrong", cut.Markup);
+
+        cut.Render(parameters => parameters
+            .Add(layout => layout.Body, builder => builder.AddContent(0, "next page")));
+
+        Assert.DoesNotContain("Something went wrong", cut.Markup);
+        Assert.Contains("next page", cut.Markup);
     }
 }
