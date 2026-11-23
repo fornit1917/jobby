@@ -13,8 +13,11 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -410,6 +413,93 @@ public class DashboardIntegrationTests
         var resp = await app.GetTestClient().GetAsync("/jobby");
         Assert.Equal(HttpStatusCode.Found, resp.StatusCode);
         Assert.Equal("/jobby/", resp.Headers.Location?.ToString());
+    }
+
+    private static WebApplicationBuilder CreateAnonymousDashboardBuilder()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Logging.ClearProviders();
+        builder.Services.AddSingleton<IJobbyDashboardReadStorage>(new FakeReadStorage());
+        builder.Services.AddJobbyDashboard().AllowAnonymous();
+        return builder;
+    }
+
+    [Fact]
+    public async Task MapJobbyDashboard_InAnApplicationWithoutWebApplication_ServesTheDashboard()
+    {
+        // The pipeline of an application with a Startup class: endpoints are added inside UseEndpoints.
+        using var host = await new HostBuilder()
+            .ConfigureWebHost(web => web
+                .UseTestServer()
+                .ConfigureServices(services =>
+                {
+                    services.AddRouting();
+                    services.AddSingleton<IJobbyDashboardReadStorage>(new FakeReadStorage());
+                    services.AddJobbyDashboard().AllowAnonymous();
+                })
+                .Configure(app =>
+                {
+                    app.UseRouting();
+                    app.UseEndpoints(endpoints => endpoints.MapJobbyDashboard("/jobby"));
+                }))
+            .StartAsync(TestContext.Current.CancellationToken);
+
+        var response = await host.GetTestClient()
+            .GetAsync("/jobby/api/stats", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("/jobby/")]
+    [InlineData("/jobby/jobs")]
+    [InlineData("/jobby/api/stats")]
+    [InlineData("/jobby/_framework/blazor.boot.json")]
+    public async Task MapJobbyDashboard_ReturnedBuilder_AppliesConventionsToEveryDashboardEndpoint(string path)
+    {
+        await using var app = CreateAnonymousDashboardBuilder().Build();
+        app.MapJobbyDashboard("/jobby").RequireHost("jobs.internal");
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        var requiredHost = app.GetTestClient();
+        requiredHost.BaseAddress = new Uri("http://jobs.internal/");
+        var otherHost = app.GetTestClient();
+
+        var allowed = await requiredHost.GetAsync(path, TestContext.Current.CancellationToken);
+        var rejected = await otherHost.GetAsync(path, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, rejected.StatusCode);
+    }
+
+    [Fact]
+    public async Task MapJobbyDashboard_OnARouteGroup_IsRejectedWithTheWayToMountIt()
+    {
+        await using var app = CreateAnonymousDashboardBuilder().Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => app.MapGroup("/admin").MapJobbyDashboard("/jobby"));
+
+        Assert.Contains("pass the full path as the prefix", exception.Message);
+    }
+
+    [Fact]
+    public async Task DashboardEndpoints_AreNotPartOfTheApplicationApiDescription()
+    {
+        var builder = CreateAnonymousDashboardBuilder();
+        builder.Services.AddEndpointsApiExplorer();
+        await using var app = builder.Build();
+        app.MapGet("/host/ping", () => "pong");
+        app.MapJobbyDashboard("/jobby");
+        await app.StartAsync(TestContext.Current.CancellationToken);
+
+        var described = app.Services.GetRequiredService<IApiDescriptionGroupCollectionProvider>()
+            .ApiDescriptionGroups.Items
+            .SelectMany(group => group.Items)
+            .Select(api => api.RelativePath);
+
+        // The application's own endpoint shows that descriptions are collected at all.
+        Assert.Equal(["host/ping"], described);
     }
 
     [Fact]

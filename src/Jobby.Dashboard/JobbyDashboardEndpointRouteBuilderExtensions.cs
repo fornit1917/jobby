@@ -1,19 +1,36 @@
 using Jobby.Core.Interfaces.Dashboard;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jobby.Dashboard;
 
 public static class JobbyDashboardEndpointRouteBuilderExtensions
 {
-    public static WebApplication MapJobbyDashboard(this WebApplication app, string prefix = "/jobby")
+    /// <summary>
+    /// Adds the dashboard at <paramref name="prefix"/>, a path from the root of the application.
+    /// </summary>
+    /// <returns>A builder for conventions that apply to every endpoint of the dashboard.</returns>
+    public static IEndpointConventionBuilder MapJobbyDashboard(
+        this IEndpointRouteBuilder endpoints, string prefix = "/jobby")
     {
-        var state = app.Services.GetService<JobbyDashboardAuthState>()
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        // The page is told its address through the prefix, and a route group would silently move the endpoints.
+        if (endpoints is RouteGroupBuilder)
+        {
+            throw new InvalidOperationException(
+                "Jobby Dashboard cannot be mapped inside a route group. " +
+                "Map it on the application and pass the full path as the prefix, e.g. \"/admin/jobby\".");
+        }
+
+        var services = endpoints.ServiceProvider;
+        var state = services.GetService<JobbyDashboardAuthState>()
                     ?? throw new InvalidOperationException(
                         "Jobby Dashboard services are not registered. Call builder.Services.AddJobbyDashboard(...) first.");
 
-        using (var probeScope = app.Services.CreateScope())
+        using (var probeScope = services.CreateScope())
         {
             if (probeScope.ServiceProvider.GetService<IJobbyDashboardReadStorage>() is null)
             {
@@ -36,13 +53,14 @@ public static class JobbyDashboardEndpointRouteBuilderExtensions
         }
 
         // Real endpoints preserve explicit AllowAnonymous/RequireAuthorization metadata under FallbackPolicy.
-        var group = app.MapGroup(prefix);
+        // They serve the dashboard's own page, so they stay out of the application's API description (OpenAPI).
+        var group = endpoints.MapGroup(prefix).ExcludeFromDescription();
 
         JobbyDashboardApi.MapAll(group, state);
 
         var mountPrefix = prefix;
 
-        app.MapGet(mountPrefix, ctx =>
+        group.MapGet("/", ctx =>
         {
             if ((ctx.Request.Path.Value ?? string.Empty).EndsWith('/'))
             {
@@ -58,6 +76,6 @@ public static class JobbyDashboardEndpointRouteBuilderExtensions
                 (string path, HttpContext ctx) => JobbyDashboardShell.ServeAsync(ctx, mountPrefix, path))
             .AllowAnonymous();
 
-        return app;
+        return group;
     }
 }
