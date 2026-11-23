@@ -494,8 +494,10 @@
     color: var(--text-3);
 }
 
+/* A long label wraps onto a second line instead of running into the count badge. */
 .jobby-nav-locked .jobby-nav-label {
-    white-space: nowrap;
+    min-width: 0;
+    line-height: 1.25;
 }
 
 .jobby-nav-count {
@@ -813,6 +815,8 @@
     display: inline-flex;
     align-items: center;
     flex: 1 1 auto;
+    gap: 8px;
+    min-width: 0;
 }
 
 .jobby-drawer.mud-drawer--closed .jobby-brand-name,

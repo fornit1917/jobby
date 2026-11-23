@@ -66,7 +66,8 @@
                 <span class="jobby-nav-label">@L["nav.lockedGroups"]</span>
                 @if (_lockedCount > 0)
                 {
-                    <span class="jobby-nav-count" data-testid="locked-count-badge">@_lockedCount</span>
+                    <span class="jobby-nav-count" data-testid="locked-count-badge"
+                          title="@_lockedCount">@LockedCountLabel</span>
                 }
             </MudNavLink>
         </MudNavMenu>
@@ -85,9 +86,15 @@
 @code {
     private const string ThemeStorageKey = "jobby-dashboard-dark";
 
+    // The nav badge has room for one digit; larger counts are shown as "9+".
+    private const int MaxLockedCountInBadge = 9;
+
     private bool _isDarkMode = true;
     private bool _drawerOpen = true;
     private int _lockedCount;
+
+    private string LockedCountLabel =>
+        _lockedCount > MaxLockedCountInBadge ? $"{MaxLockedCountInBadge}+" : _lockedCount.ToString();
 
     private string CurrentSection
     {
