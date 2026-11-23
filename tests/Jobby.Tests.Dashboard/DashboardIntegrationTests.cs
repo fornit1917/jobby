@@ -24,7 +24,7 @@ public class DashboardIntegrationTests
     {
         public Task<DashboardStatsDto> GetStatsAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(new DashboardStatsDto(StatusCounts: []));
+            return Task.FromResult(new DashboardStatsDto(StatusCounts: [], RecurrentStatusCounts: []));
         }
 
         public Task<PagedResult<DashboardJobListItemDto>> GetJobsAsync(DashboardJobsQuery query,

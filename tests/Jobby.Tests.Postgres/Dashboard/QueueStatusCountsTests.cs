@@ -18,6 +18,10 @@ public class QueueStatusCountsTests
             new DashboardStatusCount(JobStatus.Scheduled, 5),
             new DashboardStatusCount(JobStatus.Processing, 1),
         ]),
+    ],
+    [
+        new DashboardStatusCount(JobStatus.Scheduled, 7),
+        new DashboardStatusCount(JobStatus.Processing, 3),
     ]);
 
     [Fact]
@@ -61,5 +65,17 @@ public class QueueStatusCountsTests
                 new DashboardStatusCount(JobStatus.Failed, 2),
             ],
             Counts.Stats.StatusCounts);
+    }
+
+    [Fact]
+    public void Stats_KeepRecurrentCountsApartFromQueueCounts()
+    {
+        Assert.Equal(
+            [
+                new DashboardStatusCount(JobStatus.Scheduled, 7),
+                new DashboardStatusCount(JobStatus.Processing, 3),
+            ],
+            Counts.Stats.RecurrentStatusCounts);
+        Assert.Equal(18, Counts.Stats.Total);
     }
 }

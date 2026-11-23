@@ -98,6 +98,7 @@
   "overview.totalJobs": "Всего задач: {0}",
   "overview.queueBacklog": "Незавершённые задачи по очередям",
   "overview.serverHealth": "Состояние серверов",
+  "overview.recurrentJobs": "Задачи по расписанию",
   "overview.needsAttention": "Требует внимания",
   "overview.nothingNeedsAttention": "Всё в порядке",
   "overview.failedJobs": "Задачи с ошибками",

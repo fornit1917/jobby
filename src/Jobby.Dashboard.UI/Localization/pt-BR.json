@@ -98,6 +98,7 @@
   "overview.totalJobs": "Total de tarefas: {0}",
   "overview.queueBacklog": "Tarefas pendentes por fila",
   "overview.serverHealth": "Integridade dos servidores",
+  "overview.recurrentJobs": "Tarefas recorrentes",
   "overview.needsAttention": "Requer atenção",
   "overview.nothingNeedsAttention": "Nada requer atenção",
   "overview.failedJobs": "Tarefas com falha",

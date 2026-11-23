@@ -8,7 +8,10 @@ public sealed record PagedResult<T>(
 
 public sealed record DashboardStatusCount(JobStatus Status, long Count);
 
-public sealed record DashboardStatsDto(IReadOnlyList<DashboardStatusCount> StatusCounts)
+// StatusCounts and Total cover non-recurrent jobs; recurrent jobs are counted separately.
+public sealed record DashboardStatsDto(
+    IReadOnlyList<DashboardStatusCount> StatusCounts,
+    IReadOnlyList<DashboardStatusCount> RecurrentStatusCounts)
 {
     public long Total => StatusCounts.Sum(c => c.Count);
 }

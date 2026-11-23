@@ -21,7 +21,7 @@ public class QueueStatusCountsCacheTests
         return load.Task;
     }
 
-    private static QueueStatusCounts NewCounts() => new([]);
+    private static QueueStatusCounts NewCounts() => new([], []);
 
     [Fact]
     public async Task GetAsync_WithinDuration_ReusesResultWithoutLoadingAgain()

@@ -1,4 +1,5 @@
 using Jobby.Core.Models;
+using Jobby.Core.Models.Dashboard;
 using Jobby.IntegrationTests.Postgres.Helpers;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyDashboardReadStorageTests;
@@ -37,6 +38,30 @@ public class GetStatsTests
 
         Assert.Equal(1, stats.StatusCounts.Single(c => c.Status == JobStatus.Scheduled).Count);
         Assert.Equal(1, stats.Total);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_CountsRecurrentJobsByStatusAcrossQueues()
+    {
+        await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        var otherQueue = Recurrent(JobStatus.Scheduled);
+        otherQueue.QueueName = "recurrent";
+        db.Jobs.AddRange(
+            NewJob(JobStatus.Processing),
+            Recurrent(JobStatus.Scheduled),
+            otherQueue,
+            Recurrent(JobStatus.Processing));
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var storage = DbHelper.CreateDashboardReadStorage();
+        var stats = await storage.GetStatsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [
+                new DashboardStatusCount(JobStatus.Scheduled, 2),
+                new DashboardStatusCount(JobStatus.Processing, 1),
+            ],
+            stats.RecurrentStatusCounts);
     }
 
     private static JobDbModel NewJob(JobStatus status) => new()

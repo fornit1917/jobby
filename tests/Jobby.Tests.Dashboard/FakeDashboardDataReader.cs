@@ -14,7 +14,7 @@ internal sealed class FakeDashboardDataReader : IDashboardDataReader
     public IReadOnlyList<Guid>? LastDeleteIds { get; private set; }
     public IReadOnlyList<Guid>? LastDeleteRecurrentIds { get; private set; }
 
-    private DashboardStatsDto Stats { get; set; } = new(StatusCounts: []);
+    private DashboardStatsDto Stats { get; set; } = new(StatusCounts: [], RecurrentStatusCounts: []);
 
     private PagedResult<DashboardJobListItemDto> Jobs { get; set; }
         = new(Items: [], TotalCount: 0, Page: 1, PageSize: 50);

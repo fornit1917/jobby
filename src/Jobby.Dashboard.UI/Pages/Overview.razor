@@ -115,8 +115,21 @@ else if (_stats is not null)
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" md="4">
-            <MudPaper Outlined="true" Class="pa-4" Style="height:100%;">
+        <MudItem xs="12" md="4" Class="d-flex flex-column gap-3">
+            <MudPaper Outlined="true" Class="pa-4" Style="cursor:pointer;"
+                      @onclick="@(() => Nav.NavigateTo("recurrent"))" data-testid="overview-recurrent">
+                <div class="jobby-panel-title mb-3">@L["overview.recurrentJobs"]</div>
+                @foreach (var status in RecurrentStatuses)
+                {
+                    <div class="d-flex align-center justify-space-between" style="padding:7px 0;">
+                        <StatusChip Status="status"/>
+                        <span class="jobby-mono" style="font-size:18px;line-height:1;color:var(--text-1);"
+                              data-testid="@($"recurrent-count-{status}")">@RecurrentCountFor(status)</span>
+                    </div>
+                }
+            </MudPaper>
+
+            <MudPaper Outlined="true" Class="pa-4 flex-grow-1">
                 <div class="jobby-panel-title mb-3">@L["overview.needsAttention"]</div>
                 <div data-testid="overview-attention">
                     @{
@@ -181,6 +194,8 @@ else if (_stats is not null)
         JobStatus.Failed, JobStatus.Frozen, JobStatus.WaitingPrev,
     ];
 
+    private static readonly JobStatus[] RecurrentStatuses = [JobStatus.Scheduled, JobStatus.Processing];
+
     private DashboardStatsDto? _stats;
     private IReadOnlyList<DashboardServerDto> _servers = [];
     private IReadOnlyList<DashboardQueueDto> _queues = [];
@@ -196,6 +211,9 @@ else if (_stats is not null)
 
     private long CountFor(JobStatus status) =>
         _stats?.StatusCounts.FirstOrDefault(c => c.Status == status)?.Count ?? 0;
+
+    private long RecurrentCountFor(JobStatus status) =>
+        _stats?.RecurrentStatusCounts.FirstOrDefault(c => c.Status == status)?.Count ?? 0;
 
     private string QueueHref(string queueName) =>
         Nav.GetUriWithQueryParameters("queue", new Dictionary<string, object?> { ["name"] = queueName });

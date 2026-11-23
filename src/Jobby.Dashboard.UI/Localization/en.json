@@ -98,6 +98,7 @@
   "overview.totalJobs": "Total jobs: {0}",
   "overview.queueBacklog": "Queue backlog",
   "overview.serverHealth": "Server health",
+  "overview.recurrentJobs": "Recurrent jobs",
   "overview.needsAttention": "Needs attention",
   "overview.nothingNeedsAttention": "Nothing needs attention",
   "overview.failedJobs": "Failed jobs",
