@@ -53,6 +53,15 @@ app.MapJobbyDashboard("/jobby");
 
 The dashboard is now available at `/jobby`. Any path except the site root (`/`) can be used.
 
+`MapJobbyDashboard` works like the other `Map...` methods of ASP.NET Core. In an application with a `Startup` class, call it inside `UseEndpoints`. Endpoint conventions can be added to its result, for example `.RequireHost("jobs.internal")`. Call it on the application itself, not on a route group; the path may have several segments, for example `/admin/jobby`. The endpoints of the dashboard are not included in the OpenAPI (Swagger) document of the application.
+
+If the data source is registered in the dependency injection container, for example with `AddNpgsqlDataSource`, pass a function that takes it from the container instead of the data source itself:
+
+```csharp
+builder.Services.AddJobbyPostgresDashboardStorage(
+    sp => sp.GetRequiredService<NpgsqlDataSource>());
+```
+
 If Jobby is configured with a custom schema or table prefix, pass the same values to the dashboard storage, otherwise the dashboard will look for the jobs in the wrong tables:
 
 ```csharp
