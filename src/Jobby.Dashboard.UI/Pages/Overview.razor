@@ -36,15 +36,15 @@ else if (_stats is not null)
         @foreach (var status in TileOrder)
         {
             var count = CountFor(status);
-            <MudPaper Outlined="true" Class="pa-3" Style="cursor:pointer;"
-                      @onclick="@(() => Nav.NavigateTo($"jobs?status={status}"))"
-                      data-testid="@($"tile-{status}")">
-                <div class="d-flex align-center justify-space-between">
-                    <StatusChip Status="status"/>
-                    <span class="jobby-mono" style="font-size:26px;line-height:1;color:var(--text-1);"
-                          data-testid="@($"count-{status}")">@count</span>
-                </div>
-            </MudPaper>
+            <a href="@JobsHref(status)" class="jobby-row-link" data-testid="@($"tile-{status}")">
+                <MudPaper Outlined="true" Class="pa-3">
+                    <div class="d-flex align-center justify-space-between">
+                        <StatusChip Status="status"/>
+                        <span class="jobby-mono" style="font-size:26px;line-height:1;color:var(--text-1);"
+                              data-testid="@($"count-{status}")">@count</span>
+                    </div>
+                </MudPaper>
+            </a>
         }
     </div>
 
@@ -67,9 +67,8 @@ else if (_stats is not null)
                         @foreach (var q in _queues)
                         {
                             var total = q.StatusCounts.Sum(s => s.Count);
-                            <div class="d-flex flex-column" style="cursor:pointer;padding:7px 0;"
-                                 @onclick="@(() => Nav.NavigateTo(QueueHref(q.QueueName)))"
-                                 data-testid="@($"overview-queue-{q.QueueName}")">
+                            <a href="@QueueHref(q.QueueName)" class="jobby-row-link d-flex flex-column"
+                               style="padding:7px 0;" data-testid="@($"overview-queue-{q.QueueName}")">
                                 <div class="d-flex align-center justify-space-between gap-3">
                                     <span style="color:var(--text-1);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
                                           title="@q.QueueName">@q.QueueName</span>
@@ -86,7 +85,7 @@ else if (_stats is not null)
                                 <div class="mt-2">
                                     <StackedStatusBar Counts="q.StatusCounts"/>
                                 </div>
-                            </div>
+                            </a>
                         }
                     }
                 </div>
@@ -126,18 +125,19 @@ else if (_stats is not null)
         </MudItem>
 
         <MudItem xs="12" md="4" Class="d-flex flex-column gap-3">
-            <MudPaper Outlined="true" Class="pa-4" Style="cursor:pointer;"
-                      @onclick="@(() => Nav.NavigateTo("recurrent"))" data-testid="overview-recurrent">
-                <div class="jobby-panel-title mb-3">@L["overview.recurrentJobs"]</div>
-                @foreach (var status in RecurrentStatuses)
-                {
-                    <div class="d-flex align-center justify-space-between" style="padding:7px 0;">
-                        <StatusChip Status="status"/>
-                        <span class="jobby-mono" style="font-size:18px;line-height:1;color:var(--text-1);"
-                              data-testid="@($"recurrent-count-{status}")">@RecurrentCountFor(status)</span>
-                    </div>
-                }
-            </MudPaper>
+            <a href="recurrent" class="jobby-row-link" data-testid="overview-recurrent">
+                <MudPaper Outlined="true" Class="pa-4">
+                    <div class="jobby-panel-title mb-3">@L["overview.recurrentJobs"]</div>
+                    @foreach (var status in RecurrentStatuses)
+                    {
+                        <div class="d-flex align-center justify-space-between" style="padding:7px 0;">
+                            <StatusChip Status="status"/>
+                            <span class="jobby-mono" style="font-size:18px;line-height:1;color:var(--text-1);"
+                                  data-testid="@($"recurrent-count-{status}")">@RecurrentCountFor(status)</span>
+                        </div>
+                    }
+                </MudPaper>
+            </a>
 
             <MudPaper Outlined="true" Class="pa-4 flex-grow-1">
                 <div class="jobby-panel-title mb-3">@L["overview.needsAttention"]</div>
@@ -156,9 +156,8 @@ else if (_stats is not null)
                     {
                         @if (failed > 0)
                         {
-                            <div class="d-flex align-center gap-3" style="cursor:pointer;padding:7px 0;"
-                                 @onclick="@(() => Nav.NavigateTo($"jobs?status={JobStatus.Failed}"))"
-                                 data-testid="overview-attention-failed">
+                            <a href="@JobsHref(JobStatus.Failed)" class="jobby-row-link d-flex align-center gap-3"
+                               style="padding:7px 0;" data-testid="overview-attention-failed">
                                 <span class="jobby-tile-icon"
                                       style="background:var(--st-failed-bg);color:var(--st-failed);">
                                     <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Small"/>
@@ -169,14 +168,13 @@ else if (_stats is not null)
                                          style="color:var(--text-3);">@L.Format("overview.acrossAllQueues", failed)</div>
                                 </div>
                                 <StatusChip Status="JobStatus.Failed"/>
-                            </div>
+                            </a>
                         }
 
                         @if (frozen > 0)
                         {
-                            <div class="d-flex align-center gap-3" style="cursor:pointer;padding:7px 0;"
-                                 @onclick="@(() => Nav.NavigateTo($"jobs?status={JobStatus.Frozen}"))"
-                                 data-testid="overview-attention-frozen">
+                            <a href="@JobsHref(JobStatus.Frozen)" class="jobby-row-link d-flex align-center gap-3"
+                               style="padding:7px 0;" data-testid="overview-attention-frozen">
                                 <span class="jobby-tile-icon"
                                       style="background:var(--st-frozen-bg);color:var(--st-frozen);">
                                     <MudIcon Icon="@Icons.Material.Filled.AcUnit" Size="Size.Small"/>
@@ -187,7 +185,7 @@ else if (_stats is not null)
                                          style="color:var(--text-3);">@L.Format("overview.acrossAllQueues", frozen)</div>
                                 </div>
                                 <StatusChip Status="JobStatus.Frozen"/>
-                            </div>
+                            </a>
                         }
                     }
                 </div>
@@ -227,6 +225,8 @@ else if (_stats is not null)
 
     private string QueueHref(string queueName) =>
         Nav.GetUriWithQueryParameters("queue", new Dictionary<string, object?> { ["name"] = queueName });
+
+    private static string JobsHref(JobStatus status) => $"jobs?status={status}";
 
     protected override Task OnInitializedAsync()
     {

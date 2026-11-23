@@ -48,4 +48,19 @@ public class OverviewTests : DashboardClientTestContext
             Assert.Equal("4", cut.Find("[data-testid=overview-queue-backlog-emails]").TextContent));
         Assert.Equal("24", cut.Find("[data-testid=overview-queue-total-emails]").TextContent);
     }
+
+    [Fact]
+    public void Cards_AreLinksToTheListsTheySummarize()
+    {
+        SetupOverview(
+            new DashboardStatsDto(StatusCounts: [new DashboardStatusCount(JobStatus.Failed, 2)], RecurrentStatusCounts: []),
+            new DashboardQueueDto(QueueName: "emails", StatusCounts: [new DashboardStatusCount(JobStatus.Failed, 2)]));
+
+        var cut = Render<Overview>();
+
+        cut.WaitForAssertion(() => Assert.Equal("jobs?status=Failed", cut.Find("a[data-testid=tile-Failed]").GetAttribute("href")));
+        Assert.Equal("jobs?status=Failed", cut.Find("a[data-testid=overview-attention-failed]").GetAttribute("href"));
+        Assert.Equal("recurrent", cut.Find("a[data-testid=overview-recurrent]").GetAttribute("href"));
+        Assert.EndsWith("queue?name=emails", cut.Find("a[data-testid=overview-queue-emails]").GetAttribute("href"));
+    }
 }

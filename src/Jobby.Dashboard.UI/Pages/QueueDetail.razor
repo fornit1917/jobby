@@ -9,7 +9,7 @@
     <Actions>
         <MudTooltip Text="@L["queueDetail.backToQueues"]">
             <MudIconButton Icon="@Icons.Material.Outlined.ArrowBack" Href="queues"
-                           data-testid="back-to-queues"/>
+                           aria-label="@L["queueDetail.backToQueues"]" data-testid="back-to-queues"/>
         </MudTooltip>
         <AutoRefresh OnRefresh="ReloadAsync" Interval="Options.RefreshInterval"/>
     </Actions>
@@ -50,7 +50,6 @@ else
             <PropertyColumn Property="x => x.JobName" Title="@L["field.name"]">
                 <CellTemplate>
                     <a href="jobs/@context.Item.Id" class="jobby-row-link d-flex align-center gap-2 jobby-mono"
-                       @onclick="@(() => OpenJob(context.Item))" @onclick:preventDefault="true"
                        @onclick:stopPropagation="true">
                         @if (context.Item.IsGroupLocker)
                         {

@@ -4,26 +4,34 @@
 @inject LanguageState L
 @implements IDisposable
 
-<MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+<MudMenu @ref="_menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
          ActivationEvent="@MouseEvent.LeftClick" Dense="true" Class="ml-2" data-testid="datetime-settings">
     <ActivatorContent Context="menu">
-        <MudButton Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Schedule" OnClick="@menu.ToggleAsync"
-                   data-testid="datetime-pill">@PillLabel</MudButton>
+        @* MudMenu also toggles on Enter/Space keydown reaching its activator wrapper; together with the
+           button's own click that would open the panel and close it again. *@
+        <span @onkeydown:stopPropagation="true">
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Schedule" OnClick="@menu.ToggleAsync"
+                       data-testid="datetime-pill">@PillLabel</MudButton>
+        </span>
     </ActivatorContent>
     <ChildContent>
-        <div class="pa-3" style="min-width:280px;" @onclick:stopPropagation="true">
+        @* The panel holds form fields, not menu items, so MudMenu's own keyboard handling does not apply:
+           the focus trap moves focus in and back, Escape closes. *@
+        <MudFocusTrap DefaultFocus="DefaultFocus.Element">
+        <div class="pa-3" style="min-width:280px;" @onclick:stopPropagation="true" @onkeydown="OnPanelKeyDownAsync">
             <div class="jobby-field mb-3">
                 <span class="jobby-field-label">@L["settings.timeZone"]</span>
                 <MudAutocomplete T="string" Value="_tz" ValueChanged="OnTimeZoneChanged"
                                  SearchFunc="SearchTimeZones" Variant="Variant.Outlined" Margin="Margin.Dense"
                                  ResetValueOnEmptyText="false" CoerceValue="false" MaxItems="50"
-                                 data-testid="datetime-tz"/>
+                                 aria-label="@L["settings.timeZone"]" data-testid="datetime-tz"/>
             </div>
             <div class="jobby-field mb-3">
                 <span class="jobby-field-label">@L["settings.dateFormat"]</span>
                 <MudSelect T="DashboardDateStyle" Value="_date" ValueChanged="OnDateChanged"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="datetime-date">
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           aria-label="@L["settings.dateFormat"]" data-testid="datetime-date">
                     @foreach (var s in Enum.GetValues<DashboardDateStyle>())
                     {
                         <MudSelectItem T="DashboardDateStyle" Value="@s">@DateSample(s)</MudSelectItem>
@@ -33,7 +41,8 @@
             <div class="jobby-field mb-3">
                 <span class="jobby-field-label">@L["settings.timeFormat"]</span>
                 <MudSelect T="DashboardTimeStyle" Value="_time" ValueChanged="OnTimeChanged"
-                           Variant="Variant.Outlined" Margin="Margin.Dense" data-testid="datetime-time">
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           aria-label="@L["settings.timeFormat"]" data-testid="datetime-time">
                     @foreach (var s in Enum.GetValues<DashboardTimeStyle>())
                     {
                         <MudSelectItem T="DashboardTimeStyle" Value="@s">@TimeSample(s)</MudSelectItem>
@@ -48,10 +57,12 @@
                            data-testid="datetime-reset">@L["settings.reset"]</MudButton>
             </div>
         </div>
+        </MudFocusTrap>
     </ChildContent>
 </MudMenu>
 
 @code {
+    private MudMenu? _menu;
     private string _tz = "UTC";
     private DashboardDateStyle _date = DashboardDateStyle.Iso;
     private DashboardTimeStyle _time = DashboardTimeStyle.H24WithSeconds;
@@ -109,6 +120,9 @@
     }
 
     private Task ResetAsync() => Dt.ResetAsync(Js);
+
+    private Task OnPanelKeyDownAsync(KeyboardEventArgs e) =>
+        e.Key == "Escape" && _menu is not null ? _menu.CloseMenuAsync() : Task.CompletedTask;
 
     private Task<IEnumerable<string>> SearchTimeZones(string? value, CancellationToken cancellationToken)
     {

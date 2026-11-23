@@ -48,7 +48,8 @@
             <LanguageSelector />
             <DateTimeSettings />
             <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
-                           Color="Color.Inherit" OnClick="ToggleDarkModeAsync" data-testid="theme-toggle" />
+                           Color="Color.Inherit" OnClick="ToggleDarkModeAsync" aria-label="@L["nav.toggleTheme"]"
+                           data-testid="theme-toggle" />
         </div>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Mini" OpenMiniOnHover="false" Elevation="0" Class="jobby-drawer">

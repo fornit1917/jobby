@@ -88,4 +88,26 @@ public class DateTimeSettingsTests : MudTestContext
             Assert.NotEmpty(cut.FindAll("[data-testid=datetime-reset]"));
         });
     }
+
+    [Fact]
+    public void Escape_ClosesTheSettingsPopover()
+    {
+        var config = new DashboardClientConfig();
+        var state = new DateTimeDisplayState(config);
+        Services.AddSingleton(config);
+        Services.AddSingleton(state);
+        var cut = Render(builder =>
+        {
+            builder.OpenComponent<MudPopoverProvider>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<DateTimeSettings>(1);
+            builder.CloseComponent();
+        });
+        cut.Find("[data-testid=datetime-pill]").Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[data-testid=datetime-tz]")));
+
+        cut.Find(".mud-focus-trap-child-container > div").KeyDown(Key.Escape);
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[data-testid=datetime-tz]")));
+    }
 }
