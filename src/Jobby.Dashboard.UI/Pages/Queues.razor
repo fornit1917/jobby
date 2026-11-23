@@ -44,7 +44,7 @@ else if (_queues is not null)
             @foreach (var q in _queues)
             {
                 var open = _expanded.Contains(q.QueueName);
-                <tr class="@(open ? "jobby-row-open" : null)">
+                <tr>
                     <td>
                         <MudIconButton Size="Size.Small"
                                        Icon="@(open ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
@@ -78,7 +78,7 @@ else if (_queues is not null)
                 </tr>
                 @if (open)
                 {
-                    <tr class="jobby-row-open" data-testid="@($"queue-preview-{TestToken(q.QueueName)}")">
+                    <tr data-testid="@($"queue-preview-{TestToken(q.QueueName)}")">
                         <td></td>
                         <td colspan="5" style="padding-bottom:14px;">
                             @{

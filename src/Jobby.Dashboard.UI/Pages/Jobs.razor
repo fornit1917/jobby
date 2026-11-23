@@ -75,7 +75,8 @@ else if (_error is not null)
 }
 
 <MudDataGrid T="DashboardJobListItemDto" @ref="_grid" ServerData="LoadGridDataAsync" SortMode="SortMode.Single"
-             Outlined="true" Elevation="0" RowClick="OnRowClick" Class="jobby-grid-clickable" data-testid="jobs-grid">
+             Outlined="true" Elevation="0" Hover="true" RowClick="OnRowClick" RowClass="cursor-pointer"
+             data-testid="jobs-grid">
     <Columns>
         <PropertyColumn Property="x => x.JobName" Title="@L["field.name"]">
             <CellTemplate>

@@ -44,7 +44,7 @@ else
 
     <MudDataGrid T="DashboardJobListItemDto" @key="@($"{Name}|{_mode}")" @ref="_grid"
                  ServerData="LoadGridDataAsync" SortMode="SortMode.Single"
-                 Outlined="true" Elevation="0" RowClick="OnRowClick" Class="jobby-grid-clickable"
+                 Outlined="true" Elevation="0" Hover="true" RowClick="OnRowClick" RowClass="cursor-pointer"
                  data-testid="queue-jobs-grid">
         <Columns>
             <PropertyColumn Property="x => x.JobName" Title="@L["field.name"]">

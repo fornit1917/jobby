@@ -74,7 +74,7 @@
     </MudDrawer>
     <MudMainContent role="main">
         <div id="dashboard-main" tabindex="-1" @ref="_mainFocus"></div>
-        <MudContainer MaxWidth="MaxWidth.False" Class="jobby-main-container px-6 py-4" Style="max-width:1480px;">
+        <MudContainer MaxWidth="MaxWidth.False" Class="jobby-main-container px-3 px-sm-6 py-4" Style="max-width:1480px;">
             <ErrorBoundary>
                 <ChildContent>@Body</ChildContent>
                 <ErrorContent><MudAlert Severity="Severity.Error">@L["common.somethingWrong"]</MudAlert></ErrorContent>
