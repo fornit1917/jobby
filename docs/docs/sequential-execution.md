@@ -94,6 +94,8 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
 });
 ```
 
+**Important:** when the functionality is disabled (globally or for a specific queue), tasks with a populated `SerializableGroupId` are not taken for execution in such queues — they stay in the `Scheduled` status indefinitely. Make sure grouped tasks are not created in the queues where the functionality is disabled.
+
 The `DisableSerializableGroups` flag can also be set at the individual queue level. For example, you can disable sequential execution groups globally and enable them only for a single queue where you plan to create tasks with `SerializableGroupId` populated:
 
 ```csharp

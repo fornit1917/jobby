@@ -2,6 +2,9 @@
 
 ## v1.1.0 (unreleased)
 
+- Fixed the job-taking query for queues with `DisableSerializableGroups = true`
+  - Previously, if such a queue contained tasks with a populated `SerializableGroupId`, taking a batch failed with an error — either when two tasks of the same group were selected into one batch, or when a group locker was already processing
+  - Now such tasks are skipped by the query and stay in the `Scheduled` status. Consequently, the documented contract is relaxed: the flag no longer requires that all tasks in the queue have `SerializableGroupId` = `null`, but grouped tasks in such queues are never executed (the same applies to `JobbyServerSettings.DisableSerializableGroups` applied globally)
 - `last_finished_at` is now calculated by the database (`now()` in the UPDATE queries) instead of being computed on the application side
 - The heartbeat now also uses the database clock (`now()`) instead of the application server time
 - Tracing context capture for enqueued jobs (opt-in): a job can capture the tracing context of the `Activity` current at creation time and reuse it at execution. The behaviour is selected with the new `JobbyTracingMode` enum:

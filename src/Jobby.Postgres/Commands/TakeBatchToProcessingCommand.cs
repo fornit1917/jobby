@@ -24,6 +24,7 @@ internal class TakeBatchToProcessingCommand
                         queue_name = $1
                         AND status = {(int)JobStatus.Scheduled}
                         AND scheduled_start_at <= now()
+                        AND serializable_group_id IS NULL                        
 	                ORDER BY scheduled_start_at
 	                LIMIT $2
 	                FOR UPDATE SKIP LOCKED
