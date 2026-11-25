@@ -106,9 +106,28 @@ internal class PostgresqlJobbyStorage : IJobbyStorage
 
     public Task SendHeartbeatAsync(string serverId)
     {
-        return _sendHeartbeatCommand.ExecuteAsync(serverId, DateTime.UtcNow);
+        return _sendHeartbeatCommand.ExecuteAsync(serverId);
     }
 
+    public async Task DeleteLostServersAndRestartTheirJobsAsync(TimeSpan maxNoHeartbeatInterval,
+        List<string> deletedServerIds, List<StuckJobModel> stuckJobs)
+    {
+        deletedServerIds.Clear();
+        stuckJobs.Clear();
+
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var transaction = await conn.BeginTransactionAsync();
+
+        await _findAndDeleteLostServersCommand.ExecuteInTransactionAsync(conn, transaction, maxNoHeartbeatInterval, deletedServerIds);
+        if (deletedServerIds.Count > 0)
+        {
+            await _findAndRestartStuckJobsCommand.ExecuteInTransactionAsync(conn, transaction, deletedServerIds, stuckJobs);
+        }
+
+        await transaction.CommitAsync();
+    }
+
+    [Obsolete("This implementation computes minLastHeartbeat on the application clock; the TimeSpan overload computes it on the database side")]
     public async Task DeleteLostServersAndRestartTheirJobsAsync(DateTime minLastHeartbeat,
         List<string> deletedServerIds, List<StuckJobModel> stuckJobs)
     {
