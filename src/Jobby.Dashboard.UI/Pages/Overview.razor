@@ -5,7 +5,7 @@
 @inject DateTimeDisplayState Dt
 @inject NavigationManager Nav
 
-<PageHeader Title="@L["nav.overview"]" Subtitle="@Subtitle">
+<PageHeader Title="@L["nav.overview"]">
     <Actions>
         <AutoRefresh OnRefresh="LoadAsync" Interval="Options.RefreshInterval"/>
     </Actions>
@@ -18,8 +18,7 @@
 
 @if (_loading && _stats is null)
 {
-    <div data-testid="overview-loading"
-         style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
+    <div class="jobby-status-tiles" data-testid="overview-loading">
         @for (var i = 0; i < 6; i++)
         {
             <MudPaper Outlined="true" Class="pa-3">
@@ -31,26 +30,27 @@
 }
 else if (_stats is not null)
 {
-    <div data-testid="overview-cards"
-         style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;">
+    <div class="d-flex align-baseline justify-space-between gap-3 mb-2">
+        <div class="jobby-panel-title">@L["nav.jobs"]</div>
+        <div class="jobby-text-xs" style="color:var(--text-3);"
+             data-testid="overview-total">@L.Format("overview.totalJobs", _stats.Total)</div>
+    </div>
+    <div class="jobby-status-tiles" data-testid="overview-cards">
         @foreach (var status in TileOrder)
         {
-            var count = CountFor(status);
-            <a href="@JobsHref(status)" class="jobby-row-link" data-testid="@($"tile-{status}")">
-                <MudPaper Outlined="true" Class="pa-3">
-                    <div class="d-flex align-center justify-space-between">
-                        <StatusChip Status="status"/>
-                        <span class="jobby-mono" style="font-size:26px;line-height:1;color:var(--text-1);"
-                              data-testid="@($"count-{status}")">@count</span>
-                    </div>
-                </MudPaper>
-            </a>
+            <StatusTile Status="status" Count="CountFor(status)" Href="@JobsHref(status)"
+                        TestId="@($"tile-{status}")" CountTestId="@($"count-{status}")"/>
         }
     </div>
 
-    <MudText Class="mt-2" Typo="Typo.caption" data-testid="overview-total" Style="color:var(--text-3);">
-        @L.Format("overview.totalJobs", _stats.Total)
-    </MudText>
+    <div class="jobby-panel-title mt-5 mb-2">@L["overview.recurrentJobs"]</div>
+    <div class="jobby-status-tiles" data-testid="overview-recurrent">
+        @foreach (var status in RecurrentStatuses)
+        {
+            <StatusTile Status="status" Count="RecurrentCountFor(status)" Href="recurrent"
+                        TestId="@($"recurrent-tile-{status}")" CountTestId="@($"recurrent-count-{status}")"/>
+        }
+    </div>
 
     <MudGrid Class="mt-4" Spacing="3">
         <MudItem xs="12" md="4">
@@ -124,29 +124,15 @@ else if (_stats is not null)
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" md="4" Class="d-flex flex-column gap-3">
-            <a href="recurrent" class="jobby-row-link" data-testid="overview-recurrent">
-                <MudPaper Outlined="true" Class="pa-4">
-                    <div class="jobby-panel-title mb-3">@L["overview.recurrentJobs"]</div>
-                    @foreach (var status in RecurrentStatuses)
-                    {
-                        <div class="d-flex align-center justify-space-between" style="padding:7px 0;">
-                            <StatusChip Status="status"/>
-                            <span class="jobby-mono" style="font-size:18px;line-height:1;color:var(--text-1);"
-                                  data-testid="@($"recurrent-count-{status}")">@RecurrentCountFor(status)</span>
-                        </div>
-                    }
-                </MudPaper>
-            </a>
-
-            <MudPaper Outlined="true" Class="pa-4 flex-grow-1">
+        <MudItem xs="12" md="4">
+            <MudPaper Outlined="true" Class="pa-4" Style="height:100%;">
                 <div class="jobby-panel-title mb-3">@L["overview.needsAttention"]</div>
                 <div data-testid="overview-attention">
                     @{
                         var failed = CountFor(JobStatus.Failed);
                         var frozen = CountFor(JobStatus.Frozen);
                     }
-                    @if (failed == 0 && frozen == 0)
+                    @if (_lockedGroups == 0 && failed == 0 && frozen == 0)
                     {
                         <EmptyState Title="@L["overview.nothingNeedsAttention"]"
                                     Icon="@Icons.Material.Filled.CheckCircle"
@@ -154,6 +140,22 @@ else if (_stats is not null)
                     }
                     else
                     {
+                        @if (_lockedGroups > 0)
+                        {
+                            <a href="locked-groups" class="jobby-row-link d-flex align-center gap-3"
+                               style="padding:7px 0;" data-testid="overview-attention-locked">
+                                <span class="jobby-tile-icon"
+                                      style="background:var(--st-failed-bg);color:var(--st-failed);">
+                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"/>
+                                </span>
+                                <div class="flex-grow-1" style="min-width:0;">
+                                    <div style="color:var(--text-1);font-size:13px;">@L["nav.lockedGroups"]</div>
+                                    <div class="jobby-text-xs" style="color:var(--text-3);"
+                                         data-testid="overview-attention-locked-count">@L.Format("overview.lockedGroupsWaiting", _lockedGroups)</div>
+                                </div>
+                            </a>
+                        }
+
                         @if (failed > 0)
                         {
                             <a href="@JobsHref(JobStatus.Failed)" class="jobby-row-link d-flex align-center gap-3"
@@ -207,15 +209,11 @@ else if (_stats is not null)
     private DashboardStatsDto? _stats;
     private IReadOnlyList<DashboardServerDto> _servers = [];
     private IReadOnlyList<DashboardQueueDto> _queues = [];
-    private int _aliveCount;
+    private long _lockedGroups;
     private DateTime _threshold;
     private bool _loading;
     private string? _error;
     private readonly CancellationTokenSource _cts = new();
-
-    private string? Subtitle => _stats is null
-        ? null
-        : L.Format("overview.subtitle", _stats.Total, _aliveCount, _servers.Count, _queues.Count);
 
     private long CountFor(JobStatus status) =>
         _stats?.StatusCounts.FirstOrDefault(c => c.Status == status)?.Count ?? 0;
@@ -251,15 +249,14 @@ else if (_stats is not null)
             var statsTask = Reader.GetStatsAsync(_cts.Token);
             var serversTask = Reader.GetServersAsync(_cts.Token);
             var queuesTask = Reader.GetQueuesAsync(_cts.Token);
-            await Task.WhenAll(statsTask, serversTask, queuesTask);
+            var lockedGroupsTask = Reader.GetLockedGroupsCountAsync(_cts.Token);
+            await Task.WhenAll(statsTask, serversTask, queuesTask, lockedGroupsTask);
 
-            var servers = await serversTask;
-            var threshold = Options.ServerUtcNow.AddSeconds(-Options.StaleServerThresholdSeconds);
             _stats = await statsTask;
-            _servers = servers;
+            _servers = await serversTask;
             _queues = await queuesTask;
-            _threshold = threshold;
-            _aliveCount = servers.Count(s => s.HeartbeatTs >= threshold);
+            _lockedGroups = await lockedGroupsTask;
+            _threshold = Options.ServerUtcNow.AddSeconds(-Options.StaleServerThresholdSeconds);
         }
         catch (OperationCanceledException)
         {
