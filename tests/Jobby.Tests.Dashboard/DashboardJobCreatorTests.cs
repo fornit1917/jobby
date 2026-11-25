@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Jobby.Core.Models;
 using Jobby.Core.Models.Dashboard;
 using Jobby.Core.Services;
@@ -60,6 +62,51 @@ public class DashboardJobCreatorTests
             JobName: "SendReport", JobParam: """{"Recipient":"ops@example.com"}""", QueueName: queueName));
 
         Assert.Equal(expected, Assert.Single(_client.Jobs).QueueName);
+    }
+
+    [Theory]
+    [InlineData("""{"recipient":"ops@example.com","copies":3}""")]
+    [InlineData("""{"RECIPIENT":"ops@example.com","COPIES":3}""")]
+    public async Task EnqueueAsync_ParameterNamesInAnotherCase_AreReadAndStoredTheWayTheSerializerWritesThem(
+        string jobParam)
+    {
+        await _creator.EnqueueAsync(new CreateJobRequest(JobName: "SendReport", JobParam: jobParam, QueueName: null));
+
+        Assert.Equal("""{"Recipient":"ops@example.com","Copies":3}""", Assert.Single(_client.Jobs).JobParam);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_SystemTextJsonOptionsOfTheApplication_StillApplyToTypedParameters()
+    {
+        var builder = new JobbyBuilder();
+        builder.AddJob<SendReportCommand, SendReportHandler>();
+        builder.UseSystemTextJson(new JsonSerializerOptions
+        {
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        });
+        var client = new InMemoryJobbyClient(builder.CreateJobsFactory());
+        var creator = new DashboardJobCreator([builder], [client]);
+
+        // The number is a string, which only the options of the application accept.
+        await creator.EnqueueAsync(new CreateJobRequest(
+            JobName: "SendReport", JobParam: """{"recipient":"ops@example.com","copies":"3"}""", QueueName: null));
+
+        Assert.Equal("""{"Recipient":"ops@example.com","Copies":3}""", Assert.Single(client.Jobs).JobParam);
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_SerializerOfTheApplication_ReadsTypedParametersItself()
+    {
+        var builder = new JobbyBuilder();
+        builder.AddJob<SendReportCommand, SendReportHandler>();
+        builder.UseSerializer(new RecipientTextSerializer());
+        var client = new InMemoryJobbyClient(builder.CreateJobsFactory());
+        var creator = new DashboardJobCreator([builder], [client]);
+
+        await creator.EnqueueAsync(new CreateJobRequest(
+            JobName: "SendReport", JobParam: "ops@example.com", QueueName: null));
+
+        Assert.Equal("ops@example.com", Assert.Single(client.Jobs).JobParam);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Text.Json;
 using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
@@ -14,7 +15,7 @@ namespace Jobby.Dashboard;
 internal sealed class DashboardJobCreator
 {
     private readonly IJobbyClient? _client;
-    private readonly IJobParamSerializer? _serializer;
+    private readonly IJobParamSerializer? _parametersReader;
     private readonly FrozenDictionary<string, IJobCreator> _creatorsByJobName;
 
     // Both services are optional: an application can host the dashboard without registering Jobby itself.
@@ -23,7 +24,7 @@ internal sealed class DashboardJobCreator
     {
         var builder = builders.LastOrDefault();
         _client = clients.LastOrDefault();
-        _serializer = builder?.Serializer;
+        _parametersReader = ForTypedParameters(builder?.Serializer);
 
         var commandTypes = builder is null || _client is null
             ? []
@@ -81,7 +82,7 @@ internal sealed class DashboardJobCreator
         object? command;
         try
         {
-            command = _serializer!.DeserializeJobParam(jobParam, creator.CommandType);
+            command = _parametersReader!.DeserializeJobParam(jobParam, creator.CommandType);
         }
         catch (Exception e)
         {
@@ -93,6 +94,15 @@ internal sealed class DashboardJobCreator
         return command
                ?? throw new DashboardJobCreationException($"Parameters of job '{creator.JobName}' are required.");
     }
+
+    // Parameters are typed by hand, where "recipient" is as natural as "Recipient", and the default options
+    // would silently skip a name written in the other case. Only reading is relaxed: the job is still stored
+    // the way the serializer of the application writes it. A serializer of the application's own is used as is.
+    private static IJobParamSerializer? ForTypedParameters(IJobParamSerializer? serializer) =>
+        serializer is SystemTextJsonJobParamSerializer json
+            ? new SystemTextJsonJobParamSerializer(
+                new JsonSerializerOptions(json.Options) { PropertyNameCaseInsensitive = true })
+            : serializer;
 
     // A queue name with stray spaces would name a queue that no server reads.
     private static string? TrimToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

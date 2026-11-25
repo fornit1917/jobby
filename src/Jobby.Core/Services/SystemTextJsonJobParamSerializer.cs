@@ -12,6 +12,9 @@ internal class SystemTextJsonJobParamSerializer : IJobParamSerializer
         _opts = opts;
     }
 
+    // Read by the dashboard, which accepts parameters typed by hand with a more forgiving copy of these options.
+    internal JsonSerializerOptions Options => _opts;
+
     public object? DeserializeJobParam(string? json, Type jobParamType)
     {
         return json == null
