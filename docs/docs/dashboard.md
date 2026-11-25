@@ -188,6 +188,8 @@ The password is never stored as plain text. Generate its hash once and put the h
 string hash = Jobby.Dashboard.Authorization.Basic.PasswordHasher.Hash("your-password");
 ```
 
+The hash is computed with PBKDF2 (HMAC-SHA256, 210,000 iterations, a random 16-byte salt). The result is a string in Jobby's own format, which also holds the salt and the number of iterations, so a hash made by another tool is not accepted: always use `PasswordHasher.Hash`.
+
 Basic authentication sends the password with every request, so serve the dashboard over HTTPS.
 
 ### Login and password together with another scheme
@@ -255,11 +257,11 @@ Every timestamp is shown together with its UTC offset, for example `2026-11-24 1
 
 The start page summarizes the current state:
 
-- the number of jobs in each status; a click opens the list of these jobs;
+- **Jobs** - the number of jobs in each status; a click opens the list of these jobs;
+- **Recurrent jobs** - how many recurrent jobs are waiting for their next run and how many are running now;
 - **Queues** - for every queue, its backlog (jobs that are not finished yet) and the total number of jobs;
 - **Server health** - Jobby servers and the time of their last heartbeat;
-- **Recurrent jobs** - how many recurrent jobs are waiting for their next run and how many are running now;
-- **Needs attention** - failed and frozen jobs.
+- **Needs attention** - locked groups, failed jobs and frozen jobs.
 
 ### Recurrent
 
@@ -267,7 +269,7 @@ The list of recurrent jobs (see [Scheduled Jobs](./jobs-schedule)) with their sc
 
 ### Jobs
 
-The list of ordinary (non-recurrent) jobs. It can be filtered by status, queue, job name and scheduled date, and sorted by name, status, scheduled time or creation time. A click on a job opens its details: identifier, timestamps, number of attempts, server, parameters and error text.
+The list of ordinary (non-recurrent) jobs. It can be filtered by status, queue, job name and scheduled date, and sorted by name, status, scheduled time or creation time. For a job of a [sequential execution group](./sequential-execution#sequential-execution-groups) the list shows the identifier of the group. A click on a job opens its details: identifier, group, timestamps, number of attempts, server, parameters and error text.
 
 ### Queues
 
@@ -299,14 +301,14 @@ Triggering a recurrent job does not create a copy of it: the job simply runs ear
 The **Create job** button on the Jobs page and the **Create recurrent job** button on the Recurrent page open a form with the following fields:
 
 - **Job** - one of the jobs registered in the application;
-- **Parameters** - the job command as JSON, for example `{"Email": "user@example.com"}`. The JSON is parsed by the same serializer that Jobby uses when the job runs, and the form shows an error if it cannot be parsed. With the default settings property names are case-sensitive and unknown properties are ignored, so check the names carefully;
+- **Parameters** - the job command as JSON, for example `{"Email": "user@example.com"}`. The JSON is read with the serializer settings of Jobby, and the form shows an error if it cannot be read. The case of property names does not matter: both `email` and `Email` are accepted. With the default settings unknown properties are ignored, so check the names carefully;
 - **Queue** - optional; when empty, the job goes to the queue it uses by default;
 - **Cron expression** - for a recurrent job;
 - **Exclusive** - for a recurrent job. With the box checked the job is created as exclusive: if an exclusive recurrent job with the same name already exists, it is updated instead of a new one being created. Clear the box to add one more, independent schedule. See [Exclusivity](./jobs-schedule#exclusivity).
 
 A job created in the dashboard is the same as a job created from code with `IJobbyClient`.
 
-Jobs can be created only when the application that shows the dashboard also registers Jobby (`AddJobbyServerAndClient` or `AddJobbyClient`) together with its jobs (`AddJob` or `AddJobsFromAssemblies`). Otherwise the buttons are not shown.
+Jobs can be created when the application that shows the dashboard registers Jobby with `AddJobbyServerAndClient` and its jobs with `AddJob` or `AddJobsFromAssemblies`. Without registered jobs the buttons are not shown.
 
 ## Large job tables
 
