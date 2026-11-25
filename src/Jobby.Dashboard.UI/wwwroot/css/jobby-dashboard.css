@@ -552,7 +552,9 @@
     border-radius: 50%;
     flex-shrink: 0;
 }
+/* Room for the longest label in every language, so the controls next to it stay put as the text changes. */
 
+    min-width: 7.5em;
 .jobby-refresh-dot.is-on {
     background: var(--st-alive);
 }
