@@ -2,7 +2,8 @@
 
 ## v1.1.0 (unreleased)
 
-- Improved reliability of the heartbeat process
+- `last_finished_at` is now calculated by the database (`now()` in the UPDATE queries) instead of being computed on the application side
+- The heartbeat now also uses the database clock (`now()`) instead of the application server time
 - Tracing context capture for enqueued jobs (opt-in): a job can capture the tracing context of the `Activity` current at creation time and reuse it at execution. The behaviour is selected with the new `JobbyTracingMode` enum:
   - `CreateNewTraceId` (default) — every execution starts a new trace, previous behaviour
   - `RestoreTraceId` — the full W3C traceparent (TraceId, SpanId and sampling flags) captured at creation becomes the parent context of the execution activity, so the job span is a child of the span that enqueued it; the sampling decision of the original trace is preserved (a job created in an unsampled request is not recorded either)
