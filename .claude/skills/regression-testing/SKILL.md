@@ -163,6 +163,37 @@ When unsure whether a change is config or code: `UseServerSettings` lives in `Pr
 (code — rebuild), `Jobby:` section lives in `appsettings.json` (config — restart only).
 The config-only path applies to S24 tracing flags, `Jobby:UseMetrics`, etc.
 
+### Operational pitfalls (each actually bit during a run — don't repeat them)
+
+- **Combine time-critical sequences into ONE bash command.** Turnaround between separate
+  tool calls is measured in seconds and is not under your control: in S16/S17/S18 the
+  executor must be killed (or postgres stopped) IMMEDIATELY after `status=2` is observed,
+  and an 8 s `DelayMs` job WILL complete if the kill sits in the next tool call
+  (bit in practice: the S17 job finished before the kill and the scenario had to be redone).
+  Pattern: enqueue → poll for `status=2` → kill/stop, all in one command, with a generous
+  `DelayMs=30000` for kill-timing scenarios (S16/S17).
+- **Never discard the enqueue HTTP response.** A malformed JSON body fails silently if you
+  pipe the response to `/dev/null`, and the scenario then "waits" for jobs that were never
+  created (bit in practice in S15). Build bodies as files (heredoc / `--data-binary @file`,
+  not string concatenation), check the response for the returned id(s), and verify the
+  expected row count in the DB before polling for a later state.
+- **Instance logs accumulate across restarts** (the run commands append with `>>`).
+  Old lines from previous instance generations pollute greps: e.g. `Lost server` lines
+  from earlier kills are still in the file (bit in practice in S16). Before a kill/eviction
+  check, record the check point: either `wc -l < file` and grep only `tail -n +<N+1>`, or
+  `cp` the log to a snapshot like S24 does.
+- **docker-compose v1 needs `-f` for EVERY subcommand** (`stop`, `start`, `restart` too),
+  not only `up`. `docker-compose stop` without the flag fails with "no configuration file
+  provided" (bit in practice in S18 — in a scenario where every second counts).
+- **Extract `Value` from `job_param` via the JSON operator**, not string patterns:
+  `job_param::json->>'Value'` — substring/regex extraction with quotes breaks on the
+  nested-quote escaping of the psql wrapper (bit in practice in S7).
+- **Activity blocks: fields are separated by runs of spaces**, so `grep "DisplayName: DemoJob"`
+  never matches; and when parsing blocks with awk, reset extracted fields at each
+  `Activity.TraceId:` line — `ParentSpanId` is present only in some blocks and otherwise
+  leaks from the previous one (both bit in practice in S24). Use
+  `awk '/Activity.TraceId:/{tid=$2; pid="(none)"} /Activity.ParentSpanId:/{pid=$2} /Activity.DisplayName:/{print $2, tid, pid}'`.
+
 ### Fast server intervals — set them ALL in the initial copy
 
 Edit the copy's `UseServerSettings` ONCE at setup to include every scenario-tuned value,
@@ -467,7 +498,7 @@ appsettings no-rebuild shortcut does NOT apply here):
 1. `DbErrorPauseMs=2000` is already applied by the §2.1 speed setup — no edit/restart needed.
 2. Enqueue `{"Value":"s18","DelayMs":8000}`; poll until `status=2`, then IMMEDIATELY stop
    postgres — the delay is short now, so don't dawdle between steps.
-3. `wsl -e bash -lc "cd /mnt/d/projects/jobby && docker-compose stop"` (stops postgres).
+3. `wsl -e bash -lc "cd /mnt/d/projects/jobby && docker-compose -f docker-compose.postgresql.yml stop"` (stops postgres).
 4. Observe instance-1 log for ~15 s: repeated DB errors
    (`Error receiving next jobs from queue` and/or errors from the completion/post-processing path)
    every ~2 s — the server keeps retrying to persist the completion of the finished job.
@@ -689,11 +720,14 @@ Default config otherwise (polling 500 ms, retry 3×[1,2] s, queues `default` + `
    `CustomSchedulerRecurrentJobCommand` via the custom `SecondsIntervalSchedule`
    (resolved by the registered `SecondsIntervalScheduleHandler`).
 4. Log: `CustomSchedulerRecurrentJob` executions every ~1 s. DB: a separate
-   `CustomSchedulerRecurrentJob` row appears next to the `EmptyRecurrentJob` row
-   (different job names do not collide). Both rows have `queue_name='recurrent'`
+   `CustomSchedulerRecurrentJobCommand` row appears next to the `EmptyRecurrentJob` row
+   — NOTE the row's `job_name` is the command class name `CustomSchedulerRecurrentJobCommand`
+   (bit in practice: polling for `CustomSchedulerRecurrentJob` never matches), while the
+   log line says `CustomSchedulerRecurrentJob executed`. The two rows have different
+   `job_name`s so they do not collide; both have `queue_name='recurrent'`
    (`UseQueueForAllRecurrent` routes every recurrent job there, including the
    custom-scheduler one).
-5. `POST /jobs/cancel-recurrent-with-custom-scheduler`: the `CustomSchedulerRecurrentJob`
+5. `POST /jobs/cancel-recurrent-with-custom-scheduler`: the `CustomSchedulerRecurrentJobCommand`
    row disappears / executions stop, while `EmptyRecurrentJob` keeps running every ~2 s.
 6. `POST /jobs/cancel-recurrent`: the `EmptyRecurrentJob` row disappears / executions stop.
 **Expected:** both non-cron schedule types execute on their interval, are stored as
