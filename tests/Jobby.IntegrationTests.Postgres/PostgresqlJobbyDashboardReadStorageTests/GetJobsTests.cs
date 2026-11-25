@@ -466,6 +466,26 @@ public class GetJobsTests
         Assert.False(result.Items.Single(i => i.JobName == "plain").IsGroupLocker);
     }
 
+    [Theory]
+    // the default sort reads through the per-partition query
+    [InlineData(DashboardJobsSortBy.ScheduledStartAt)]
+    // any other sort reads through the single-scan query
+    [InlineData(DashboardJobsSortBy.JobName)]
+    public async Task GetJobsAsync_ReturnsSerializableGroupIdOfEachJob(DashboardJobsSortBy sortBy)
+    {
+        await using var db = await DbHelper.CreateContextAndClearDbAsync();
+        var grouped = NewJob(JobStatus.Scheduled, "grouped");
+        grouped.SerializableGroupId = "order-42";
+        db.Jobs.AddRange(grouped, NewJob(JobStatus.Scheduled, "plain"));
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await DbHelper.CreateDashboardReadStorage().GetJobsAsync(
+            new DashboardJobsQuery { SortBy = sortBy }, TestContext.Current.CancellationToken);
+
+        Assert.Equal("order-42", result.Items.Single(i => i.JobName == "grouped").SerializableGroupId);
+        Assert.Null(result.Items.Single(i => i.JobName == "plain").SerializableGroupId);
+    }
+
     private static IEnumerable<string> JobNames(int first, int count) =>
         Enumerable.Range(first, count).Select(i => $"job-{i:D6}");
 

@@ -10,12 +10,13 @@ namespace Jobby.Tests.Dashboard.Components;
 
 public class JobsTests : DashboardClientTestContext
 {
-    private static PagedResult<DashboardJobListItemDto> OneJob() => new(
+    private static PagedResult<DashboardJobListItemDto> OneJob(string? groupId = null) => new(
         Items:
         [
             new DashboardJobListItemDto(Id: Guid.NewGuid(), JobName: "send-email", Status: JobStatus.Failed,
                 QueueName: "emails", CreatedAt: DateTime.UtcNow, ScheduledStartAt: DateTime.UtcNow,
-                LastStartedAt: null, LastFinishedAt: null, StartedCount: 1, ServerId: null, IsGroupLocker: false),
+                LastStartedAt: null, LastFinishedAt: null, StartedCount: 1, ServerId: null,
+                SerializableGroupId: groupId, IsGroupLocker: false),
         ],
         TotalCount: 1, Page: 1, PageSize: 10);
 
@@ -39,6 +40,19 @@ public class JobsTests : DashboardClientTestContext
         NavigateTo("jobs");
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("status=", JobsQueries.Last()));
+    }
+
+    [Fact]
+    public void GroupOfTheJob_IsShownInTheList()
+    {
+        SetupApi(req => req.RequestUri!.AbsolutePath == "/api/queues"
+            ? Array.Empty<DashboardQueueDto>()
+            : OneJob(groupId: "order-42"));
+
+        var cut = Render<Jobs>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal("order-42", cut.Find("[data-testid=job-group]").TextContent));
     }
 
     [Fact]

@@ -89,6 +89,12 @@ else if (_error is not null)
                     }
                     <span>@context.Item.JobName</span>
                 </a>
+            @if (context.Item.SerializableGroupId is { } groupId)
+            {
+                <div class="jobby-text-xs jobby-job-group" title="@groupId">
+                    @L["field.group"]: <span class="jobby-mono" data-testid="job-group">@groupId</span>
+                </div>
+            }
             </CellTemplate>
         </PropertyColumn>
         <PropertyColumn Property="x => x.Status" Title="@L["field.status"]">

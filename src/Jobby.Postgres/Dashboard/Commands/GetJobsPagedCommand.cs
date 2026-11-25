@@ -13,7 +13,7 @@ internal sealed class GetJobsPagedCommand
 
     private const string Columns =
         "id, job_name, status, queue_name, created_at, scheduled_start_at, " +
-        "last_started_at, last_finished_at, started_count, server_id, is_group_locker";
+        "last_started_at, last_finished_at, started_count, server_id, serializable_group_id, is_group_locker";
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly QueueStatusCountsCache _countsCache;
@@ -284,6 +284,7 @@ internal sealed class GetJobsPagedCommand
                 LastFinishedAt: reader.GetNullableDatetime("last_finished_at"),
                 StartedCount: reader.GetInt32(reader.GetOrdinal("started_count")),
                 ServerId: reader.GetNullableString("server_id"),
+                SerializableGroupId: reader.GetNullableString("serializable_group_id"),
                 IsGroupLocker: reader.GetBoolean(reader.GetOrdinal("is_group_locker"))));
         }
 

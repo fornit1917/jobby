@@ -109,6 +109,26 @@ public class QueueDetailTests : DashboardClientTestContext
     }
 
     [Fact]
+    public void GroupOfTheJob_IsShownInTheList()
+    {
+        SetupApi(_ => new PagedResult<DashboardJobListItemDto>(
+            Items:
+            [
+                new DashboardJobListItemDto(Id: Guid.NewGuid(), JobName: "j", Status: JobStatus.Scheduled,
+                    QueueName: "emails", CreatedAt: DateTime.UtcNow, ScheduledStartAt: DateTime.UtcNow,
+                    LastStartedAt: null, LastFinishedAt: null, StartedCount: 0, ServerId: null,
+                    SerializableGroupId: "order-42", IsGroupLocker: false),
+            ],
+            TotalCount: 1, Page: 1, PageSize: 50));
+        NavigateToQueue("emails");
+
+        var cut = Render<QueueDetail>();
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal("order-42", cut.Find("[data-testid=job-group]").TextContent));
+    }
+
+    [Fact]
     public void Scheduled_CellReformatsWhenTimezoneChanges()
     {
         SetupApi(req => req.RequestUri!.AbsolutePath switch
@@ -121,7 +141,7 @@ public class QueueDetailTests : DashboardClientTestContext
                         CreatedAt: new DateTime(2026, 6, 10, 13, 30, 0, DateTimeKind.Utc),
                         ScheduledStartAt: new DateTime(2026, 6, 10, 13, 30, 0, DateTimeKind.Utc),
                         LastStartedAt: null, LastFinishedAt: null, StartedCount: 0, ServerId: null,
-                        IsGroupLocker: false),
+                        SerializableGroupId: null, IsGroupLocker: false),
                 ],
                 TotalCount: 1, Page: 1, PageSize: 50),
             _ => null,

@@ -56,6 +56,20 @@ public class JobDetailTests : DashboardClientTestContext
     }
 
     [Theory]
+    [InlineData("order-42", "order-42")]
+    [InlineData(null, "-")]
+    public void Group_IsShownOrMarkedAsAbsent(string? groupId, string expected)
+    {
+        var job = Job(isGroupLocker: false) with { SerializableGroupId = groupId };
+        SetupApi(req => req.RequestUri!.AbsolutePath.StartsWith("/api/jobs/") ? job : null);
+
+        var cut = Render<JobDetail>(p => p.Add(x => x.Id, job.Id));
+
+        cut.WaitForAssertion(() =>
+            Assert.Equal(expected, cut.Find("[data-testid=detail-group]").TextContent.Trim()));
+    }
+
+    [Theory]
     [InlineData(true, "Yes")]
     [InlineData(false, "No")]
     public void Recurrent_ShowsExclusiveStateAndMeaning(bool isExclusive, string expected)

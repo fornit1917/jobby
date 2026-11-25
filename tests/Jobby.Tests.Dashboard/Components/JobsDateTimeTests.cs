@@ -17,7 +17,7 @@ public class JobsDateTimeTests : DashboardClientTestContext
             new DashboardJobListItemDto(Id: Guid.NewGuid(), JobName: "send-email", Status: JobStatus.Completed,
                 QueueName: "emails",
                 CreatedAt: createdUtc, ScheduledStartAt: scheduledUtc ?? createdUtc, LastStartedAt: null, LastFinishedAt: null,
-                StartedCount: 1, ServerId: null, IsGroupLocker: false),
+                StartedCount: 1, ServerId: null, SerializableGroupId: null, IsGroupLocker: false),
         ],
         TotalCount: 1, Page: 1, PageSize: 50);
 

@@ -126,7 +126,8 @@ public class QueuesTests : DashboardClientTestContext
             new DashboardJobListItemDto(
                 Id: Guid.NewGuid(), JobName: "send-email", Status: JobStatus.Scheduled,
                 QueueName: "emails", CreatedAt: DateTime.UtcNow, ScheduledStartAt: DateTime.UtcNow,
-                LastStartedAt: null, LastFinishedAt: null, StartedCount: 0, ServerId: null, IsGroupLocker: false),
+                LastStartedAt: null, LastFinishedAt: null, StartedCount: 0, ServerId: null,
+                SerializableGroupId: null, IsGroupLocker: false),
         ],
         TotalCount: 1, Page: 1, PageSize: 5);
 }

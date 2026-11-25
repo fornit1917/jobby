@@ -232,6 +232,17 @@
     border: 1px solid var(--border);
 }
 
+/* The group of a job, under its name in a list. A group id can be any text, so it is cut short there;
+   the full value is in the tooltip and on the page of the job. */
+.jobby-job-group {
+    max-width: 40ch;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-3);
+}
+
 .jobby-stack-bar {
     display: flex;
     height: 8px;

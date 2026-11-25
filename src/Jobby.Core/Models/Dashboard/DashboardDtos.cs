@@ -51,6 +51,7 @@ public sealed record DashboardJobListItemDto(
     DateTime? LastFinishedAt,
     int StartedCount,
     string? ServerId,
+    string? SerializableGroupId,
     bool IsGroupLocker);
 
 public sealed record DashboardJobDetailsDto(
