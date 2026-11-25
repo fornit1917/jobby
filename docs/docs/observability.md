@@ -71,7 +71,7 @@ jobby
     // ...
 ```
 
-To set it for a specific job, set `TracingMode` in `JobOpts` (a command can also provide it via `IHasDefaultJobOptions.GetOptionsForEnqueuedJob`). Per-job `JobOpts.TracingMode` overrides the global setting. The per-job mode takes effect only when tracing is enabled with `UseTracing`: without that call jobs are not executed inside an `Activity`, so `TracingMode` has nothing to apply to:
+To set it for a specific job, set `TracingMode` in `JobOpts` (a command can also provide it via `IHasDefaultJobOptions.GetOptionsForEnqueuedJob`). Per-job `JobOpts.TracingMode` overrides the global setting. Only the execution side requires `UseTracing` — without that call jobs are not executed inside an `Activity`, so the captured context has nothing to apply to at execution time. The capture itself does not require `UseTracing`: a per-job mode is resolved and the traceparent is persisted at creation time even on a factory created without tracing settings, and such jobs silently start reusing their stored context if `UseTracing` is enabled later:
 
 ```csharp
 // continue the current trace even if the global mode is CreateNewTraceId
@@ -88,6 +88,7 @@ Notes:
 - If there is no current `Activity` at job creation time, nothing is captured and the execution starts a new trace. The same applies when the current `Activity` uses a non-W3C (hierarchical) ID format — e.g. in apps calling `Activity.ForceDefaultIdFormat = true` — since its IDs cannot form a valid traceparent.
 - The captured value is the full W3C traceparent stored in the `traceparent` column of the `jobby_jobs` table; the resolved `JobbyTracingMode` is stored alongside it in the `tracing_mode` column, so the behaviour of a job is pinned at creation time and survives redeployments. Both values are reused across job retries.
 - With `RestoreTraceId` the sampling decision of the original trace is preserved: a job created inside an unsampled request will not be recorded either. If you want jobs to be recorded independently of request sampling, use `LinkTraceId`.
+- `CreateNewTraceId` and `LinkTraceId` start the job `Activity` without an explicit parent context, and .NET treats that as "use the current `Activity` as the parent". If an ambient activity is current on the thread executing jobs (e.g. a custom outer middleware in the job pipeline started one and did not dispose it), the job span is recorded as a child of that ambient activity instead of being the root of its own trace. With no current `Activity` the span starts a new trace as described.
 - If the stored traceparent is invalid (e.g. corrupted), the execution falls back to starting a new trace.
 
 You can enable export of Jobby job traces through OpenTelemetry as follows:

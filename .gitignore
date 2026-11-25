@@ -51,5 +51,6 @@ BenchmarkDotNet.Artifacts
 node_modules/
 
 docs/.vitepress/cache
+docs/.vitepress/dist
 
 temp
