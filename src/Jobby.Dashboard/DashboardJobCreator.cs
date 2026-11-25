@@ -14,21 +14,25 @@ namespace Jobby.Dashboard;
 // the command type is needed to read the submitted parameters.
 internal sealed class DashboardJobCreator
 {
+    // Parameters are typed by hand, where "recipient" is as natural as "Recipient", and the default serializer
+    // of Jobby would silently skip a name written in the other case. Only reading is relaxed: the job is still
+    // stored the way that serializer writes it.
+    private static readonly JsonSerializerOptions TypedParametersOptions = new() { PropertyNameCaseInsensitive = true };
+
     private readonly IJobbyClient? _client;
-    private readonly IJobParamSerializer? _parametersReader;
+    private readonly JobbyBuilder? _builder;
     private readonly FrozenDictionary<string, IJobCreator> _creatorsByJobName;
 
     // Both services are optional: an application can host the dashboard without registering Jobby itself.
     // The last registration is taken, as it is the one the application itself resolves.
     public DashboardJobCreator(IEnumerable<JobbyBuilder> builders, IEnumerable<IJobbyClient> clients)
     {
-        var builder = builders.LastOrDefault();
+        _builder = builders.LastOrDefault();
         _client = clients.LastOrDefault();
-        _parametersReader = ForTypedParameters(builder?.Serializer);
 
-        var commandTypes = builder is null || _client is null
+        var commandTypes = _builder is null || _client is null
             ? []
-            : builder.AddedJobTypes.Select(types => types.CommandType);
+            : _builder.AddedJobTypes.Select(types => types.CommandType);
         _creatorsByJobName = commandTypes
             .Select(commandType => (IJobCreator)Activator.CreateInstance(
                 typeof(JobCreator<>).MakeGenericType(commandType))!)
@@ -82,7 +86,7 @@ internal sealed class DashboardJobCreator
         object? command;
         try
         {
-            command = _parametersReader!.DeserializeJobParam(jobParam, creator.CommandType);
+            command = ReadParameters(jobParam, creator.CommandType);
         }
         catch (Exception e)
         {
@@ -95,14 +99,16 @@ internal sealed class DashboardJobCreator
                ?? throw new DashboardJobCreationException($"Parameters of job '{creator.JobName}' are required.");
     }
 
-    // Parameters are typed by hand, where "recipient" is as natural as "Recipient", and the default options
-    // would silently skip a name written in the other case. Only reading is relaxed: the job is still stored
-    // the way the serializer of the application writes it. A serializer of the application's own is used as is.
-    private static IJobParamSerializer? ForTypedParameters(IJobParamSerializer? serializer) =>
-        serializer is SystemTextJsonJobParamSerializer json
-            ? new SystemTextJsonJobParamSerializer(
-                new JsonSerializerOptions(json.Options) { PropertyNameCaseInsensitive = true })
-            : serializer;
+    private object? ReadParameters(string? jobParam, Type commandType)
+    {
+        // A serializer or JSON options that the application chose itself are applied exactly as they are.
+        if (_builder!.IsSerializerSpecified)
+        {
+            return _builder.Serializer.DeserializeJobParam(jobParam, commandType);
+        }
+
+        return jobParam is null ? null : JsonSerializer.Deserialize(jobParam, commandType, TypedParametersOptions);
+    }
 
     // A queue name with stray spaces would name a queue that no server reads.
     private static string? TrimToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

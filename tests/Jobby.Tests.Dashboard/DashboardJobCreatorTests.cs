@@ -76,7 +76,7 @@ public class DashboardJobCreatorTests
     }
 
     [Fact]
-    public async Task EnqueueAsync_SystemTextJsonOptionsOfTheApplication_StillApplyToTypedParameters()
+    public async Task EnqueueAsync_JsonOptionsOfTheApplication_AreAppliedAsTheyAre()
     {
         var builder = new JobbyBuilder();
         builder.AddJob<SendReportCommand, SendReportHandler>();
@@ -89,9 +89,17 @@ public class DashboardJobCreatorTests
 
         // The number is a string, which only the options of the application accept.
         await creator.EnqueueAsync(new CreateJobRequest(
-            JobName: "SendReport", JobParam: """{"recipient":"ops@example.com","copies":"3"}""", QueueName: null));
+            JobName: "SendReport", JobParam: """{"Recipient":"ops@example.com","Copies":"3"}""", QueueName: null));
 
         Assert.Equal("""{"Recipient":"ops@example.com","Copies":3}""", Assert.Single(client.Jobs).JobParam);
+
+        // These options match names exactly, and the dashboard does not relax what the application chose.
+        var error = await Assert.ThrowsAsync<DashboardJobCreationException>(() =>
+            creator.EnqueueAsync(new CreateJobRequest(
+                JobName: "SendReport", JobParam: """{"recipient":"ops@example.com"}""", QueueName: null)));
+
+        Assert.StartsWith("Parameters do not match job 'SendReport': ", error.Message);
+        Assert.Single(client.Jobs);
     }
 
     [Fact]
