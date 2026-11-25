@@ -28,27 +28,27 @@ public class AvailabilityCheckServerModuleTests
         var availabilityCheckServerModule = CreateAvailabilityCheckServerModule(settings);
 
         var heartbeatSent = false;
-        DateTime? usedLastHeartbeatForDeleteServers = null;
+        TimeSpan? usedMaxNoHeartbeatInterval = null;
         _storageMock
             .Setup(x => x.SendHeartbeatAsync(ServerId))
             .Callback<string>(_ => heartbeatSent = true);
         _storageMock
-            .Setup(x => x.DeleteLostServersAndRestartTheirJobsAsync(It.IsAny<DateTime>(), It.IsAny<List<string>>(), It.IsAny<List<StuckJobModel>>()))
-            .Callback<DateTime, List<string>, List<StuckJobModel>>((dt, _, _) => usedLastHeartbeatForDeleteServers = dt);
+            .Setup(x => x.DeleteLostServersAndRestartTheirJobsAsync(It.IsAny<TimeSpan>(), It.IsAny<List<string>>(), It.IsAny<List<StuckJobModel>>()))
+            .Callback<TimeSpan, List<string>, List<StuckJobModel>>((interval, _, _) => usedMaxNoHeartbeatInterval = interval);
 
         availabilityCheckServerModule.Start();
 
         for (var i = 0; i < 100; i++)
         {
-            if (heartbeatSent && usedLastHeartbeatForDeleteServers.HasValue)
+            if (heartbeatSent && usedMaxNoHeartbeatInterval.HasValue)
                 break;
             await Task.Delay(10, TestContext.Current.CancellationToken);
         }
         availabilityCheckServerModule.SendStopSignal();
-        
+
         Assert.True(heartbeatSent);
-        Assert.NotNull(usedLastHeartbeatForDeleteServers);
-        Assert.True(DateTime.UtcNow.Subtract(usedLastHeartbeatForDeleteServers.Value) < TimeSpan.FromSeconds(settings.MaxNoHeartbeatIntervalSeconds + 1));
+        Assert.NotNull(usedMaxNoHeartbeatInterval);
+        Assert.Equal(TimeSpan.FromSeconds(settings.MaxNoHeartbeatIntervalSeconds), usedMaxNoHeartbeatInterval.Value);
     }
 
     private AvailabilityCheckServerModule CreateAvailabilityCheckServerModule(JobbyServerSettings settings)

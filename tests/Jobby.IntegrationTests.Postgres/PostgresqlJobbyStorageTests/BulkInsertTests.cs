@@ -6,7 +6,6 @@ using Jobby.IntegrationTests.Postgres.Helpers;
 using Jobby.TestsUtils.Jobs;
 using Jobby.TestsUtils.Tracing;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace Jobby.IntegrationTests.Postgres.PostgresqlJobbyStorageTests;
 
@@ -191,33 +190,26 @@ public class BulkInsertTests
         builder.UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId });
         var factory = builder.CreateJobsFactory();
 
-        var activity = TestTracingContext.StartAmbientActivity("bulk-insert-test");
-        try
-        {
-            var expectedTraceparent = TestTracingContext.ToTraceparent(activity);
-            var firstJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
-                new JobOpts { StartTime = DateTime.UtcNow.AddDays(1) });
-            var secondJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
-                new JobOpts { StartTime = DateTime.UtcNow.AddDays(2) });
-            Assert.Equal(expectedTraceparent, firstJob.Traceparent);
-            Assert.Equal(expectedTraceparent, secondJob.Traceparent);
+        using var ambient = TestTracingContext.BeginAmbientActivity("bulk-insert-test");
+        var expectedTraceparent = ambient.Traceparent;
+        var firstJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
+            new JobOpts { StartTime = DateTime.UtcNow.AddDays(1) });
+        var secondJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
+            new JobOpts { StartTime = DateTime.UtcNow.AddDays(2) });
+        Assert.Equal(expectedTraceparent, firstJob.Traceparent);
+        Assert.Equal(expectedTraceparent, secondJob.Traceparent);
 
-            var storage = DbHelper.CreateJobbyStorage();
-            await storage.BulkInsertJobsAsync([firstJob, secondJob]);
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.BulkInsertJobsAsync([firstJob, secondJob]);
 
-            var firstActualJob = await dbContext.Jobs.AsNoTracking()
-                .FirstAsync(x => x.Id == firstJob.Id, cancellationToken: TestContext.Current.CancellationToken);
-            var secondActualJob = await dbContext.Jobs.AsNoTracking()
-                .FirstAsync(x => x.Id == secondJob.Id, cancellationToken: TestContext.Current.CancellationToken);
-            Assert.Equal(expectedTraceparent, firstActualJob.Traceparent);
-            Assert.Equal(expectedTraceparent, secondActualJob.Traceparent);
-            Assert.Equal(JobbyTracingMode.RestoreTraceId, firstActualJob.TracingMode);
-            Assert.Equal(JobbyTracingMode.RestoreTraceId, secondActualJob.TracingMode);
-        }
-        finally
-        {
-            Activity.Current = null;
-        }
+        var firstActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == firstJob.Id, cancellationToken: TestContext.Current.CancellationToken);
+        var secondActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == secondJob.Id, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(expectedTraceparent, firstActualJob.Traceparent);
+        Assert.Equal(expectedTraceparent, secondActualJob.Traceparent);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, firstActualJob.TracingMode);
+        Assert.Equal(JobbyTracingMode.RestoreTraceId, secondActualJob.TracingMode);
     }
 
     [Fact]
@@ -230,32 +222,25 @@ public class BulkInsertTests
         var factory = builder.CreateJobsFactory();
 
         // ambient activity exists, but tracing context capture is disabled for these jobs via JobOpts
-        var activity = TestTracingContext.StartAmbientActivity("bulk-insert-test");
-        try
-        {
-            var firstJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
-                new JobOpts { StartTime = DateTime.UtcNow.AddDays(1), TracingMode = JobbyTracingMode.CreateNewTraceId });
-            var secondJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
-                new JobOpts { StartTime = DateTime.UtcNow.AddDays(2), TracingMode = JobbyTracingMode.CreateNewTraceId });
-            Assert.Null(firstJob.Traceparent);
-            Assert.Null(secondJob.Traceparent);
+        using var ambient = TestTracingContext.BeginAmbientActivity("bulk-insert-test");
+        var firstJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
+            new JobOpts { StartTime = DateTime.UtcNow.AddDays(1), TracingMode = JobbyTracingMode.CreateNewTraceId });
+        var secondJob = factory.Create(new TestJobCommand { UniqueId = Guid.NewGuid() },
+            new JobOpts { StartTime = DateTime.UtcNow.AddDays(2), TracingMode = JobbyTracingMode.CreateNewTraceId });
+        Assert.Null(firstJob.Traceparent);
+        Assert.Null(secondJob.Traceparent);
 
-            var storage = DbHelper.CreateJobbyStorage();
-            await storage.BulkInsertJobsAsync([firstJob, secondJob]);
+        var storage = DbHelper.CreateJobbyStorage();
+        await storage.BulkInsertJobsAsync([firstJob, secondJob]);
 
-            var firstActualJob = await dbContext.Jobs.AsNoTracking()
-                .FirstAsync(x => x.Id == firstJob.Id, cancellationToken: TestContext.Current.CancellationToken);
-            var secondActualJob = await dbContext.Jobs.AsNoTracking()
-                .FirstAsync(x => x.Id == secondJob.Id, cancellationToken: TestContext.Current.CancellationToken);
-            Assert.Null(firstActualJob.Traceparent);
-            Assert.Null(secondActualJob.Traceparent);
-            Assert.Equal(JobbyTracingMode.CreateNewTraceId, firstActualJob.TracingMode);
-            Assert.Equal(JobbyTracingMode.CreateNewTraceId, secondActualJob.TracingMode);
-        }
-        finally
-        {
-            Activity.Current = null;
-        }
+        var firstActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == firstJob.Id, cancellationToken: TestContext.Current.CancellationToken);
+        var secondActualJob = await dbContext.Jobs.AsNoTracking()
+            .FirstAsync(x => x.Id == secondJob.Id, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Null(firstActualJob.Traceparent);
+        Assert.Null(secondActualJob.Traceparent);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, firstActualJob.TracingMode);
+        Assert.Equal(JobbyTracingMode.CreateNewTraceId, secondActualJob.TracingMode);
     }
 
     private IJobsFactory CreateJobsFactory()

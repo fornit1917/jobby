@@ -1,5 +1,4 @@
-﻿using Jobby.Core.Models;
-using Jobby.Postgres.Helpers;
+﻿using Jobby.Postgres.Helpers;
 using Npgsql;
 
 namespace Jobby.Postgres.Commands;
@@ -15,14 +14,14 @@ internal class SendHeartbeatCommand
         _commandText = $@"
             INSERT INTO {DbName.Servers(settings)}
                 (id, heartbeat_ts)
-                VALUES ($1, $2)
+                VALUES ($1, now())
             ON CONFLICT (id) DO
             UPDATE
-                SET heartbeat_ts = $2
+                SET heartbeat_ts = now()
         ";
     }
 
-    public async Task ExecuteAsync(string serverId, DateTime ts)
+    public async Task ExecuteAsync(string serverId)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = new NpgsqlCommand(_commandText, conn)
@@ -30,7 +29,6 @@ internal class SendHeartbeatCommand
             Parameters =
             {
                 new() { Value = serverId },
-                new() { Value = ts },
             }
         };
         await cmd.ExecuteNonQueryAsync();
