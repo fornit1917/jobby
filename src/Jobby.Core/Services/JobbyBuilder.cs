@@ -66,7 +66,6 @@ public class JobbyBuilder : IJobbyComponentsConfigurable, IJobbyJobsConfigurable
     
     public bool IsExecutionScopeFactorySpecified => _scopeFactory != null;
     public bool IsLoggerFactorySpecified => _loggerFactory != null;
-    public bool IsSerializerSpecified => _serializer != null;
     public IEnumerable<JobTypesMetadata> AddedJobTypes => _jobExecutorsByJobName
         .Values
         .Select(x => x.GetJobTypesMetadata());

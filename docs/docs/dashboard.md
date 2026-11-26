@@ -301,7 +301,7 @@ Triggering a recurrent job does not create a copy of it: the job simply runs ear
 The **Create job** button on the Jobs page and the **Create recurrent job** button on the Recurrent page open a form with the following fields:
 
 - **Job** - one of the jobs registered in the application;
-- **Parameters** - the job command as JSON, for example `{"Email": "user@example.com"}`. The form shows an error if the JSON cannot be read. With the default serializer of Jobby the case of property names does not matter (both `email` and `Email` are accepted) and unknown properties are ignored, so check the names carefully. If the application sets its own serializer or JSON options for Jobby, the parameters are read exactly by their rules;
+- **Parameters** - the job command as JSON, for example `{"Email": "user@example.com"}`. The form shows an error if the JSON cannot be read. The dashboard reads the parameters itself, not with the serializer configured for Jobby: the case of property names does not matter (both `email` and `Email` are accepted) and unknown properties are ignored, so check the names carefully. The job is then stored by the serializer configured for Jobby, like a job created from code;
 - **Queue** - optional; when empty, the job goes to the queue it uses by default;
 - **Cron expression** - for a recurrent job;
 - **Exclusive** - for a recurrent job. With the box checked the job is created as exclusive: if an exclusive recurrent job with the same name already exists, it is updated instead of a new one being created. Clear the box to add one more, independent schedule. See [Exclusivity](./jobs-schedule#exclusivity).

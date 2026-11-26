@@ -14,25 +14,23 @@ namespace Jobby.Dashboard;
 // the command type is needed to read the submitted parameters.
 internal sealed class DashboardJobCreator
 {
-    // Parameters are typed by hand, where "recipient" is as natural as "Recipient", and the default serializer
-    // of Jobby would silently skip a name written in the other case. Only reading is relaxed: the job is still
-    // stored the way that serializer writes it.
-    private static readonly JsonSerializerOptions TypedParametersOptions = new() { PropertyNameCaseInsensitive = true };
+    // Parameters are typed by hand, where "recipient" is as natural as "Recipient". These options only read
+    // the typed text: the command is then passed to the client, which stores it in the format of Jobby.
+    private static readonly JsonSerializerOptions ParametersOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly IJobbyClient? _client;
-    private readonly JobbyBuilder? _builder;
     private readonly FrozenDictionary<string, IJobCreator> _creatorsByJobName;
 
     // Both services are optional: an application can host the dashboard without registering Jobby itself.
     // The last registration is taken, as it is the one the application itself resolves.
     public DashboardJobCreator(IEnumerable<JobbyBuilder> builders, IEnumerable<IJobbyClient> clients)
     {
-        _builder = builders.LastOrDefault();
+        var builder = builders.LastOrDefault();
         _client = clients.LastOrDefault();
 
-        var commandTypes = _builder is null || _client is null
+        var commandTypes = builder is null || _client is null
             ? []
-            : _builder.AddedJobTypes.Select(types => types.CommandType);
+            : builder.AddedJobTypes.Select(types => types.CommandType);
         _creatorsByJobName = commandTypes
             .Select(commandType => (IJobCreator)Activator.CreateInstance(
                 typeof(JobCreator<>).MakeGenericType(commandType))!)
@@ -81,33 +79,24 @@ internal sealed class DashboardJobCreator
         throw new DashboardJobCreationException($"Job '{jobName}' is not registered in this application.");
     }
 
-    private object DeserializeCommand(IJobCreator creator, string? jobParam)
+    private static object DeserializeCommand(IJobCreator creator, string? jobParam)
     {
         object? command;
         try
         {
-            command = ReadParameters(jobParam, creator.CommandType);
+            command = jobParam is null
+                ? null
+                : JsonSerializer.Deserialize(jobParam, creator.CommandType, ParametersOptions);
         }
         catch (Exception e)
         {
-            // The serializer is replaceable, so its exception types are unknown; whatever it rejects here is
-            // text typed by the user.
+            // Besides JSON errors, a constructor or a converter of the command can throw anything; whatever
+            // is rejected here is text typed by the user.
             throw new DashboardJobCreationException($"Parameters do not match job '{creator.JobName}': {e.Message}");
         }
 
         return command
                ?? throw new DashboardJobCreationException($"Parameters of job '{creator.JobName}' are required.");
-    }
-
-    private object? ReadParameters(string? jobParam, Type commandType)
-    {
-        // A serializer or JSON options that the application chose itself are applied exactly as they are.
-        if (_builder!.IsSerializerSpecified)
-        {
-            return _builder.Serializer.DeserializeJobParam(jobParam, commandType);
-        }
-
-        return jobParam is null ? null : JsonSerializer.Deserialize(jobParam, commandType, TypedParametersOptions);
     }
 
     // A queue name with stray spaces would name a queue that no server reads.

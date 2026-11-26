@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
-using System.Text.Json;
 using Jobby.Core.Exceptions;
 using Jobby.Core.Interfaces;
 using Jobby.Core.Models;
@@ -270,19 +269,6 @@ public class JobbyBuilderTests
         builder.AddOrReplaceJob<TestJobCommand, TestJobCommandHandler>();
 
         Assert.Single(builder.AddedJobTypes);
-    }
-
-    [Fact]
-    public void IsSerializerSpecified_IsFalseUntilASerializerOrItsOptionsAreSet()
-    {
-        var withSerializer = new JobbyBuilder();
-        withSerializer.UseSerializer(Mock.Of<IJobParamSerializer>());
-        var withJsonOptions = new JobbyBuilder();
-        withJsonOptions.UseSystemTextJson(new JsonSerializerOptions());
-
-        Assert.False(new JobbyBuilder().IsSerializerSpecified);
-        Assert.True(withSerializer.IsSerializerSpecified);
-        Assert.True(withJsonOptions.IsSerializerSpecified);
     }
 
     private static void AssertJobAdded(JobbyBuilder builder, string commandTypeName)
