@@ -25,3 +25,5 @@ dotnet pack --output nupkgs -p:PackageVersion=${VERSION}
 dotnet nuget push nupkgs/Jobby.Core.${VERSION}.nupkg --api-key ${NUGET_KEY} --source https://api.nuget.org/v3/index.json
 dotnet nuget push nupkgs/Jobby.Postgres.${VERSION}.nupkg --api-key ${NUGET_KEY} --source https://api.nuget.org/v3/index.json
 dotnet nuget push nupkgs/Jobby.AspNetCore.${VERSION}.nupkg --api-key ${NUGET_KEY} --source https://api.nuget.org/v3/index.json
+dotnet nuget push nupkgs/Jobby.Dashboard.${VERSION}.nupkg --api-key ${NUGET_KEY} --source https://api.nuget.org/v3/index.json
+dotnet nuget push nupkgs/Jobby.Dashboard.Authorization.Basic.${VERSION}.nupkg --api-key ${NUGET_KEY} --source https://api.nuget.org/v3/index.json

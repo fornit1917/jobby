@@ -138,38 +138,124 @@ until grep -q "Lost server" <file> 2>/dev/null; do sleep 1; done
 until bash temp/regression/db.sh "SELECT 1 WHERE EXISTS (SELECT 1 FROM jobby_jobs WHERE status=4)" | grep -q 1; do sleep 1; done
 ```
 
-Restart-after-config-edit is always this exact sequence (never skip the build check —
-see the rebuild discipline below):
+Restart-after-edit depends on WHAT was edited. BOTH paths: kill the port's PID FIRST
+(unconditional — a stale instance silently keeps serving the port), and after the
+wait-ready loop verify the fresh log contains `Now listening on: http://127.0.0.1:<port>`
+(see the S25 pitfall below for why this check is mandatory):
 
 ```bash
+# --- config-only edit (appsettings.json): NO REBUILD. ---
+# dotnet run serves appsettings.json from the PROJECT dir, so the new config applies
+# on a plain process restart; --no-build guarantees nothing touches the output dir
+# and no accidental build sneaks in:
 taskkill //F //PID $(netstat -ano | grep ":5075" | grep LISTEN | awk '{print $NF}' | head -1)
-# ...edit the copy...
+# ...edit the copy's appsettings.json...
+dotnet run --project temp/Jobby.Samples.AspNet --no-launch-profile --no-build --urls http://127.0.0.1:5075 \
+  >> temp/regression/logs/instance1.log 2>&1 &
+# run the wait-ready loop above, then:
+until grep -q "Now listening on: http://127.0.0.1:5075" <(tail -n 50 temp/regression/logs/instance1.log); do sleep 0.5; done
+
+# --- code edit (Program.cs, DemoJobCommand, ...): build IS required. ---
+# never build while an instance is running (output files are locked, see §5 discipline):
+taskkill //F //PID $(netstat -ano | grep ":5075" | grep LISTEN | awk '{print $NF}' | head -1)
+# ...edit the copy's code...
 dotnet build temp/Jobby.Samples.AspNet/Jobby.Samples.AspNet.csproj 2>&1 | tail -4   # expect "Ошибок: 0"
-# start instance in background, then run the wait-ready loop above
+# start instance in background, then run the wait-ready loop + "Now listening on" check above
 ```
+
+When unsure whether a change is config or code: ALL server settings — scalar
+(`DeleteCompleted`, `CompleteWithBatching`, heartbeat/freeze intervals, `DbErrorPauseMs`,
+polling, parallelism) in the `Jobby:Server` section AND the queue list in the
+`Jobby:Queues` section (`[{"QueueName": "default"}, {"QueueName": "heavy",
+"MaxDegreeOfParallelism": 1}]`; `MaxDegreeOfParallelism` omitted/0 = server default) —
+live in `appsettings.json` (config — restart only); the `Jobby:` flags (`UseTracing`,
+`TracingMode`, `UseMetrics`) are config too. The retry policy is hardcoded in `Program.cs`
+(code edit), but no scenario edits it. The config-only path applies to S9 (all three
+sub-checks), S17, S24 tracing flags, S25's `CompleteWithBatching`, etc.
+
+### Operational pitfalls (each actually bit during a run — don't repeat them)
+
+- **Combine time-critical sequences into ONE bash command.** Turnaround between separate
+  tool calls is measured in seconds and is not under your control: in S16/S17/S18 the
+  executor must be killed (or postgres stopped) IMMEDIATELY after `status=2` is observed,
+  and an 8 s `DelayMs` job WILL complete if the kill sits in the next tool call
+  (bit in practice: the S17 job finished before the kill and the scenario had to be redone).
+  Pattern: enqueue → poll for `status=2` → kill/stop, all in one command, with a generous
+  `DelayMs=30000` for kill-timing scenarios (S16/S17).
+- **Never discard the enqueue HTTP response.** A malformed JSON body fails silently if you
+  pipe the response to `/dev/null`, and the scenario then "waits" for jobs that were never
+  created (bit in practice in S15). Build bodies as files (heredoc / `--data-binary @file`,
+  not string concatenation), check the response for the returned id(s), and verify the
+  expected row count in the DB before polling for a later state.
+- **Instance logs accumulate across restarts** (the run commands append with `>>`).
+  Old lines from previous instance generations pollute greps: e.g. `Lost server` lines
+  from earlier kills are still in the file (bit in practice in S16). Before a kill/eviction
+  check, record the check point: either `wc -l < file` and grep only `tail -n +<N+1>`, or
+  `cp` the log to a snapshot like S24 does.
+- **KILL the instance on the target port before EVERY `dotnet run`, even if you believe
+  nothing is running** (bit in practice in S25: a stale instance from a previous scenario
+  step kept serving :5075; the new instance failed to bind and its truncated log recorded
+  only the bind failure, so one "instance" executed ~1000 jobs into a log file nobody was
+  reading, and the drain looked wrong until the logs were reconciled). `dotnet run` on an
+  occupied port does NOT fail the background command — the old process keeps answering
+  `curl` 200 and everything looks healthy. Rules:
+  1. Every start is preceded by an unconditional `taskkill` of the port's PID
+     (`taskkill //F //PID $(netstat -ano | grep ":5075" | grep LISTENING | awk '{print $NF}' | head -1)`)
+     — even between steps of the same scenario, even when the previous step "surely" stopped it.
+  2. After every start, verify the NEW process actually bound the port: the fresh log must
+     contain the Kestrel line `Now listening on: http://127.0.0.1:<port>`. If it is absent,
+     the start failed — find the stale instance and kill it. A bind failure prints
+     `Failed to bind to address http://127.0.0.1:<port>: address already in use`:
+     `grep -c "Now listening on: http://127.0.0.1:5075" <fresh-log>` must be >= 1.
+- **docker-compose v1 needs `-f` for EVERY subcommand** (`stop`, `start`, `restart` too),
+  not only `up`. `docker-compose stop` without the flag fails with "no configuration file
+  provided" (bit in practice in S18 — in a scenario where every second counts).
+- **Extract `Value` from `job_param` via the JSON operator**, not string patterns:
+  `job_param::json->>'Value'` — substring/regex extraction with quotes breaks on the
+  nested-quote escaping of the psql wrapper (bit in practice in S7).
+- **Activity blocks: fields are separated by runs of spaces**, so `grep "DisplayName: DemoJob"`
+  never matches; and when parsing blocks with awk, reset extracted fields at each
+  `Activity.TraceId:` line — `ParentSpanId` is present only in some blocks and otherwise
+  leaks from the previous one (both bit in practice in S24). Use
+  `awk '/Activity.TraceId:/{tid=$2; pid="(none)"} /Activity.ParentSpanId:/{pid=$2} /Activity.DisplayName:/{print $2, tid, pid}'`.
 
 ### Fast server intervals — set them ALL in the initial copy
 
-Edit the copy's `UseServerSettings` ONCE at setup to include every scenario-tuned value,
-so S15–S18 need no extra rebuild/restart cycles:
+All scalar server settings are bound from the `Jobby:Server` section of the copy's
+`appsettings.json` (config-only: applied on a plain process restart, NO rebuild).
+Set every scenario-tuned value ONCE at setup, so S15–S18 need no extra cycles:
 
-```csharp
-PermanentLockedFreezingIntervalSeconds = 2,
-PermanentLockedHandleUnlockingRequestsIntervalSeconds = 2,
-HeartbeatIntervalSeconds = 2,
-MaxNoHeartbeatIntervalSeconds = 6,
-DbErrorPauseMs = 2000
+```json
+"PermanentLockedFreezingIntervalSeconds": 2,
+"PermanentLockedHandleUnlockingRequestsIntervalSeconds": 2,
+"HeartbeatIntervalSeconds": 2,
+"MaxNoHeartbeatIntervalSeconds": 6,
+"DbErrorPauseMs": 2000
 ```
 
 Accepted side effect: blocked groups now freeze after ~2 s everywhere, so S14B's second
 job transitions `Scheduled`→`Frozen` quickly — fine, the assertion is only that it never
 executes. S9 still needs its own restarts (it tests other settings' values).
 
-### Pre-add the S17 code edit
+### No rebuilds needed in the whole suite
 
-Add the `CanBeRestarted` field to the copy's `DemoJobCommand` right after copying (see S17
-for the exact `JobOpts.CanBeRestartedIfServerGoesDown` mapping) — one rebuild at setup
-instead of a mid-suite rebuild+restart.
+The `DemoJobCommand` in the sample already carries every per-job field the scenarios use
+(`QueueName`, `SerializableGroupId`, `LockGroupIfFailed`, `TracingMode`, `CanBeRestarted`
+→ `JobOpts.CanBeRestartedIfServerGoesDown`, etc.), and all server settings live in
+`appsettings.json`. The copy still needs its ONE initial build after copying (bin/obj are
+stripped), but after that no scenario requires a code edit or rebuild — everything is a
+config edit + restart or just an HTTP call. If a future scenario seems to need a new
+command field, prefer adding it permanently to the sample (like the fields above) over
+editing the disposable copy.
+
+### Immediate DB checks (the S24 pattern, applies everywhere)
+
+With `DeleteCompleted=true` a fresh job row is visible in the DB from the moment of
+creation until completion. To verify row fields without racing the completion, do NOT
+sleep first: give the job a small `DelayMs≈1500`, POST it, then poll the DB until the row
+appears (~1 s at 500 ms polling — it is in status 1 or 2 then) and check the fields.
+Poll the log for the execution line only when you need execution evidence, not for DB
+checks. A fixed `sleep` before a checkable state is always wrong: poll for the state.
 
 ### Timing substitutions (override the scenario sleeps)
 
@@ -186,6 +272,7 @@ sleeps are conservative. Poll instead of sleeping:
 | S16 | `sleep 12` after kill | poll the survivor's log for `Lost server` |
 | S16 | `sleep 24` + `sleep 8` for completion | poll until the job row disappears |
 | S18 | `DelayMs=20000` | `DelayMs=8000`; stop postgres right after `status=2` is seen |
+| S18 | observe DB errors ~15 s | poll the log until 3+ DB-error lines appear (~2 s apart at `DbErrorPauseMs=2000`), then recover postgres |
 
 Cap every poll loop at the scenario's stated timeout and count the iterations, so a
 never-met condition is reported as a FAIL, not a hang.
@@ -194,8 +281,8 @@ never-met condition is reported as a FAIL, not a hang.
 
 While a scenario parks a delayed job (S4) or waits out retries (S12/S13/S14), run the next
 independent scenario's enqueues and checks meanwhile — log/DB checks are value- or
-group-scoped and don't interfere. Never overlap scenarios that edit config, rebuild, or
-kill instances.
+group-scoped and don't interfere. Never overlap scenarios that edit config/code, restart,
+or kill instances.
 
 ## 3. Clean the database
 
@@ -256,21 +343,30 @@ All endpoints are `POST` unless stated; base URL `http://127.0.0.1:5075` (or :50
   "DelayMs": 0,
   "QueueName": null,
   "SerializableGroupId": null,
-  "LockGroupIfFailed": false
+  "LockGroupIfFailed": false,
+  "CanBeRestarted": null,
+  "TracingMode": null
 }
 ```
 
 Handler behavior: logs `Executing demo job, value is {Value}, attempt number is {Attempt}`;
 `ShouldBeFailed=true` throws (retried per retry policy); `ShouldThrowIgnoredException=true`
 throws an exception that `IgnoreSomeErrorsMiddleware` swallows; `DelayMs` delays completion.
+`TracingMode` (`"RestoreTraceId" | "LinkTraceId" | "CreateNewTraceId"`, string enum —
+`JsonStringEnumConverter` is applied on the sample's command) overrides the global
+`Jobby:TracingMode` appsettings value for that job; used by S24.
 
-Default demo config (`Program.cs` of the copy): polling 500 ms; retry policy `MaxCount=3,
-IntervalsSeconds=[1,2]`; queues: `default`, `recurrent`, `heavy` (`MaxDegreeOfParallelism=1`);
-`DeleteCompleted=true` (default), `CompleteWithBatching=false` (default).
+Default demo config: all server settings come from the copy's `appsettings.json` —
+scalars in `Jobby:Server` (polling 500 ms, `DeleteCompleted=true`,
+`CompleteWithBatching=false`, default heartbeat/freeze intervals) and the queue list in
+`Jobby:Queues` (`default`, `recurrent`, `heavy` with `MaxDegreeOfParallelism=1`);
+in code (`Program.cs`) only the retry policy `MaxCount=3, IntervalsSeconds=[1,2]` remains.
 
 You may edit **the copy's** `Program.cs` / `appsettings.json` / code per-scenario
 (e.g. server settings, extra command fields). That is expected — the repo itself stays untouched.
-Rebuild the copy after code edits and restart instances after any config edit.
+Code edits require a rebuild; appsettings.json edits require only a process restart
+(`dotnet run --no-build` — see the two restart paths in §2.1). Server settings and queues
+(S9, S25, §2.1 speed setup) are appsettings edits — restart only, no rebuild.
 
 **Rebuild discipline (important — bitten in practice):**
 - NEVER build while an instance is running: the running exe locks the output and the build
@@ -343,12 +439,15 @@ responses), and verdict PASS/FAIL.
 **Expected:** all five metric families present and reflecting activity.
 
 ### S9. Server settings variations (DeleteCompleted / CompleteWithBatching / queue count)
-Run three sub-checks, editing the copy's `UseServerSettings` in `Program.cs` between them:
-1. `DeleteCompleted=false`: successful jobs remain in DB with `status=3`.
-2. `CompleteWithBatching=true`: jobs still complete correctly (batch completion path works);
-   with `DeleteCompleted=false` rows end `status=3`, with `true` rows are removed.
-3. Single queue only (`Queues=[default]`): default-queue jobs execute; jobs sent to `heavy`
-   stay `Scheduled` and are NOT executed (server is not listening to that queue).
+Run three sub-checks; ALL are config-only — edit the copy's `appsettings.json`
+(`Jobby:Server` for 1–2, `Jobby:Queues` for 3), each needs only the kill→edit→restart
+cycle (NO rebuild):
+1. `Jobby:Server:DeleteCompleted=false`: successful jobs remain in DB with `status=3`.
+2. `Jobby:Server:CompleteWithBatching=true`: jobs still complete correctly (batch completion
+   path works); with `DeleteCompleted=false` rows end `status=3`, with `true` rows are removed.
+3. Single queue only (`"Queues": [{"QueueName": "default"}]`): default-queue jobs execute;
+   jobs sent to `heavy` stay `Scheduled` and are NOT executed (server is not listening to
+   that queue). Restore the full queue list afterwards (needed by S5/S25).
 **Expected:** settings behave per `docs/docs/install-and-config.md` semantics.
 
 ### S10. Transactional batch
@@ -422,10 +521,9 @@ Run three sub-checks, editing the copy's `UseServerSettings` in `Program.cs` bet
 **Expected:** dead server evicted by heartbeat timeout; its in-flight job restarted on a live instance.
 
 ### S17. `CanBeRestartedIfServerGoesDown=false`
-1. Same settings/instances as S16. The `CanBeRestarted` field was already added to the
-   copy's `DemoJobCommand` by the §2.1 speed setup (mapped to
-   `JobOpts.CanBeRestartedIfServerGoesDown`) — no rebuild needed; just TRUNCATE
-   `jobby_jobs` and ensure both instances are running.
+1. Same settings/instances as S16. The `CanBeRestarted` field is a permanent part of the
+   sample's `DemoJobCommand` (mapped to `JobOpts.CanBeRestartedIfServerGoesDown`) —
+   just TRUNCATE `jobby_jobs` and ensure both instances are running.
 2. Enqueue `{"Value":"s17","DelayMs":8000,"CanBeRestarted":false}` to instance 1; poll until `status=2`.
 3. Kill instance 1. Poll up to ~12 s: server removed as in S16, but the job is NOT restarted —
    it stays with the dead server's `server_id`, `started_count` stays 1, `can_be_restarted=false`.
@@ -435,7 +533,7 @@ Run three sub-checks, editing the copy's `UseServerSettings` in `Program.cs` bet
 1. `DbErrorPauseMs=2000` is already applied by the §2.1 speed setup — no edit/restart needed.
 2. Enqueue `{"Value":"s18","DelayMs":8000}`; poll until `status=2`, then IMMEDIATELY stop
    postgres — the delay is short now, so don't dawdle between steps.
-3. `wsl -e bash -lc "cd /mnt/d/projects/jobby && docker-compose stop"` (stops postgres).
+3. `wsl -e bash -lc "cd /mnt/d/projects/jobby && docker-compose -f docker-compose.postgresql.yml stop"` (stops postgres).
 4. Observe instance-1 log for ~15 s: repeated DB errors
    (`Error receiving next jobs from queue` and/or errors from the completion/post-processing path)
    every ~2 s — the server keeps retrying to persist the completion of the finished job.
@@ -497,21 +595,112 @@ Run three sub-checks, editing the copy's `UseServerSettings` in `Program.cs` bet
 **Expected:** after a complete wipe, startup migrations recreate the full schema and the app
    works normally.
 
-### S24. Tracing
-1. Edit the copy's `appsettings.json`: `"Jobby": { "UseTracing": true }` (keep `UseMetrics: true`).
-   Restart instance 1. Tracing exports to stdout via the console OTel exporter.
-2. Enqueue `{"Value":"s24"}`. In the log find the Activity entries for the job run: activity
-   name/source `Jobby` jobs execution (`JobbyActivitySourceNames.JobsExecution`), a fresh
-   `ActivityId`/`TraceId` per run, job name and status attributes; a FAILED job's activity is
-   marked as error.
-3. After the scenario, set `UseTracing` back to `false` (only matters if you keep the copy;
-   the copy is deleted in cleanup anyway).
-**Expected:** each job execution produces an Activity in stdout with correct attributes;
-   failed jobs traced as errors.
+### S24. Tracing modes
+The sample app instruments incoming HTTP requests with OpenTelemetry
+(`AddAspNetCoreInstrumentation`), so every `POST` runs inside a request `Activity` whose
+TraceId appears in the console exporter output when the request completes. Job creation
+inside a request can capture the full W3C traceparent (TraceId + SpanId + flags) of that
+Activity (`traceparent` column of `jobby_jobs`, mode in `tracing_mode`: 0 = CreateNewTraceId,
+1 = RestoreTraceId, 2 = LinkTraceId) and the execution either continues the trace
+(RestoreTraceId: job span is a child of the request span) or links to it (LinkTraceId).
+
+Practical notes (verified in the first run):
+- SPEED: `DemoJobCommand` already carries `[JsonConverter(typeof(JsonStringEnumConverter))]`
+  on `TracingMode`, so string enum values in JSON bodies work out of the box — this scenario
+  needs NO code edits, only appsettings.json changes. `dotnet run` serves appsettings.json
+  from the project dir, so a config edit needs only a process restart, NEVER a rebuild.
+  Total scenario cost is one build (shared with the copy setup) and one mid-scenario restart.
+- SPEED: `DelayMs=1500` is enough. The DB row is visible the whole time before completion,
+  so query the DB IMMEDIATELY after the POST (poll until the row appears, ~1 s — it is in
+  status 1 or 2 then), do not wait for the execution to check traceparent/tracing_mode.
+  Then poll the log for `Executing demo job, value is s24x` (executes within ~1–2 s at the
+  default 500 ms polling). NOTE: the handler line means the span STARTED, not finished —
+  the console exporter prints the execution Activity block only after the span STOPS, so
+  wait out the remaining `DelayMs` (~2 s with `DelayMs=1500`) after that line before
+  snapshotting the log and reading Activity blocks (bit in practice: a snapshot taken right
+  after the handler line contained no execution block yet).
+- The console exporter prints the request span AFTER the HTTP response returns, so for a
+  `DelayMs` job the job execution block appears BEFORE its request-span block in the log.
+  Correlate by the TraceId hex string, not by order. Identify blocks by the line after
+  `Activity.TraceId`/`SpanId` — `Activity.DisplayName` (`POST jobs/enqueue-job` vs
+  the job name, e.g. `DemoJob` — the execution span is named after the job). A delay-free
+  job's request span is exported immediately though; either way, matching by hex is the
+  reliable method.
+- When extracting a request span's TraceId by its `Activity.DisplayName`, grep with a WIDE
+  look-back window (`grep -B9`, not `-B7`): the number of lines between `Activity.TraceId`
+  and `DisplayName` varies (a `ParentSpanId` line may or may not be present, e.g. when curl
+  sends no traceparent header vs propagation middleware), so a tight window can miss the
+  right line (bit in practice).
+- The console exporter DOES print links: a LinkTraceId execution shows an `Activity.Links:`
+  section with one `<TraceId> <SpanId>` line per link — matching it against the DB
+  `traceparent` is the direct evidence for step 4.
+- The request span's `SpanId` is printed in its Activity block — needed to verify
+  `ParentSpanId` of the job execution span in RestoreTraceId mode (they must be equal now,
+  the full traceparent is restored) and the link's `SpanId` in LinkTraceId mode.
+- The stored traceparent flags are always `-01` here: the app does not configure a sampler,
+  so the default ASP.NET instrumentation records every local request. The unsampled-parent
+  path (`-00`, job span stays unrecorded) is covered by unit tests, not by this scenario.
+- The instance log is written CONCURRENTLY with your checks: counts taken at different
+  moments on the same file differ (bit in practice — a recurrent job executes every 5 s
+  while you grep). `cp` the log to a temp snapshot and run all counting/extracting (awk,
+  uniq) against the snapshot, not the live file.
+- If you truncated `jobby_jobs` after instance startup (as this scenario's restarts may
+  prompt), the startup `EmptyRecurrentJob` will NOT come back by itself — before step 6
+  schedule it manually: `POST /jobs/schedule-recurrent` with `"*/5 * * * * *"`.
+- `DemoJobCommand` accepts `"TracingMode": "RestoreTraceId" | "LinkTraceId" | "CreateNewTraceId"`
+  (omit → global setting); `appsettings.json` binds the same names for the global
+  `Jobby:TracingMode` value.
+
+1. Edit the copy's `appsettings.json`: `"Jobby": { "UseTracing": true, "TracingMode": "RestoreTraceId" }`
+   (keep `UseMetrics: true`). Start instance 1 (restart only — appsettings changes need
+   no rebuild).
+2. Default inherit (global RestoreTraceId): `POST /jobs/enqueue-job` with
+   `{"Value":"s24a","DelayMs":1500}`. Immediately poll the DB
+   until the row appears (status 1 or 2 — do not wait for the execution) and check:
+   - DB: the new `DemoJob` row has `traceparent` = `00-<request TraceId>-<request SpanId>-01`
+     and `tracing_mode` = 1;
+   then poll the log for `Executing demo job, value is s24a` and check the console output:
+   the job's execution Activity (`JobbyActivitySourceNames.JobsExecution`)
+   has the SAME TraceId as the request span AND its `Activity.ParentSpanId` equals the
+   request span's SpanId (true child of the creating span). Also verify the execution
+   span is identified by the job name (`Activity.DisplayName: DemoJob`).
+3. Per-job override (off): `POST /jobs/enqueue-job` with
+   `{"Value":"s24b","DelayMs":1500,"TracingMode":"CreateNewTraceId"}`.
+   DB (immediately): `traceparent` NULL, `tracing_mode` = 0; the execution Activity has a
+   TraceId different from the request's.
+4. LinkTraceId: `POST /jobs/enqueue-job` with
+   `{"Value":"s24c","DelayMs":1500,"TracingMode":"LinkTraceId"}`.
+   DB (immediately): `traceparent` is the full request traceparent, `tracing_mode` = 2;
+   console: the execution Activity has a NEW TraceId (different from the request's), no
+   parent, and its `Activity.Links` contain the request trace (the link's TraceId/SpanId
+   equal the request span's).
+5. Failed job is traced as an error: `POST /jobs/enqueue-job` with
+   `{"Value":"s24fail","ShouldBeFailed":true}` (no DelayMs). Poll the log until the retry
+   policy is exhausted (3 attempts, `failed` LogError on the last). Every execution attempt
+   exports a `DemoJob` Activity; the FAILED attempt's block has `Activity.StatusCode: Error`
+   with the exception message and an `exception` event containing
+   `exception.type`/`exception.message`/`exception.stacktrace`. DB (final row, it is not
+   deleted on failure): `status=4`.
+6. Recurrent jobs never capture tracing context: with the same global config, check the
+   `EmptyRecurrentJob` row has `traceparent` NULL and `tracing_mode` = 0 (schedule it
+   first if the table was truncated) and its execution Activities keep starting fresh
+   traces.
+7. Per-job override (on, global off): edit `appsettings.json` to
+   `"UseTracing": true, "TracingMode": "CreateNewTraceId"`, restart instance 1 (no rebuild).
+   `POST /jobs/enqueue-job` with `{"Value":"s24d","DelayMs":1500,"TracingMode":"RestoreTraceId"}`.
+   DB (immediately): `traceparent` equals the request traceparent, `tracing_mode` = 1; the
+   execution Activity continues it (same TraceId, ParentSpanId = request SpanId).
+8. Restore `appsettings.json` to `"UseTracing": false`.
+**Expected:** each job execution produces an Activity in stdout, named after the job; the
+   full traceparent survives the DB roundtrip; in RestoreTraceId mode the execution is a
+   child span of the creating request span; per-job `JobOpts.TracingMode` overrides the
+   global setting in both directions; LinkTraceId produces an independent trace with a
+   link; recurrent jobs always start new traces; failed jobs traced as errors.
 
 ### S25. Bulk load: thousands of jobs drain without stalls (run twice)
 Run this scenario twice: once with default `CompleteWithBatching=false` and once with
-`CompleteWithBatching=true` (edit the copy's `UseServerSettings`, restart instances between runs).
+`CompleteWithBatching=true` (edit `Jobby:Server:CompleteWithBatching` in the copy's
+`appsettings.json` — config-only, kill→edit→restart between runs, NO rebuild).
 Default config otherwise (polling 500 ms, retry 3×[1,2] s, queues `default` + `heavy`).
 
 1. TRUNCATE `jobby_jobs`. Start BOTH instances (:5075 and :5076). Then remove the startup
@@ -566,11 +755,14 @@ Default config otherwise (polling 500 ms, retry 3×[1,2] s, queues `default` + `
    `CustomSchedulerRecurrentJobCommand` via the custom `SecondsIntervalSchedule`
    (resolved by the registered `SecondsIntervalScheduleHandler`).
 4. Log: `CustomSchedulerRecurrentJob` executions every ~1 s. DB: a separate
-   `CustomSchedulerRecurrentJob` row appears next to the `EmptyRecurrentJob` row
-   (different job names do not collide). Both rows have `queue_name='recurrent'`
+   `CustomSchedulerRecurrentJobCommand` row appears next to the `EmptyRecurrentJob` row
+   — NOTE the row's `job_name` is the command class name `CustomSchedulerRecurrentJobCommand`
+   (bit in practice: polling for `CustomSchedulerRecurrentJob` never matches), while the
+   log line says `CustomSchedulerRecurrentJob executed`. The two rows have different
+   `job_name`s so they do not collide; both have `queue_name='recurrent'`
    (`UseQueueForAllRecurrent` routes every recurrent job there, including the
    custom-scheduler one).
-5. `POST /jobs/cancel-recurrent-with-custom-scheduler`: the `CustomSchedulerRecurrentJob`
+5. `POST /jobs/cancel-recurrent-with-custom-scheduler`: the `CustomSchedulerRecurrentJobCommand`
    row disappears / executions stop, while `EmptyRecurrentJob` keeps running every ~2 s.
 6. `POST /jobs/cancel-recurrent`: the `EmptyRecurrentJob` row disappears / executions stop.
 **Expected:** both non-cron schedule types execute on their interval, are stored as
@@ -602,4 +794,6 @@ and relevant log excerpt / DB rows. Report overall suite status.
   forwarding is broken, restart the container or ask the user.
 - `docker compose` (plugin) not found: use `docker-compose` (v1) — that's the installed one.
 - Two app instances share the DB — always check `server_id` when attributing log lines to an instance.
-- If a scenario needs a new command field, edit **the copy's** code only (see S17 pattern).
+- If a scenario needs a new command field, prefer adding it permanently to the sample's
+  `DemoJobCommand` (like `QueueName`/`CanBeRestarted`) so future runs need no rebuild;
+  as a stopgap, edit **the copy's** code only (then a rebuild is required).

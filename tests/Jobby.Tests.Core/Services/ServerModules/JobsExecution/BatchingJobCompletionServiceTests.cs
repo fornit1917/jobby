@@ -177,7 +177,7 @@ public class BatchingJobCompletionServiceTests
             {
                 // WaitAsync turns a regression (error never propagated to the waiting
                 // task) into a test failure instead of an infinite hang
-                var ex = await Assert.ThrowsAsync<Exception>(() => task.WaitAsync(TimeSpan.FromSeconds(10)));
+                var ex = await Assert.ThrowsAsync<Exception>(() => task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
                 Assert.Equal(storageError, ex);
             }
         }

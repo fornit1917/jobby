@@ -26,6 +26,8 @@ public class TakeBatchToProcessingTests
             Status = JobStatus.Scheduled,
             ScheduledStartAt = DateTime.UtcNow.AddMinutes(-10),
             QueueName = QueueSettings.DefaultQueueName,
+            Traceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+            TracingMode = JobbyTracingMode.RestoreTraceId,
         };
         var secondExpected = new JobDbModel
         {
@@ -229,6 +231,102 @@ public class TakeBatchToProcessingTests
     }
 
     [Fact]
+    public async Task TakeBatchToProcessingAsync_SkipsJobsWithGroupWhenSerializableGroupsDisabled()
+    {
+        await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
+
+        var jobWithoutGroup = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "withoutGroup",
+            Schedule = null,
+            JobParam = "param1",
+            StartedCount = 0,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-5),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = null
+        };
+        var firstJobFromGroup = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "g_1",
+            Schedule = null,
+            JobParam = "param2",
+            StartedCount = 0,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-4),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = "g"
+        };
+        // both group jobs are ready to run: before the fix taking them into one batch
+        // violated the unique index on serializable_group_id where is_group_locker = TRUE
+        var secondJobFromGroup = new JobDbModel
+        {
+            Id = Guid.NewGuid(),
+            JobName = "g_2",
+            Schedule = null,
+            JobParam = "param3",
+            StartedCount = 0,
+            NextJobId = null,
+            Status = JobStatus.Scheduled,
+            ScheduledStartAt = DateTime.UtcNow.AddMinutes(-4),
+            QueueName = QueueSettings.DefaultQueueName,
+            SerializableGroupId = "g"
+        };
+
+        var jobs = new List<JobDbModel>
+        {
+            jobWithoutGroup,
+            firstJobFromGroup,
+            secondJobFromGroup,
+
+            // locker of the same group is processing: updating the scheduled job
+            // to processing would violate the unique index even alone in a batch
+            new JobDbModel
+            {
+                Id = Guid.NewGuid(),
+                JobName = "locker",
+                JobParam = "param",
+                StartedCount = 1,
+                Status = JobStatus.Processing,
+                ScheduledStartAt = DateTime.UtcNow.AddMinutes(-30),
+                QueueName = QueueSettings.DefaultQueueName,
+                SerializableGroupId = "other_group"
+            }
+        };
+
+        dbContext.Jobs.AddRange(jobs);
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var storage = DbHelper.CreateJobbyStorage();
+        var result = new List<JobExecutionModel>();
+        var request = new GetJobsRequest
+        {
+            QueueName = QueueSettings.DefaultQueueName,
+            BatchSize = 10,
+            ServerId = "serverId",
+            DisableSerializableGroups = true
+        };
+        await storage.TakeBatchToProcessingAsync(request, result);
+
+        Assert.Single(result);
+        AssertTakenToRunJob(jobWithoutGroup, result[0], request.ServerId);
+
+        var groupJobIds = new[] { firstJobFromGroup.Id, secondJobFromGroup.Id };
+        var groupJobsFromDb = await dbContext.Jobs.AsNoTracking()
+            .Where(x => groupJobIds.Contains(x.Id))
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.All(groupJobsFromDb, job =>
+        {
+            Assert.Equal(JobStatus.Scheduled, job.Status);
+            Assert.Equal(0, job.StartedCount);
+        });
+    }
+
+    [Fact]
     public async Task TakeBatchToProcessingAsync_DoesRetryForLocker()
     {
         await using var dbContext = await DbHelper.CreateContextAndClearDbAsync();
@@ -330,6 +428,8 @@ public class TakeBatchToProcessingTests
         Assert.Equal(createdJob.StartedCount + 1, takenJob.StartedCount);
         Assert.Equal(createdJob.NextJobId, takenJob.NextJobId);
         Assert.Equal(createdJob.SchedulerType, takenJob.SchedulerType);
+        Assert.Equal(createdJob.Traceparent, takenJob.Traceparent);
+        Assert.Equal(createdJob.TracingMode, takenJob.TracingMode);
         Assert.Equal(serverId, takenJob.ServerId);
     }
 

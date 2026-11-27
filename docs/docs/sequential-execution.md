@@ -94,6 +94,8 @@ builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
 });
 ```
 
+**Important:** when the functionality is disabled (globally or for a specific queue), tasks with a populated `SerializableGroupId` are not taken for execution in such queues — they stay in the `Scheduled` status indefinitely. Make sure grouped tasks are not created in the queues where the functionality is disabled.
+
 The `DisableSerializableGroups` flag can also be set at the individual queue level. For example, you can disable sequential execution groups globally and enable them only for a single queue where you plan to create tasks with `SerializableGroupId` populated:
 
 ```csharp
@@ -167,9 +169,9 @@ This feature should be used cautiously because if there are many ready-to-execut
 
 Jobby has a built-in capability to automatically detect groups locked by failed tasks. If Jobby detects a large number of ready-to-execute tasks in such locked groups, it will transition them to a `Frozen` status to prevent negative impact on task execution performance.
 
-A UI will be added in future versions where you can view the list of locked groups and, if necessary, initiate the unfreezing and unlocking process.
+The list of locked groups is shown on the **Locked Groups** page of the [Dashboard](./dashboard#locked-groups), where the unfreezing and unlocking process of a group is started with **Request Unlock**.
 
-Until the UI is available, these operations can be performed via SQL queries if needed.
+The same operations can be performed via the SQL queries below.
 
 ```sql
 -- Get IDs of groups locked by failed tasks

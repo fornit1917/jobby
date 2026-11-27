@@ -19,32 +19,32 @@ internal class BulkCompleteProcessingJobsCommand
             SET
                 status = {(int)JobStatus.Completed},
                 error = null,
-                last_finished_at = $1
+                last_finished_at = now()
             WHERE
-                id = ANY($2)
+                id = ANY($1)
                 AND status = {(int)JobStatus.Processing}
-                AND server_id = $3
+                AND server_id = $2
         ";
 
         _completeAndUnlockNextCommandText = @$"
             WITH complete_and_get_next_job_id AS (
-	            UPDATE {DbName.Jobs(settings)} 
+	            UPDATE {DbName.Jobs(settings)}
 	            SET
 		            status = {(int)JobStatus.Completed},
-		            last_finished_at = $1,
+		            last_finished_at = now(),
 		            error = NULL
-	            WHERE 
-		            id = ANY($2)
+	            WHERE
+		            id = ANY($1)
 		            AND status = {(int)JobStatus.Processing}
-		            AND server_id = $3
-	            RETURNING next_job_id 
+		            AND server_id = $2
+	            RETURNING next_job_id
             )
-            UPDATE {DbName.Jobs(settings)} 
+            UPDATE {DbName.Jobs(settings)}
             SET
 	            status = {(int)JobStatus.Scheduled}
             WHERE
                 id IN (SELECT next_job_id FROM complete_and_get_next_job_id)
-                AND id = ANY($4)
+                AND id = ANY($3)
                 AND status = {(int)JobStatus.WaitingPrev}
         ";
     }
@@ -55,7 +55,6 @@ internal class BulkCompleteProcessingJobsCommand
         if (jobs.NextJobIds is { Count: > 0 })
         {
             await using var completeAndUnlockNextCmd = new NpgsqlCommand(_completeAndUnlockNextCommandText, conn);
-            completeAndUnlockNextCmd.Parameters.Add(new() { Value = DateTime.UtcNow });
             completeAndUnlockNextCmd.Parameters.Add(new() { Value = jobs.JobIds });
             completeAndUnlockNextCmd.Parameters.Add(new() { Value = jobs.ServerId });
             completeAndUnlockNextCmd.Parameters.Add(new() { Value = jobs.NextJobIds });
@@ -65,7 +64,6 @@ internal class BulkCompleteProcessingJobsCommand
         else
         {
             await using var updateCmd = new NpgsqlCommand(_completeCommandText, conn);
-            updateCmd.Parameters.Add(new() { Value = DateTime.UtcNow });
             updateCmd.Parameters.Add(new() { Value = jobs.JobIds });
             updateCmd.Parameters.Add(new() { Value = jobs.ServerId });
 

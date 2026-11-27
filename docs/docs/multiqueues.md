@@ -33,7 +33,7 @@ To use multiple queues, you need to specify all of them (including `default`) in
 
 - **QueueName** - The name of the queue. Required parameter.
 - **MaxDegreeOfParallelism** - The maximum degree of parallelism when executing tasks from this queue. Optional parameter, defaults to `JobbyServerSettings.MaxDegreeOfParallelism`. Can be overridden to a lower value.
-- **DisableSerializableGroups** - When set to `true`, this flag disables (for optimization purposes) the sequential execution mechanism within groups for this queue (see [Sequential Execution](./sequential-execution) for details). Default value is `false`. **Important:** when using the value `true`, the library will only work correctly if all tasks in the queue have `SerializableGroupId` = `null`.
+- **DisableSerializableGroups** - When set to `true`, this flag disables (for optimization purposes) the sequential execution mechanism within groups for this queue (see [Sequential Execution](./sequential-execution) for details). Default value is `false`. **Important:** tasks with a populated `SerializableGroupId` are not taken for execution in such a queue — they stay in the `Scheduled` status indefinitely, so do not create grouped tasks in queues where the functionality is disabled.
 
 Example configuration:
 

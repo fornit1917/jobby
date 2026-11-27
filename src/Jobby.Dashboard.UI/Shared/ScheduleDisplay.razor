@@ -1,0 +1,31 @@
+@if (_model.Kind == ScheduleKind.None)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">-</MudText>
+}
+else
+{
+    <div class="jobby-schedule">
+        @if (_model.Description is not null)
+        {
+            <div class="jobby-schedule-desc">
+                <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small"/>
+                <MudText Typo="Typo.body2">@_model.Description</MudText>
+            </div>
+        }
+        @if (_model.Badge is not null)
+        {
+            <code class="jobby-schedule-badge" data-testid="schedule-badge">@_model.Badge</code>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Schedule { get; set; }
+    [Parameter] public string? SchedulerType { get; set; }
+
+    private ScheduleDisplayModel _model = new() { Kind = ScheduleKind.None };
+
+    protected override void OnParametersSet()
+        => _model = ScheduleFormatter.Format(Schedule, SchedulerType);
+
+}

@@ -1,0 +1,54 @@
+@inherits LocalizedComponentBase
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+@inject DashboardClientConfig Config
+@inject DashboardModeState Mode
+
+@if (Mode.IsManagementView && Config.CreatableJobNames.Count > 0)
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAsync"
+               data-testid="create-job">@Title</MudButton>
+}
+
+@code {
+    private static readonly DialogOptions Options = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+        BackdropClick = false,
+    };
+
+    [Parameter] public bool Recurrent { get; set; }
+
+    [Parameter] public EventCallback OnCreated { get; set; }
+
+    private string Title => L[Recurrent ? "createJob.titleRecurrent" : "createJob.title"];
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Mode.Changed += OnModeChanged;
+    }
+
+    private void OnModeChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task OpenAsync()
+    {
+        var parameters = new DialogParameters<CreateJobDialog> { { dialog => dialog.Recurrent, Recurrent } };
+        var dialog = await Dialog.ShowAsync<CreateJobDialog>(Title, parameters, Options);
+        if (await dialog.Result is { Canceled: false })
+        {
+            Snackbar.Add(L[Recurrent ? "createJob.createdRecurrent" : "createJob.created"], Severity.Success);
+            await OnCreated.InvokeAsync();
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Mode.Changed -= OnModeChanged;
+    }
+
+}

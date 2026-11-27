@@ -20,6 +20,7 @@ High-performance and reliable .NET library for background tasks, designed for di
 - Multi-Queues
 - Configurable middlewares pipeline for executing background tasks code
 - OpenTelemetry-compatible metrics and tracing
+- Optional web dashboard for monitoring and managing jobs
 - Proper operation in distributed applications
 - Fault tolerance and component failure resilience  
 - High performance  
@@ -41,6 +42,12 @@ For ASP.NET Core integration, also install the Jobby.AspNetCore package:
 ```
 dotnet add package Jobby.AspNetCore  
 ```
+
+### Dashboard
+
+The optional ASP.NET Core dashboard shows jobs, recurrent jobs, queues, servers, and locked groups. It supports filtering and sorting, creating jobs, early execution of scheduled jobs, retries, deletion, and group unlock requests. Access is controlled by an authorization policy of the application or by the optional Basic authentication package.
+
+See [Dashboard installation and configuration](https://fornit1917.github.io/jobby/docs/dashboard.html).
 
 ### Defining Background Tasks  
 
@@ -485,6 +492,25 @@ builder.Services.AddJobbyServerAndClient((IAspNetCoreJobbyConfigurable jobbyBuil
     });
 });
 ```
+
+By default every job execution starts a new trace. Optionally, the tracing context of the `Activity` current at job creation time can be captured and reused at execution — select the behaviour with the `JobbyTracingMode` enum (`CreateNewTraceId` — new trace, default; `RestoreTraceId` — the job execution continues the captured trace; `LinkTraceId` — a new independent trace referencing the captured one via an `ActivityLink`). Set it globally via `UseTracing`:
+
+```csharp
+jobbyBuilder.ConfigureJobby((sp, jobby) =>
+{
+    jobby
+        .UseTracing(new JobbyTracingSettings { TracingMode = JobbyTracingMode.RestoreTraceId })
+        // ...
+});
+```
+
+or per job via `JobOpts`, which overrides the global setting (per-job `TracingMode` takes effect only when tracing is enabled with `UseTracing` — without it jobs are not executed inside an `Activity`):
+
+```csharp
+jobsFactory.Create(new SendEmailCommand { ... }, new JobOpts { TracingMode = JobbyTracingMode.RestoreTraceId });
+```
+
+Recurrent jobs always start a new trace on each run. Call `UseTracing` before creating the jobs factory (`CreateJobsFactory` / `CreateJobbyClient`) — tracing settings are applied to a factory at its creation. See the [documentation](docs/docs/observability.md) for details on the modes and their sampling semantics.
 
 You can enable the export of Jobby job traces via OpenTelemetry as follows:
 

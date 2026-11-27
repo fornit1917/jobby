@@ -30,7 +30,7 @@ public interface IJobbyComponentsConfigurable
     IJobbyComponentsConfigurable ConfigurePipeline(Action<IPipelineConfigurable> configure);
 
     IJobbyComponentsConfigurable UseMetrics();
-    IJobbyComponentsConfigurable UseTracing();
+    IJobbyComponentsConfigurable UseTracing(JobbyTracingSettings? settings = null);
 
     IJobbyComponentsConfigurable UseScheduler<TSchedule>(IScheduleHandler<TSchedule> scheduleHandler) where TSchedule : ISchedule;
 }

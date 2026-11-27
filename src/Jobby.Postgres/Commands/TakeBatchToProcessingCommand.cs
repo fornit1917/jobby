@@ -24,6 +24,7 @@ internal class TakeBatchToProcessingCommand
                         queue_name = $1
                         AND status = {(int)JobStatus.Scheduled}
                         AND scheduled_start_at <= now()
+                        AND serializable_group_id IS NULL                        
 	                ORDER BY scheduled_start_at
 	                LIMIT $2
 	                FOR UPDATE SKIP LOCKED
@@ -36,9 +37,9 @@ internal class TakeBatchToProcessingCommand
 	                    started_count = started_count + 1,
                         server_id = $3
                     WHERE id IN (SELECT id FROM ready_jobs)
-                    RETURNING id, job_name, job_param, started_count, schedule, next_job_id, scheduled_start_at, server_id, scheduler_type
+                    RETURNING id, job_name, job_param, started_count, schedule, next_job_id, scheduled_start_at, server_id, scheduler_type, traceparent, tracing_mode
                 )
-            SELECT id, job_name, job_param, started_count, schedule, next_job_id, scheduled_start_at, server_id, scheduler_type
+            SELECT id, job_name, job_param, started_count, schedule, next_job_id, scheduled_start_at, server_id, scheduler_type, traceparent, tracing_mode
             FROM updated
         ";
     }

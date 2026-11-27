@@ -17,13 +17,13 @@ internal class RescheduleProcessingJobCommand
             UPDATE {DbName.Jobs(settings)}
             SET
                 status = {(int)JobStatus.Scheduled},
-                last_finished_at = $1,
-                scheduled_start_at = $2,
-                error = $3
-            WHERE 
-                id = $4
+                last_finished_at = now(),
+                scheduled_start_at = $1,
+                error = $2
+            WHERE
+                id = $3
                 AND status = {(int)JobStatus.Processing}
-                AND server_id = $5
+                AND server_id = $4
         ";
     }
 
@@ -31,7 +31,6 @@ internal class RescheduleProcessingJobCommand
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = new NpgsqlCommand(_commandText, conn);
-        cmd.Parameters.Add(new() { Value = DateTime.UtcNow });
         cmd.Parameters.Add(new() { Value = scheduledStartTime });
         cmd.Parameters.Add(new() { Value = error as object ?? DBNull.Value });
         cmd.Parameters.Add(new() { Value = job.Id });

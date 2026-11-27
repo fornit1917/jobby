@@ -7,4 +7,5 @@ public readonly record struct JobOpts
     public string? SerializableGroupId { get; init; }
     public bool? LockGroupIfFailed { get; init; }
     public bool? CanBeRestartedIfServerGoesDown { get; init; }
+    public JobbyTracingMode? TracingMode { get; init; }
 }

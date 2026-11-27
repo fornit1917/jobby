@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 	<IsPackable>false</IsPackable>
   </PropertyGroup>
 
@@ -13,12 +14,15 @@
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.14.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Jobby.AspNetCore\Jobby.AspNetCore.csproj" />
     <ProjectReference Include="..\..\src\Jobby.Postgres\Jobby.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard\Jobby.Dashboard.csproj" />
+    <ProjectReference Include="..\..\src\Jobby.Dashboard.Authorization.Basic\Jobby.Dashboard.Authorization.Basic.csproj" />
   </ItemGroup>
 
 </Project>

@@ -30,9 +30,14 @@ internal class BulkInsertJobsCommand
                 serializable_group_id,
                 lock_group_if_failed,
                 is_exclusive,
-                scheduler_type
+                scheduler_type,
+                traceparent,
+                tracing_mode
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            -- recurrent jobs never capture a tracing context (traceparent=NULL, tracing_mode=0),
+            -- so updating these columns on upsert is a no-op for them; updating anyway keeps
+            -- the values correct for any other exclusive re-enqueue of an existing job_name
             ON CONFLICT (job_name) WHERE is_exclusive=true DO
             UPDATE SET
                 job_param = $3,
@@ -45,7 +50,9 @@ internal class BulkInsertJobsCommand
                 can_be_restarted = $9,
                 queue_name = $10,
                 serializable_group_id = $11,
-                scheduler_type = $14
+                scheduler_type = $14,
+                traceparent = $15,
+                tracing_mode = $16
         ";
     }
 
@@ -93,6 +100,8 @@ internal class BulkInsertJobsCommand
                     new() { Value = job.LockGroupIfFailed },                            // 12
                     new() { Value = job.IsExclusive },                                  // 13
                     new() { Value = (object?)job.SchedulerType ?? DBNull.Value },       // 14
+                    new() { Value = (object?)job.Traceparent ?? DBNull.Value },         // 15
+                    new() { Value = (int)job.TracingMode },                             // 16
                 }
             };
             batch.BatchCommands.Add(cmd);

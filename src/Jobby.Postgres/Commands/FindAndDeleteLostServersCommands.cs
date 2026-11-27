@@ -5,11 +5,23 @@ namespace Jobby.Postgres.Commands;
 
 internal class FindAndDeleteLostServersCommands
 {
-    private readonly string _commandText;
+    private readonly string _deleteByIntervalText;
+    private readonly string _deleteByMinHeartbeatText;
 
     public FindAndDeleteLostServersCommands(PostgresqlStorageSettings settings)
     {
-        _commandText = $@"
+        _deleteByIntervalText = $@"
+            DELETE FROM {DbName.Servers(settings)}
+            WHERE id IN (
+                SELECT id FROM {DbName.Servers(settings)}
+                WHERE heartbeat_ts < now() - make_interval(secs => $1)
+                FOR UPDATE SKIP LOCKED
+            )
+            RETURNING id
+        ";
+        
+        // Legacy path: compares against an absolute timestamp computed on the application clock
+        _deleteByMinHeartbeatText = $@"
             DELETE FROM {DbName.Servers(settings)}
             WHERE id IN (
                 SELECT id FROM {DbName.Servers(settings)}
@@ -20,15 +32,26 @@ internal class FindAndDeleteLostServersCommands
         ";
     }
 
-    public async Task ExecuteInTransactionAsync(NpgsqlConnection conn, NpgsqlTransaction? tr, DateTime minLastHearbeat, List<string> deletedServerIds)
+    public Task ExecuteInTransactionAsync(NpgsqlConnection conn, NpgsqlTransaction? tr, TimeSpan maxNoHeartbeatInterval, List<string> deletedServerIds)
+    {
+        return ExecuteInTransactionAsync(conn, tr, _deleteByIntervalText, maxNoHeartbeatInterval.TotalSeconds, deletedServerIds);
+    }
+
+    public Task ExecuteInTransactionAsync(NpgsqlConnection conn, NpgsqlTransaction? tr, DateTime minLastHeartbeat, List<string> deletedServerIds)
+    {
+        return ExecuteInTransactionAsync(conn, tr, _deleteByMinHeartbeatText, minLastHeartbeat, deletedServerIds);
+    }
+
+    private static async Task ExecuteInTransactionAsync(NpgsqlConnection conn, NpgsqlTransaction? tr, string commandText,
+        object parameter, List<string> deletedServerIds)
     {
         deletedServerIds.Clear();
 
-        await using var cmd = new NpgsqlCommand(_commandText, conn, tr)
+        await using var cmd = new NpgsqlCommand(commandText, conn, tr)
         {
             Parameters =
             {
-                new() { Value = minLastHearbeat }
+                new() { Value = parameter }
             }
         };
 

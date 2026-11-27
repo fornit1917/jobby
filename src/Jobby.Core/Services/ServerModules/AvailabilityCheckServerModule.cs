@@ -69,8 +69,8 @@ internal class AvailabilityCheckServerModule : IAvailabilityCheckServerModule
             // detect lost servers and restart their jobs
             try
             {
-                var minLastHeartbeat = DateTime.UtcNow.AddSeconds(-1 * _settings.MaxNoHeartbeatIntervalSeconds);
-                await _storage.DeleteLostServersAndRestartTheirJobsAsync(minLastHeartbeat, deletedServerIds, stuckJobs);
+                var maxNoHeartbeatInterval = TimeSpan.FromSeconds(_settings.MaxNoHeartbeatIntervalSeconds);
+                await _storage.DeleteLostServersAndRestartTheirJobsAsync(maxNoHeartbeatInterval, deletedServerIds, stuckJobs);
                 foreach (var serverId in deletedServerIds)
                 {
                     _logger.LogInformation("Lost server was found and deleted, serverId = {ServerId}", serverId);
