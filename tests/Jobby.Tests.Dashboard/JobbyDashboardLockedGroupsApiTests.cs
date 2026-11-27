@@ -14,7 +14,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task GetLockedGroups_ReturnsPagedResult_AndForwardsPaging()
     {
-        var reader = new FakeDashboardDataReader
+        var reader = new FakeDashboardService
         {
             ManagementEnabled = true,
             LockedGroups = new PagedResult<LockedGroupDto>(Items: [], TotalCount: 0, Page: 2, PageSize: 10),
@@ -31,7 +31,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task GetLockedGroupsCount_ReturnsCountWithoutRequestingAPage()
     {
-        var reader = new FakeDashboardDataReader { LockedGroupsCount = 7 };
+        var reader = new FakeDashboardService { LockedGroupsCount = 7 };
         await using var app = await StartAsync(reader);
 
         var resp = await app.GetTestClient().GetAsync("/api/locked-groups/count");
@@ -45,7 +45,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task GetLockedGroupDetail_Returns404_WhenNotLocked()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, LockedGroupDetails = null };
+        var reader = new FakeDashboardService { ManagementEnabled = true, LockedGroupDetails = null };
         await using var app = await StartAsync(reader);
 
         var resp = await app.GetTestClient().GetAsync("/api/locked-groups/detail?groupId=g1");
@@ -56,7 +56,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task Unlock_WhenInserted_Returns200WithInsertedTrue_AndForwardsGroupId()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, UnlockInserted = true };
+        var reader = new FakeDashboardService { ManagementEnabled = true, UnlockInserted = true };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Post, "/api/locked-groups/unlock-request",
@@ -71,7 +71,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task Unlock_WhenNoOp_Returns200WithInsertedFalse_NotNotFound()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, UnlockInserted = false };
+        var reader = new FakeDashboardService { ManagementEnabled = true, UnlockInserted = false };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Post, "/api/locked-groups/unlock-request",
@@ -85,7 +85,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task Unlock_WhenManagementDisabled_Returns404()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = false };
+        var reader = new FakeDashboardService { ManagementEnabled = false };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Post, "/api/locked-groups/unlock-request",
@@ -98,7 +98,7 @@ public class JobbyDashboardLockedGroupsApiTests
     [Fact]
     public async Task Unlock_WithoutCsrfHeader_Returns403_AndDoesNotAct()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true };
+        var reader = new FakeDashboardService { ManagementEnabled = true };
         await using var app = await StartAsync(reader);
 
         var resp = await app.GetTestClient().PostAsync("/api/locked-groups/unlock-request",
@@ -108,14 +108,14 @@ public class JobbyDashboardLockedGroupsApiTests
         Assert.Null(reader.LastUnlockGroupId);
     }
 
-    private static async Task<WebApplication> StartAsync(FakeDashboardDataReader reader)
+    private static async Task<WebApplication> StartAsync(FakeDashboardService reader)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(new JobbyDashboardOptions());
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
-        builder.Services.AddScoped<IDashboardDataReader>(_ => reader);
+        builder.Services.AddScoped<IDashboardService>(_ => reader);
         var state = new JobbyDashboardAuthState();
         state.Configure(JobbyDashboardAuthMode.Anonymous);
         var app = builder.Build();

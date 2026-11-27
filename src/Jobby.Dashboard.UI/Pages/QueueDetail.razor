@@ -1,6 +1,6 @@
 @page "/queue"
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject NavigationManager Nav
 @inject DashboardClientConfig Options
 @inject DateTimeDisplayState Dt
@@ -185,7 +185,7 @@ else
 
         try
         {
-            var result = await Reader.GetJobsAsync(query, cancellationToken);
+            var result = await ApiClient.GetJobsAsync(query, cancellationToken);
 
             if (name != Name || mode != _mode)
             {

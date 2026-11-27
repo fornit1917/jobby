@@ -1,6 +1,6 @@
 @page "/locked-groups"
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject DashboardClientConfig Options
 @inject DashboardModeState Mode
 @inject NavigationManager Nav
@@ -163,7 +163,7 @@ else if (_result is not null)
         {
             _loading = true;
             _error = null;
-            _result = await Reader.GetLockedGroupsAsync(new LockedGroupsQuery { Page = _page, PageSize = PageSize }, _cts.Token);
+            _result = await ApiClient.GetLockedGroupsAsync(new LockedGroupsQuery { Page = _page, PageSize = PageSize }, _cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -213,7 +213,7 @@ else if (_result is not null)
         try
         {
             _unlockingGroupId = g.GroupId;
-            var result = await Reader.RequestGroupUnlockAsync(g.GroupId, _cts.Token);
+            var result = await ApiClient.RequestGroupUnlockAsync(g.GroupId, _cts.Token);
             Snackbar.Add(result.Inserted
                 ? L["lockedGroups.unlockRequested"]
                 : L["lockedGroups.unlockAlready"], Severity.Success);

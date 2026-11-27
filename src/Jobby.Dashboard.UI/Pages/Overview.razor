@@ -1,6 +1,6 @@
 @page "/"
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject DashboardClientConfig Options
 @inject DateTimeDisplayState Dt
 @inject NavigationManager Nav
@@ -246,10 +246,10 @@ else if (_stats is not null)
             _loading = true;
             _error = null;
 
-            var statsTask = Reader.GetStatsAsync(_cts.Token);
-            var serversTask = Reader.GetServersAsync(_cts.Token);
-            var queuesTask = Reader.GetQueuesAsync(_cts.Token);
-            var lockedGroupsTask = Reader.GetLockedGroupsCountAsync(_cts.Token);
+            var statsTask = ApiClient.GetStatsAsync(_cts.Token);
+            var serversTask = ApiClient.GetServersAsync(_cts.Token);
+            var queuesTask = ApiClient.GetQueuesAsync(_cts.Token);
+            var lockedGroupsTask = ApiClient.GetLockedGroupsCountAsync(_cts.Token);
             await Task.WhenAll(statsTask, serversTask, queuesTask, lockedGroupsTask);
 
             _stats = await statsTask;

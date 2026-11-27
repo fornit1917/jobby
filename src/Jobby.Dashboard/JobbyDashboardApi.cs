@@ -24,7 +24,7 @@ internal static class JobbyDashboardApi
         }
 
         api.MapGet("config",
-            (HttpContext http, IDashboardDataReader reader, JobbyDashboardOptions opts, IAntiforgery antiforgery) =>
+            (HttpContext http, IDashboardService dashboardService, JobbyDashboardOptions opts, IAntiforgery antiforgery) =>
             {
                 var tokens = antiforgery.GetAndStoreTokens(http);
                 http.Response.Headers.CacheControl = "no-store";
@@ -49,8 +49,8 @@ internal static class JobbyDashboardApi
                     RefreshIntervalSeconds = opts.RefreshInterval?.TotalSeconds,
                     StaleServerThresholdSeconds = opts.StaleServerThresholdSeconds,
                     ReadOnly = opts.ReadOnly,
-                    ManagementEnabled = reader.ManagementEnabled,
-                    CreatableJobNames = reader.CreatableJobNames,
+                    ManagementEnabled = dashboardService.ManagementEnabled,
+                    CreatableJobNames = dashboardService.CreatableJobNames,
                     ManagementRequestHeaderName = tokens.HeaderName,
                     ManagementRequestToken = tokens.RequestToken,
                     DefaultTimeZoneId = defaultTimeZoneId,
@@ -62,38 +62,38 @@ internal static class JobbyDashboardApi
             });
 
         api.MapGet("stats",
-            (IDashboardDataReader reader, CancellationToken cancellationToken) =>
-                reader.GetStatsAsync(cancellationToken));
+            (IDashboardService dashboardService, CancellationToken cancellationToken) =>
+                dashboardService.GetStatsAsync(cancellationToken));
 
-        api.MapGet("jobs", (HttpContext http, IDashboardDataReader reader, CancellationToken cancellationToken) =>
-            reader.GetJobsAsync(ParseJobsQuery(http.Request.Query), cancellationToken));
+        api.MapGet("jobs", (HttpContext http, IDashboardService dashboardService, CancellationToken cancellationToken) =>
+            dashboardService.GetJobsAsync(ParseJobsQuery(http.Request.Query), cancellationToken));
 
         api.MapGet("jobs/{id:guid}",
-            async (Guid id, IDashboardDataReader reader, CancellationToken cancellationToken) =>
-                await reader.GetJobByIdAsync(id, cancellationToken) is { } details
+            async (Guid id, IDashboardService dashboardService, CancellationToken cancellationToken) =>
+                await dashboardService.GetJobByIdAsync(id, cancellationToken) is { } details
                     ? Results.Ok(details)
                     : Results.NotFound());
 
-        api.MapGet("recurrent", (HttpContext http, IDashboardDataReader reader, CancellationToken cancellationToken) =>
-            reader.GetRecurrentJobsAsync(ParseRecurrentQuery(http.Request.Query), cancellationToken));
+        api.MapGet("recurrent", (HttpContext http, IDashboardService dashboardService, CancellationToken cancellationToken) =>
+            dashboardService.GetRecurrentJobsAsync(ParseRecurrentQuery(http.Request.Query), cancellationToken));
 
         api.MapGet("servers",
-            (IDashboardDataReader reader, CancellationToken cancellationToken) =>
-                reader.GetServersAsync(cancellationToken));
+            (IDashboardService dashboardService, CancellationToken cancellationToken) =>
+                dashboardService.GetServersAsync(cancellationToken));
         api.MapGet("queues",
-            (IDashboardDataReader reader, CancellationToken cancellationToken) =>
-                reader.GetQueuesAsync(cancellationToken));
+            (IDashboardService dashboardService, CancellationToken cancellationToken) =>
+                dashboardService.GetQueuesAsync(cancellationToken));
 
         api.MapGet("locked-groups",
-            (HttpContext http, IDashboardDataReader reader, CancellationToken cancellationToken) =>
-                reader.GetLockedGroupsAsync(ParseLockedGroupsQuery(http.Request.Query), cancellationToken));
+            (HttpContext http, IDashboardService dashboardService, CancellationToken cancellationToken) =>
+                dashboardService.GetLockedGroupsAsync(ParseLockedGroupsQuery(http.Request.Query), cancellationToken));
 
         api.MapGet("locked-groups/count",
-            async (IDashboardDataReader reader, CancellationToken cancellationToken) =>
-                new LockedGroupsCountDto(await reader.GetLockedGroupsCountAsync(cancellationToken)));
+            async (IDashboardService dashboardService, CancellationToken cancellationToken) =>
+                new LockedGroupsCountDto(await dashboardService.GetLockedGroupsCountAsync(cancellationToken)));
 
         api.MapGet("locked-groups/detail",
-            async (HttpContext http, IDashboardDataReader reader, CancellationToken cancellationToken) =>
+            async (HttpContext http, IDashboardService dashboardService, CancellationToken cancellationToken) =>
             {
                 var groupId = QueryValue(http.Request.Query, "groupId");
                 if (string.IsNullOrEmpty(groupId))
@@ -101,7 +101,7 @@ internal static class JobbyDashboardApi
                     return Results.NotFound();
                 }
 
-                return await reader.GetLockedGroupByIdAsync(groupId, cancellationToken) is { } details
+                return await dashboardService.GetLockedGroupByIdAsync(groupId, cancellationToken) is { } details
                     ? Results.Ok(details)
                     : Results.NotFound();
             });
@@ -112,32 +112,32 @@ internal static class JobbyDashboardApi
     private static void MapManagementActions(IEndpointRouteBuilder api, JobbyDashboardAuthState state)
     {
         Manage(api.MapPost("jobs/{id:guid}/trigger",
-            (Guid id, HttpContext http, IDashboardDataReader reader, IAntiforgery antiforgery,
+            (Guid id, HttpContext http, IDashboardService dashboardService, IAntiforgery antiforgery,
                     CancellationToken cancellationToken) =>
-                RunAsync(http, reader, antiforgery, () => reader.TriggerJobsAsync([id], cancellationToken))), state);
+                RunAsync(http, dashboardService, antiforgery, () => dashboardService.TriggerJobsAsync([id], cancellationToken))), state);
 
         Manage(api.MapPost("jobs/{id:guid}/retry",
-            (Guid id, HttpContext http, IDashboardDataReader reader, IAntiforgery antiforgery,
+            (Guid id, HttpContext http, IDashboardService dashboardService, IAntiforgery antiforgery,
                     CancellationToken cancellationToken) =>
-                RunAsync(http, reader, antiforgery, () => reader.RetryJobsAsync([id], cancellationToken))), state);
+                RunAsync(http, dashboardService, antiforgery, () => dashboardService.RetryJobsAsync([id], cancellationToken))), state);
 
         Manage(api.MapDelete("jobs/{id:guid}",
-            (Guid id, HttpContext http, IDashboardDataReader reader, IAntiforgery antiforgery,
+            (Guid id, HttpContext http, IDashboardService dashboardService, IAntiforgery antiforgery,
                     CancellationToken cancellationToken) =>
-                RunAsync(http, reader, antiforgery, () => reader.DeleteJobsAsync([id], cancellationToken))), state);
+                RunAsync(http, dashboardService, antiforgery, () => dashboardService.DeleteJobsAsync([id], cancellationToken))), state);
 
         Manage(api.MapDelete("recurrent/{id:guid}",
-                (Guid id, HttpContext http, IDashboardDataReader reader, IAntiforgery antiforgery,
+                (Guid id, HttpContext http, IDashboardService dashboardService, IAntiforgery antiforgery,
                         CancellationToken cancellationToken) =>
-                    RunAsync(http, reader, antiforgery,
-                        () => reader.DeleteRecurrentJobsAsync([id], cancellationToken))),
+                    RunAsync(http, dashboardService, antiforgery,
+                        () => dashboardService.DeleteRecurrentJobsAsync([id], cancellationToken))),
             state);
 
         Manage(api.MapPost("locked-groups/unlock-request",
-            async (UnlockGroupRequest body, HttpContext http, IDashboardDataReader reader,
+            async (UnlockGroupRequest body, HttpContext http, IDashboardService dashboardService,
                 IAntiforgery antiforgery, CancellationToken cancellationToken) =>
             {
-                if (await RejectAsync(http, reader.ManagementEnabled, antiforgery) is { } rejection)
+                if (await RejectAsync(http, dashboardService.ManagementEnabled, antiforgery) is { } rejection)
                 {
                     return rejection;
                 }
@@ -147,28 +147,28 @@ internal static class JobbyDashboardApi
                     return Results.BadRequest();
                 }
 
-                var affected = await reader.RequestGroupUnlockAsync(body.GroupId, cancellationToken);
+                var affected = await dashboardService.RequestGroupUnlockAsync(body.GroupId, cancellationToken);
                 return Results.Ok(new RequestGroupUnlockResultDto(affected > 0));
             }), state);
 
         Manage(api.MapPost("jobs",
-            (CreateJobRequest body, HttpContext http, IDashboardDataReader reader, IAntiforgery antiforgery) =>
-                CreateAsync(http, reader, antiforgery, () => reader.CreateJobAsync(body))), state);
+            (CreateJobRequest body, HttpContext http, IDashboardService dashboardService, IAntiforgery antiforgery) =>
+                CreateAsync(http, dashboardService, antiforgery, () => dashboardService.CreateJobAsync(body))), state);
 
         Manage(api.MapPost("recurrent",
-            (CreateRecurrentJobRequest body, HttpContext http, IDashboardDataReader reader,
+            (CreateRecurrentJobRequest body, HttpContext http, IDashboardService dashboardService,
                     IAntiforgery antiforgery) =>
-                CreateAsync(http, reader, antiforgery, () => reader.CreateRecurrentJobAsync(body))), state);
+                CreateAsync(http, dashboardService, antiforgery, () => dashboardService.CreateRecurrentJobAsync(body))), state);
     }
 
     [SuppressMessage("ReSharper", "UnusedMethodReturnValue.Local")]
     private static RouteHandlerBuilder Manage(RouteHandlerBuilder builder, JobbyDashboardAuthState state) =>
         state.Mode == JobbyDashboardAuthMode.Anonymous ? builder : builder.RequireAuthorization(state.ManagePolicy);
 
-    private static async Task<IResult> RunAsync(HttpContext http, IDashboardDataReader reader,
+    private static async Task<IResult> RunAsync(HttpContext http, IDashboardService dashboardService,
         IAntiforgery antiforgery, Func<Task<int>> action)
     {
-        if (await RejectAsync(http, reader.ManagementEnabled, antiforgery) is { } rejection)
+        if (await RejectAsync(http, dashboardService.ManagementEnabled, antiforgery) is { } rejection)
         {
             return rejection;
         }
@@ -176,10 +176,10 @@ internal static class JobbyDashboardApi
         return await action() > 0 ? Results.NoContent() : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateAsync(HttpContext http, IDashboardDataReader reader,
+    private static async Task<IResult> CreateAsync(HttpContext http, IDashboardService dashboardService,
         IAntiforgery antiforgery, Func<Task<Guid>> create)
     {
-        if (await RejectAsync(http, reader.CreatableJobNames.Count > 0, antiforgery) is { } rejection)
+        if (await RejectAsync(http, dashboardService.CreatableJobNames.Count > 0, antiforgery) is { } rejection)
         {
             return rejection;
         }

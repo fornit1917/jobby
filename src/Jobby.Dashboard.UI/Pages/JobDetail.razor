@@ -1,7 +1,7 @@
 @page "/jobs/{Id:guid}"
 @using System.Text.Json
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject DateTimeDisplayState Dt
 
 <div class="jobby-breadcrumb mb-3">
@@ -196,7 +196,7 @@ else
         _error = null;
         try
         {
-            var job = await Reader.GetJobByIdAsync(Id, token);
+            var job = await ApiClient.GetJobByIdAsync(Id, token);
             if (!token.IsCancellationRequested)
             {
                 _job = job;

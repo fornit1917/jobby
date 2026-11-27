@@ -1,6 +1,6 @@
 @page "/locked-groups/detail"
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject DashboardClientConfig Options
 @inject DateTimeDisplayState Dt
 @inject DashboardModeState Mode
@@ -206,7 +206,7 @@ else
         {
             _loading = true;
             _error = null;
-            var details = await Reader.GetLockedGroupAsync(groupId, _cts.Token);
+            var details = await ApiClient.GetLockedGroupAsync(groupId, _cts.Token);
             if (groupId == GroupId)
             {
                 _details = details;
@@ -244,7 +244,7 @@ else
         try
         {
             _unlocking = true;
-            var result = await Reader.RequestGroupUnlockAsync(_details.GroupId, _cts.Token);
+            var result = await ApiClient.RequestGroupUnlockAsync(_details.GroupId, _cts.Token);
             Snackbar.Add(result.Inserted
                 ? L["lockedGroups.unlockRequested"]
                 : L["lockedGroups.unlockAlready"], Severity.Success);

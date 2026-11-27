@@ -1,6 +1,6 @@
 @page "/queues"
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject DashboardClientConfig Options
 @inject DateTimeDisplayState Dt
 @inject NavigationManager Nav
@@ -181,7 +181,7 @@ else if (_queues is not null)
         {
             _loading = true;
             _error = null;
-            _queues = await Reader.GetQueuesAsync(_cts.Token);
+            _queues = await ApiClient.GetQueuesAsync(_cts.Token);
 
             _previews.Clear();
             foreach (var name in _expanded.ToList())
@@ -230,7 +230,7 @@ else if (_queues is not null)
         _previews[queueName] = new QueuePreview { Loading = true };
         try
         {
-            var result = await Reader.GetJobsAsync(new DashboardJobsQuery
+            var result = await ApiClient.GetJobsAsync(new DashboardJobsQuery
             {
                 QueueName = queueName,
                 Statuses = QueueBacklog.Statuses,

@@ -2,11 +2,7 @@
 
 ## v1.1.0 (unreleased)
 
-- Fixed the job-taking query for queues with `DisableSerializableGroups = true`
-  - Previously, if such a queue contained tasks with a populated `SerializableGroupId`, taking a batch failed with an error — either when two tasks of the same group were selected into one batch, or when a group locker was already processing
-  - Now such tasks are skipped by the query and stay in the `Scheduled` status. Consequently, the documented contract is relaxed: the flag no longer requires that all tasks in the queue have `SerializableGroupId` = `null`, but grouped tasks in such queues are never executed (the same applies to `JobbyServerSettings.DisableSerializableGroups` applied globally)
-- `last_finished_at` is now calculated by the database (`now()` in the UPDATE queries) instead of being computed on the application side
-- The heartbeat now also uses the database clock (`now()`) instead of the application server time
+- Web dashboard for watching and managing background jobs
 - Tracing context capture for enqueued jobs (opt-in): a job can capture the tracing context of the `Activity` current at creation time and reuse it at execution. The behaviour is selected with the new `JobbyTracingMode` enum:
   - `CreateNewTraceId` (default) — every execution starts a new trace, previous behaviour
   - `RestoreTraceId` — the full W3C traceparent (TraceId, SpanId and sampling flags) captured at creation becomes the parent context of the execution activity, so the job span is a child of the span that enqueued it; the sampling decision of the original trace is preserved (a job created in an unsampled request is not recorded either)
@@ -17,6 +13,11 @@
   - Potentially breaking changes:
     - `IJobbyComponentsConfigurable.UseTracing()` now takes an optional `JobbyTracingSettings?` parameter — external implementations of the interface must be updated to the new signature
     - Job execution spans are now named after the job name (e.g. `DemoJob`) instead of the fixed `JobExecution`, and the `job_name` span tag is removed — the job name is carried by the span name itself. Queries, dashboards or alerts filtering on `name = "JobExecution"` or on the `job_name` tag must be updated to filter on the span name
+- Fixed the job-taking query for queues with `DisableSerializableGroups = true`
+  - Previously, if such a queue contained tasks with a populated `SerializableGroupId`, taking a batch failed with an error — either when two tasks of the same group were selected into one batch, or when a group locker was already processing
+  - Now such tasks are skipped by the query and stay in the `Scheduled` status. Consequently, the documented contract is relaxed: the flag no longer requires that all tasks in the queue have `SerializableGroupId` = `null`, but grouped tasks in such queues are never executed (the same applies to `JobbyServerSettings.DisableSerializableGroups` applied globally)
+- `last_finished_at` is now calculated by the database (`now()` in the UPDATE queries) instead of being computed on the application side
+- The heartbeat now also uses the database clock (`now()`) instead of the application server time
 
 - Added the optional ASP.NET Core Dashboard with an embedded Blazor WebAssembly UI, polling JSON API, and PostgreSQL storage. It provides job and queue views, scheduled-date filtering, recurring definitions, server health, and job and locked-group management. Authorization supports host or inline policies, explicit anonymous access, and the optional `Jobby.Dashboard.Authorization.Basic` package, with separate read and management permissions, server-enforced read-only mode, and antiforgery protection.
   - Jobs and recurrent jobs (cron schedules) can be created from the Dashboard for the jobs registered in the host application. They are created through the host's `IJobbyClient`, so they are stored like jobs created from code; in the typed JSON parameters the case of property names does not matter

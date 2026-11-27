@@ -3,14 +3,14 @@ using Jobby.Core.Models.Dashboard;
 
 namespace Jobby.Dashboard;
 
-internal sealed class DashboardDataReader : IDashboardDataReader
+internal sealed class DashboardService : IDashboardService
 {
     private readonly IJobbyDashboardReadStorage _readStorage;
     private readonly IJobbyDashboardCommandStorage? _commandStorage;
     private readonly DashboardJobCreator _jobCreator;
     private readonly JobbyDashboardOptions _options;
 
-    public DashboardDataReader(
+    public DashboardService(
         IJobbyDashboardReadStorage readStorage,
         IEnumerable<IJobbyDashboardCommandStorage> commandStorage,
         DashboardJobCreator jobCreator,

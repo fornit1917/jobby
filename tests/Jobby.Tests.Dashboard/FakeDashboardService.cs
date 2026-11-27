@@ -3,7 +3,7 @@ using Jobby.Dashboard;
 
 namespace Jobby.Tests.Dashboard;
 
-internal sealed class FakeDashboardDataReader : IDashboardDataReader
+internal sealed class FakeDashboardService : IDashboardService
 {
     public bool ManagementEnabled { get; set; }
 

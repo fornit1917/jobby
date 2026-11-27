@@ -1,6 +1,6 @@
 @page "/recurrent"
 @inherits LocalizedComponentBase
-@inject DashboardApiClient Reader
+@inject DashboardApiClient ApiClient
 @inject DashboardClientConfig Options
 @inject DateTimeDisplayState Dt
 
@@ -150,7 +150,7 @@
         };
         try
         {
-            var result = await Reader.GetRecurrentJobsAsync(query, cancellationToken);
+            var result = await ApiClient.GetRecurrentJobsAsync(query, cancellationToken);
             if (_error is not null)
             {
                 _error = null;

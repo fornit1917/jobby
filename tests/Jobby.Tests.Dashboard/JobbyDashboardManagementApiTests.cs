@@ -58,14 +58,14 @@ public class JobbyDashboardManagementApiTests
         return await client.SendAsync(request);
     }
 
-    private static async Task<WebApplication> StartAsync(FakeDashboardDataReader reader)
+    private static async Task<WebApplication> StartAsync(FakeDashboardService reader)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(new JobbyDashboardOptions());
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
-        builder.Services.AddScoped<IDashboardDataReader>(_ => reader);
+        builder.Services.AddScoped<IDashboardService>(_ => reader);
         var state = new JobbyDashboardAuthState();
         state.Configure(JobbyDashboardAuthMode.Anonymous);
         var app = builder.Build();
@@ -74,7 +74,7 @@ public class JobbyDashboardManagementApiTests
         return app;
     }
 
-    private static FakeDashboardDataReader CreationReader() =>
+    private static FakeDashboardService CreationReader() =>
         new() { ManagementEnabled = true, CreatableJobNames = ["SendReport"] };
 
     private static Action<HttpRequestMessage> JsonBody(object body) =>
@@ -138,7 +138,7 @@ public class JobbyDashboardManagementApiTests
     [InlineData("/api/recurrent")]
     public async Task Create_WhenNoJobCanBeCreated_Returns404AndDoesNotAct(string url)
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, CreatableJobNames = [] };
+        var reader = new FakeDashboardService { ManagementEnabled = true, CreatableJobNames = [] };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Post, url,
@@ -178,7 +178,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_WhenManagementEnabledAndJobAffected_Returns204AndForwardsId()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartAsync(reader);
         var id = Guid.NewGuid();
 
@@ -191,7 +191,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_WhenNoJobAffected_Returns404()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 0 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 0 };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Post, $"/api/jobs/{Guid.NewGuid()}/trigger");
@@ -202,7 +202,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_WithoutCsrfHeader_IsRejectedAndDoesNotAct()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartAsync(reader);
 
         var resp = await app.GetTestClient().PostAsync($"/api/jobs/{Guid.NewGuid()}/trigger", null);
@@ -214,7 +214,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_WithInvalidCsrfToken_IsRejectedAndDoesNotAct()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartAsync(reader);
         var client = app.GetTestClient();
         var token = await GetManagementRequestTokenAsync(client);
@@ -235,7 +235,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_WhenManagementDisabled_Returns404()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = false };
+        var reader = new FakeDashboardService { ManagementEnabled = false };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Post, $"/api/jobs/{Guid.NewGuid()}/trigger");
@@ -247,7 +247,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_WhenManagementDisabledWithoutCsrfHeader_Returns404AndDoesNotAct()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = false };
+        var reader = new FakeDashboardService { ManagementEnabled = false };
         await using var app = await StartAsync(reader);
 
         var resp = await app.GetTestClient().PostAsync($"/api/jobs/{Guid.NewGuid()}/trigger", null);
@@ -259,7 +259,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Retry_WhenManagementEnabledAndJobAffected_Returns204AndForwardsId()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartAsync(reader);
         var id = Guid.NewGuid();
 
@@ -272,7 +272,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task DeleteJob_WhenManagementEnabledAndJobAffected_Returns204AndForwardsId()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartAsync(reader);
         var id = Guid.NewGuid();
 
@@ -285,7 +285,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task DeleteRecurrent_WhenManagementEnabledAndJobAffected_Returns204AndForwardsId()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartAsync(reader);
         var id = Guid.NewGuid();
 
@@ -298,7 +298,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task DeleteRecurrent_WhenManagementDisabled_Returns404()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = false };
+        var reader = new FakeDashboardService { ManagementEnabled = false };
         await using var app = await StartAsync(reader);
 
         var resp = await SendManageAsync(app, HttpMethod.Delete, $"/api/recurrent/{Guid.NewGuid()}");
@@ -310,7 +310,7 @@ public class JobbyDashboardManagementApiTests
     [Fact]
     public async Task Trigger_InPolicyMode_RejectsUnauthenticatedAndAllowsAuthenticated()
     {
-        var reader = new FakeDashboardDataReader { ManagementEnabled = true, ManagementAffected = 1 };
+        var reader = new FakeDashboardService { ManagementEnabled = true, ManagementAffected = 1 };
         await using var app = await StartPolicyAsync(reader);
         var id = Guid.NewGuid();
 
@@ -324,14 +324,14 @@ public class JobbyDashboardManagementApiTests
         Assert.Equal([id], reader.LastTriggerIds);
     }
 
-    private static async Task<WebApplication> StartPolicyAsync(FakeDashboardDataReader reader)
+    private static async Task<WebApplication> StartPolicyAsync(FakeDashboardService reader)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(new JobbyDashboardOptions());
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
-        builder.Services.AddScoped<IDashboardDataReader>(_ => reader);
+        builder.Services.AddScoped<IDashboardService>(_ => reader);
         builder.Services.AddAuthentication(TestAuthHandler.Scheme)
             .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.Scheme, _ => { });
         builder.Services.AddAuthorizationBuilder()

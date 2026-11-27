@@ -2,7 +2,7 @@ using Jobby.Core.Models.Dashboard;
 
 namespace Jobby.Dashboard;
 
-internal interface IDashboardDataReader
+internal interface IDashboardService
 {
     // False means action methods throw; callers should hide or disable management paths first.
     bool ManagementEnabled { get; }

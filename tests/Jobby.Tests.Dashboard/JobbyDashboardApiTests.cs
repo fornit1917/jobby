@@ -12,7 +12,7 @@ namespace Jobby.Tests.Dashboard;
 
 public class JobbyDashboardApiTests
 {
-    private static async Task<WebApplication> StartAsync(FakeDashboardDataReader reader,
+    private static async Task<WebApplication> StartAsync(FakeDashboardService reader,
         JobbyDashboardOptions? options = null)
     {
         var builder = WebApplication.CreateBuilder();
@@ -20,7 +20,7 @@ public class JobbyDashboardApiTests
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(options ?? new JobbyDashboardOptions { StaleServerThresholdSeconds = 123 });
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
-        builder.Services.AddScoped<IDashboardDataReader>(_ => reader);
+        builder.Services.AddScoped<IDashboardService>(_ => reader);
         var state = new JobbyDashboardAuthState();
         state.Configure(JobbyDashboardAuthMode.Anonymous);
         var app = builder.Build();
@@ -32,14 +32,14 @@ public class JobbyDashboardApiTests
     [Fact]
     public async Task Stats_ReturnsOk()
     {
-        await using var app = await StartAsync(new FakeDashboardDataReader());
+        await using var app = await StartAsync(new FakeDashboardService());
         Assert.Equal(HttpStatusCode.OK, (await app.GetTestClient().GetAsync("/api/stats")).StatusCode);
     }
 
     [Fact]
     public async Task Config_ReturnsSettingsFromOptions()
     {
-        await using var app = await StartAsync(new FakeDashboardDataReader());
+        await using var app = await StartAsync(new FakeDashboardService());
         var dto = await app.GetTestClient()
             .GetFromJsonAsync<JobbyDashboardClientConfigDto>("/api/config");
         Assert.Equal(123, dto!.StaleServerThresholdSeconds);
@@ -51,7 +51,7 @@ public class JobbyDashboardApiTests
     [Fact]
     public async Task Jobs_ParsesPagingFromQueryString()
     {
-        var reader = new FakeDashboardDataReader();
+        var reader = new FakeDashboardService();
         await using var app = await StartAsync(reader);
         Assert.Equal(HttpStatusCode.OK, (await app.GetTestClient().GetAsync("/api/jobs?page=3&pageSize=7")).StatusCode);
         Assert.Equal(3, reader.LastJobsQuery!.Page);
@@ -65,7 +65,7 @@ public class JobbyDashboardApiTests
     [InlineData(true)]
     public async Task Jobs_ParsesScheduledBoundsAsUtc_AndPreservesExplicitSort(bool reversed)
     {
-        var reader = new FakeDashboardDataReader();
+        var reader = new FakeDashboardService();
         await using var app = await StartAsync(reader);
         var from = new DateTimeOffset(2026, 6, 10, 12, 30, 0, TimeSpan.FromHours(3));
         var to = from.AddDays(reversed ? -1 : 1);
@@ -86,7 +86,7 @@ public class JobbyDashboardApiTests
     [Fact]
     public async Task Jobs_IgnoresMalformedBounds_AndDefaultsMalformedSort()
     {
-        var reader = new FakeDashboardDataReader();
+        var reader = new FakeDashboardService();
         await using var app = await StartAsync(reader);
 
         using var response = await app.GetTestClient().GetAsync(
@@ -103,7 +103,7 @@ public class JobbyDashboardApiTests
     [Fact]
     public async Task Jobs_ParsesMultipleStatuses_AndDropsUndefinedTokens()
     {
-        var reader = new FakeDashboardDataReader();
+        var reader = new FakeDashboardService();
         await using var app = await StartAsync(reader);
         var client = app.GetTestClient();
 
@@ -120,7 +120,7 @@ public class JobbyDashboardApiTests
     [Fact]
     public async Task JobById_NotFound_Returns404()
     {
-        await using var app = await StartAsync(new FakeDashboardDataReader { JobById = null });
+        await using var app = await StartAsync(new FakeDashboardService { JobById = null });
         Assert.Equal(HttpStatusCode.NotFound,
             (await app.GetTestClient().GetAsync($"/api/jobs/{Guid.NewGuid()}")).StatusCode);
     }
@@ -129,7 +129,7 @@ public class JobbyDashboardApiTests
     public async Task Config_IncludesDateTimeDefaultsAndServerTime()
     {
         var before = DateTime.UtcNow;
-        await using var app = await StartAsync(new FakeDashboardDataReader());
+        await using var app = await StartAsync(new FakeDashboardService());
         var dto = await app.GetTestClient()
             .GetFromJsonAsync<JobbyDashboardClientConfigDto>("/api/config");
 
@@ -148,7 +148,7 @@ public class JobbyDashboardApiTests
         {
             DefaultTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/London"),
         };
-        await using var app = await StartAsync(new FakeDashboardDataReader(), options);
+        await using var app = await StartAsync(new FakeDashboardService(), options);
 
         var dto = await app.GetTestClient()
             .GetFromJsonAsync<JobbyDashboardClientConfigDto>("/api/config", TestContext.Current.CancellationToken);
@@ -164,7 +164,7 @@ public class JobbyDashboardApiTests
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton(new JobbyDashboardOptions { DefaultLanguage = DashboardLanguage.Russian });
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
-        builder.Services.AddScoped<IDashboardDataReader>(_ => new FakeDashboardDataReader());
+        builder.Services.AddScoped<IDashboardService>(_ => new FakeDashboardService());
         var state = new JobbyDashboardAuthState();
         state.Configure(JobbyDashboardAuthMode.Anonymous);
         await using var app = builder.Build();
@@ -191,7 +191,7 @@ public class JobbyDashboardApiTests
                 "Not a real zone")
         });
         builder.Services.AddAntiforgery(o => o.HeaderName = JobbyDashboardProtocol.ManagementRequestHeader);
-        builder.Services.AddScoped<IDashboardDataReader>(_ => new FakeDashboardDataReader());
+        builder.Services.AddScoped<IDashboardService>(_ => new FakeDashboardService());
         var state = new JobbyDashboardAuthState();
         state.Configure(JobbyDashboardAuthMode.Anonymous);
         await using var app = builder.Build();
