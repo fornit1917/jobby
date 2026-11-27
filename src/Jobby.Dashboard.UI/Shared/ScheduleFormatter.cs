@@ -26,10 +26,12 @@ public static class ScheduleFormatter
     private const string CronType = "JOBBY_CRON";
     private const string IntervalType = "JOBBY_INTERVAL";
 
-    private static readonly Options CronOptions = new()
-    {
-        ThrowExceptionOnParseError = true,
-    };
+    // Cron descriptions are always English, by design: they do not follow the language selected in the
+    // dashboard nor the culture of the machine or browser. The locale is passed to the describer
+    // explicitly so the output is stable on any machine, but only when the runtime can create the
+    // culture: under InvariantGlobalization (the WASM client ships with it) any non-invariant culture
+    // cannot be created, and the describer's default resources - which are English as well - are used.
+    private const string CronLocale = "en";
 
     public static ScheduleDisplayModel Format(string? schedule, string? schedulerType)
     {
@@ -57,7 +59,14 @@ public static class ScheduleFormatter
         string? description = null;
         try
         {
-            description = ExpressionDescriptor.GetDescription(cron, CronOptions);
+            var options = new Options { ThrowExceptionOnParseError = true };
+            var locale = ResolveCronLocale();
+            if (locale is not null)
+            {
+                options.Locale = locale;
+            }
+
+            description = ExpressionDescriptor.GetDescription(cron, options);
         }
         catch (Exception)
         {
@@ -65,6 +74,19 @@ public static class ScheduleFormatter
         }
 
         return new ScheduleDisplayModel { Kind = ScheduleKind.Cron, Description = description, Badge = cron };
+    }
+
+    private static string? ResolveCronLocale()
+    {
+        try
+        {
+            var culture = new CultureInfo(CronLocale);
+            return string.IsNullOrEmpty(culture.Name) ? null : culture.Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return null;
+        }
     }
 
     private static string ExtractCronExpression(string schedule)

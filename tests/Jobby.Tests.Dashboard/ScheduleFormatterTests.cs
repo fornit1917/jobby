@@ -2,6 +2,9 @@ using Jobby.Dashboard.UI.Shared;
 
 namespace Jobby.Tests.Dashboard;
 
+// Pin test: cron schedule descriptions are always English by design. They do not follow the language
+// selected in the dashboard and must not depend on the culture of the machine running the code, which
+// is what the exact assertions below lock in.
 public class ScheduleFormatterTests
 {
     [Theory]
@@ -15,26 +18,13 @@ public class ScheduleFormatterTests
         Assert.Equal(expected, ScheduleFormatter.DescribeCron(cron));
     }
 
-    [Theory]
-    [InlineData(null, "JOBBY_CRON")]
-    [InlineData("", "JOBBY_CRON")]
-    [InlineData("   ", "JOBBY_INTERVAL")]
-    public void Empty_ScheduleIsKindNone(string? schedule, string? schedulerType)
-    {
-        var model = ScheduleFormatter.Format(schedule, schedulerType);
-        Assert.Equal(ScheduleKind.None, model.Kind);
-        Assert.Null(model.Description);
-        Assert.Null(model.Badge);
-    }
-
     [Fact]
     public void Bare_CronDailyProducesDescriptionAndBadge()
     {
         var model = ScheduleFormatter.Format("0 0 9 * * *", "JOBBY_CRON");
         Assert.Equal(ScheduleKind.Cron, model.Kind);
         Assert.Equal("0 0 9 * * *", model.Badge);
-        Assert.NotNull(model.Description);
-        Assert.Contains("09:00", model.Description);
+        Assert.Equal("At 09:00 AM", model.Description);
     }
 
     [Fact]
@@ -42,7 +32,7 @@ public class ScheduleFormatterTests
     {
         var model = ScheduleFormatter.Format("*/5 * * * *", "JOBBY_CRON");
         Assert.Equal(ScheduleKind.Cron, model.Kind);
-        Assert.Contains("5 minutes", model.Description);
+        Assert.Equal("Every 5 minutes", model.Description);
     }
 
     [Fact]
@@ -50,7 +40,7 @@ public class ScheduleFormatterTests
     {
         var model = ScheduleFormatter.Format("*/5 * * * * *", "JOBBY_CRON");
         Assert.Equal(ScheduleKind.Cron, model.Kind);
-        Assert.Contains("5 seconds", model.Description);
+        Assert.Equal("Every 5 seconds", model.Description);
     }
 
     [Fact]

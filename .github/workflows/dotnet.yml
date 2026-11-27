@@ -18,9 +18,16 @@ jobs:
           - os: ubuntu-latest
             start_infra: true
             test_command: dotnet test --no-build --verbosity normal
+          # Windows has no PostgreSQL, so the integration tests (Jobby.IntegrationTests.*) run only on
+          # Ubuntu; the unit suites (Jobby.Tests.*) run on both operating systems to catch
+          # platform-dependent behavior (time zones, paths, globalization).
           - os: windows-latest
             start_infra: false
-            test_command: dotnet test tests/Jobby.Tests.Dashboard/Jobby.Tests.Dashboard.csproj --no-build --verbosity normal
+            test_command: |
+              for project in $(find tests -maxdepth 2 -name 'Jobby.Tests.*.csproj' | sort); do
+                echo "Testing $project"
+                dotnet test "$project" --no-build --verbosity normal || exit 1
+              done
 
     runs-on: ${{ matrix.os }}
 
@@ -60,4 +67,5 @@ jobs:
         compose-file: "docker-compose.postgresql.yml"      
 
     - name: Test
+      shell: bash
       run: ${{ matrix.test_command }}

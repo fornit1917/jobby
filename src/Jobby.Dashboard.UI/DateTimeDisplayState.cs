@@ -165,6 +165,18 @@ public sealed class DateTimeDisplayState
         Recompute();
     }
 
+    // Bypasses id resolution: tests for the offset, fold and gap behavior run against zones with
+    // explicit rules, which are built without the OS database and work on every OS.
+    internal void ApplyForTests(TimeZoneInfo timeZone, DashboardDateStyle date, DashboardTimeStyle time)
+    {
+        _overrideTimeZoneId = null;
+        _overrideDateStyle = date;
+        _overrideTimeStyle = time;
+        TimeZone = timeZone;
+        DateStyle = date;
+        TimeStyle = time;
+    }
+
     internal void RaiseChangedForTests() => Changed?.Invoke();
 
     private async Task SaveAsync(IJSRuntime js)
