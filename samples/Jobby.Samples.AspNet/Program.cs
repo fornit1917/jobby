@@ -68,6 +68,14 @@ public static class Program
 
         builder.Services.AddScoped<JobLoggingMiddleware>();
         const string recurrentJobsQueueName = "recurrent";
+        var queues = appJobbyConfig.Queues.Length > 0
+            ? appJobbyConfig.Queues.Select(q => new QueueSettings
+            {
+                QueueName = q.QueueName,
+                MaxDegreeOfParallelism = q.MaxDegreeOfParallelism,
+                DisableSerializableGroups = q.DisableSerializableGroups,
+            }).ToArray()
+            : [new QueueSettings { QueueName = QueueSettings.DefaultQueueName }];
         builder.Services.AddJobbyServerAndClient(jobbyBuilder =>
         {
             jobbyBuilder
@@ -80,16 +88,20 @@ public static class Program
                     .UsePostgresql(sp.GetRequiredService<NpgsqlDataSource>())
                     .UseServerSettings(new JobbyServerSettings
                     {
-                        PollingIntervalMs = 500,
-                        MaxDegreeOfParallelism = 10,
-                        TakeToProcessingBatchSize = 10,
-                        MaxNoHeartbeatIntervalSeconds = 600,
-                        Queues =
-                        [
-                            new QueueSettings { QueueName = QueueSettings.DefaultQueueName },
-                            new QueueSettings { QueueName = recurrentJobsQueueName },
-                            new QueueSettings { QueueName = "heavy", MaxDegreeOfParallelism = 1 }
-                        ]
+                        PollingIntervalMs = appJobbyConfig.Server.PollingIntervalMs,
+                        PollingIntervalStartMs = appJobbyConfig.Server.PollingIntervalStartMs,
+                        PollingIntervalFactor = appJobbyConfig.Server.PollingIntervalFactor,
+                        MaxDegreeOfParallelism = appJobbyConfig.Server.MaxDegreeOfParallelism,
+                        TakeToProcessingBatchSize = appJobbyConfig.Server.TakeToProcessingBatchSize,
+                        DeleteCompleted = appJobbyConfig.Server.DeleteCompleted,
+                        CompleteWithBatching = appJobbyConfig.Server.CompleteWithBatching,
+                        DisableSerializableGroups = appJobbyConfig.Server.DisableSerializableGroups,
+                        HeartbeatIntervalSeconds = appJobbyConfig.Server.HeartbeatIntervalSeconds,
+                        MaxNoHeartbeatIntervalSeconds = appJobbyConfig.Server.MaxNoHeartbeatIntervalSeconds,
+                        PermanentLockedFreezingIntervalSeconds = appJobbyConfig.Server.PermanentLockedFreezingIntervalSeconds,
+                        PermanentLockedHandleUnlockingRequestsIntervalSeconds = appJobbyConfig.Server.PermanentLockedHandleUnlockingRequestsIntervalSeconds,
+                        DbErrorPauseMs = appJobbyConfig.Server.DbErrorPauseMs,
+                        Queues = queues
                     })
                     .UseDefaultRetryPolicy(new RetryPolicy
                     {

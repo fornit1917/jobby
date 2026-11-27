@@ -14,6 +14,7 @@ namespace Jobby.Samples.AspNet.Jobs
         public string? QueueName { get; init; }
         public string? SerializableGroupId { get; init; }
         public bool LockGroupIfFailed { get; init; } = false;
+        public bool? CanBeRestarted { get; init; } = null;
 
         // accept enum names ("RestoreTraceId") in JSON bodies, not only numbers
         [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -28,6 +29,7 @@ namespace Jobby.Samples.AspNet.Jobs
             SerializableGroupId = SerializableGroupId,
             LockGroupIfFailed = LockGroupIfFailed,
             TracingMode = TracingMode,
+            CanBeRestartedIfServerGoesDown = CanBeRestarted,
         };
 
         public RecurrentJobOpts GetOptionsForRecurrentJob() => default(RecurrentJobOpts);

@@ -138,7 +138,10 @@ until grep -q "Lost server" <file> 2>/dev/null; do sleep 1; done
 until bash temp/regression/db.sh "SELECT 1 WHERE EXISTS (SELECT 1 FROM jobby_jobs WHERE status=4)" | grep -q 1; do sleep 1; done
 ```
 
-Restart-after-edit depends on WHAT was edited:
+Restart-after-edit depends on WHAT was edited. BOTH paths: kill the port's PID FIRST
+(unconditional — a stale instance silently keeps serving the port), and after the
+wait-ready loop verify the fresh log contains `Now listening on: http://127.0.0.1:<port>`
+(see the S25 pitfall below for why this check is mandatory):
 
 ```bash
 # --- config-only edit (appsettings.json): NO REBUILD. ---
@@ -149,19 +152,26 @@ taskkill //F //PID $(netstat -ano | grep ":5075" | grep LISTEN | awk '{print $NF
 # ...edit the copy's appsettings.json...
 dotnet run --project temp/Jobby.Samples.AspNet --no-launch-profile --no-build --urls http://127.0.0.1:5075 \
   >> temp/regression/logs/instance1.log 2>&1 &
-# run the wait-ready loop above
+# run the wait-ready loop above, then:
+until grep -q "Now listening on: http://127.0.0.1:5075" <(tail -n 50 temp/regression/logs/instance1.log); do sleep 0.5; done
 
 # --- code edit (Program.cs, DemoJobCommand, ...): build IS required. ---
 # never build while an instance is running (output files are locked, see §5 discipline):
 taskkill //F //PID $(netstat -ano | grep ":5075" | grep LISTEN | awk '{print $NF}' | head -1)
 # ...edit the copy's code...
 dotnet build temp/Jobby.Samples.AspNet/Jobby.Samples.AspNet.csproj 2>&1 | tail -4   # expect "Ошибок: 0"
-# start instance in background, then run the wait-ready loop above
+# start instance in background, then run the wait-ready loop + "Now listening on" check above
 ```
 
-When unsure whether a change is config or code: `UseServerSettings` lives in `Program.cs`
-(code — rebuild), `Jobby:` section lives in `appsettings.json` (config — restart only).
-The config-only path applies to S24 tracing flags, `Jobby:UseMetrics`, etc.
+When unsure whether a change is config or code: ALL server settings — scalar
+(`DeleteCompleted`, `CompleteWithBatching`, heartbeat/freeze intervals, `DbErrorPauseMs`,
+polling, parallelism) in the `Jobby:Server` section AND the queue list in the
+`Jobby:Queues` section (`[{"QueueName": "default"}, {"QueueName": "heavy",
+"MaxDegreeOfParallelism": 1}]`; `MaxDegreeOfParallelism` omitted/0 = server default) —
+live in `appsettings.json` (config — restart only); the `Jobby:` flags (`UseTracing`,
+`TracingMode`, `UseMetrics`) are config too. The retry policy is hardcoded in `Program.cs`
+(code edit), but no scenario edits it. The config-only path applies to S9 (all three
+sub-checks), S17, S24 tracing flags, S25's `CompleteWithBatching`, etc.
 
 ### Operational pitfalls (each actually bit during a run — don't repeat them)
 
@@ -182,6 +192,21 @@ The config-only path applies to S24 tracing flags, `Jobby:UseMetrics`, etc.
   from earlier kills are still in the file (bit in practice in S16). Before a kill/eviction
   check, record the check point: either `wc -l < file` and grep only `tail -n +<N+1>`, or
   `cp` the log to a snapshot like S24 does.
+- **KILL the instance on the target port before EVERY `dotnet run`, even if you believe
+  nothing is running** (bit in practice in S25: a stale instance from a previous scenario
+  step kept serving :5075; the new instance failed to bind and its truncated log recorded
+  only the bind failure, so one "instance" executed ~1000 jobs into a log file nobody was
+  reading, and the drain looked wrong until the logs were reconciled). `dotnet run` on an
+  occupied port does NOT fail the background command — the old process keeps answering
+  `curl` 200 and everything looks healthy. Rules:
+  1. Every start is preceded by an unconditional `taskkill` of the port's PID
+     (`taskkill //F //PID $(netstat -ano | grep ":5075" | grep LISTENING | awk '{print $NF}' | head -1)`)
+     — even between steps of the same scenario, even when the previous step "surely" stopped it.
+  2. After every start, verify the NEW process actually bound the port: the fresh log must
+     contain the Kestrel line `Now listening on: http://127.0.0.1:<port>`. If it is absent,
+     the start failed — find the stale instance and kill it. A bind failure prints
+     `Failed to bind to address http://127.0.0.1:<port>: address already in use`:
+     `grep -c "Now listening on: http://127.0.0.1:5075" <fresh-log>` must be >= 1.
 - **docker-compose v1 needs `-f` for EVERY subcommand** (`stop`, `start`, `restart` too),
   not only `up`. `docker-compose stop` without the flag fails with "no configuration file
   provided" (bit in practice in S18 — in a scenario where every second counts).
@@ -196,26 +221,32 @@ The config-only path applies to S24 tracing flags, `Jobby:UseMetrics`, etc.
 
 ### Fast server intervals — set them ALL in the initial copy
 
-Edit the copy's `UseServerSettings` ONCE at setup to include every scenario-tuned value,
-so S15–S18 need no extra rebuild/restart cycles:
+All scalar server settings are bound from the `Jobby:Server` section of the copy's
+`appsettings.json` (config-only: applied on a plain process restart, NO rebuild).
+Set every scenario-tuned value ONCE at setup, so S15–S18 need no extra cycles:
 
-```csharp
-PermanentLockedFreezingIntervalSeconds = 2,
-PermanentLockedHandleUnlockingRequestsIntervalSeconds = 2,
-HeartbeatIntervalSeconds = 2,
-MaxNoHeartbeatIntervalSeconds = 6,
-DbErrorPauseMs = 2000
+```json
+"PermanentLockedFreezingIntervalSeconds": 2,
+"PermanentLockedHandleUnlockingRequestsIntervalSeconds": 2,
+"HeartbeatIntervalSeconds": 2,
+"MaxNoHeartbeatIntervalSeconds": 6,
+"DbErrorPauseMs": 2000
 ```
 
 Accepted side effect: blocked groups now freeze after ~2 s everywhere, so S14B's second
 job transitions `Scheduled`→`Frozen` quickly — fine, the assertion is only that it never
 executes. S9 still needs its own restarts (it tests other settings' values).
 
-### Pre-add the S17 code edit
+### No rebuilds needed in the whole suite
 
-Add the `CanBeRestarted` field to the copy's `DemoJobCommand` right after copying (see S17
-for the exact `JobOpts.CanBeRestartedIfServerGoesDown` mapping) — one rebuild at setup
-instead of a mid-suite rebuild+restart.
+The `DemoJobCommand` in the sample already carries every per-job field the scenarios use
+(`QueueName`, `SerializableGroupId`, `LockGroupIfFailed`, `TracingMode`, `CanBeRestarted`
+→ `JobOpts.CanBeRestartedIfServerGoesDown`, etc.), and all server settings live in
+`appsettings.json`. The copy still needs its ONE initial build after copying (bin/obj are
+stripped), but after that no scenario requires a code edit or rebuild — everything is a
+config edit + restart or just an HTTP call. If a future scenario seems to need a new
+command field, prefer adding it permanently to the sample (like the fields above) over
+editing the disposable copy.
 
 ### Immediate DB checks (the S24 pattern, applies everywhere)
 
@@ -313,6 +344,7 @@ All endpoints are `POST` unless stated; base URL `http://127.0.0.1:5075` (or :50
   "QueueName": null,
   "SerializableGroupId": null,
   "LockGroupIfFailed": false,
+  "CanBeRestarted": null,
   "TracingMode": null
 }
 ```
@@ -324,14 +356,17 @@ throws an exception that `IgnoreSomeErrorsMiddleware` swallows; `DelayMs` delays
 `JsonStringEnumConverter` is applied on the sample's command) overrides the global
 `Jobby:TracingMode` appsettings value for that job; used by S24.
 
-Default demo config (`Program.cs` of the copy): polling 500 ms; retry policy `MaxCount=3,
-IntervalsSeconds=[1,2]`; queues: `default`, `recurrent`, `heavy` (`MaxDegreeOfParallelism=1`);
-`DeleteCompleted=true` (default), `CompleteWithBatching=false` (default).
+Default demo config: all server settings come from the copy's `appsettings.json` —
+scalars in `Jobby:Server` (polling 500 ms, `DeleteCompleted=true`,
+`CompleteWithBatching=false`, default heartbeat/freeze intervals) and the queue list in
+`Jobby:Queues` (`default`, `recurrent`, `heavy` with `MaxDegreeOfParallelism=1`);
+in code (`Program.cs`) only the retry policy `MaxCount=3, IntervalsSeconds=[1,2]` remains.
 
 You may edit **the copy's** `Program.cs` / `appsettings.json` / code per-scenario
 (e.g. server settings, extra command fields). That is expected — the repo itself stays untouched.
 Code edits require a rebuild; appsettings.json edits require only a process restart
-(`dotnet run --no-build` — see the two restart paths in §2.1).
+(`dotnet run --no-build` — see the two restart paths in §2.1). Server settings and queues
+(S9, S25, §2.1 speed setup) are appsettings edits — restart only, no rebuild.
 
 **Rebuild discipline (important — bitten in practice):**
 - NEVER build while an instance is running: the running exe locks the output and the build
@@ -404,14 +439,15 @@ responses), and verdict PASS/FAIL.
 **Expected:** all five metric families present and reflecting activity.
 
 ### S9. Server settings variations (DeleteCompleted / CompleteWithBatching / queue count)
-Run three sub-checks, editing the copy's `UseServerSettings` in `Program.cs` between them
-(these are CODE edits — each sub-check needs the kill→edit→build→start cycle, the
-appsettings no-rebuild shortcut does NOT apply here):
-1. `DeleteCompleted=false`: successful jobs remain in DB with `status=3`.
-2. `CompleteWithBatching=true`: jobs still complete correctly (batch completion path works);
-   with `DeleteCompleted=false` rows end `status=3`, with `true` rows are removed.
-3. Single queue only (`Queues=[default]`): default-queue jobs execute; jobs sent to `heavy`
-   stay `Scheduled` and are NOT executed (server is not listening to that queue).
+Run three sub-checks; ALL are config-only — edit the copy's `appsettings.json`
+(`Jobby:Server` for 1–2, `Jobby:Queues` for 3), each needs only the kill→edit→restart
+cycle (NO rebuild):
+1. `Jobby:Server:DeleteCompleted=false`: successful jobs remain in DB with `status=3`.
+2. `Jobby:Server:CompleteWithBatching=true`: jobs still complete correctly (batch completion
+   path works); with `DeleteCompleted=false` rows end `status=3`, with `true` rows are removed.
+3. Single queue only (`"Queues": [{"QueueName": "default"}]`): default-queue jobs execute;
+   jobs sent to `heavy` stay `Scheduled` and are NOT executed (server is not listening to
+   that queue). Restore the full queue list afterwards (needed by S5/S25).
 **Expected:** settings behave per `docs/docs/install-and-config.md` semantics.
 
 ### S10. Transactional batch
@@ -485,10 +521,9 @@ appsettings no-rebuild shortcut does NOT apply here):
 **Expected:** dead server evicted by heartbeat timeout; its in-flight job restarted on a live instance.
 
 ### S17. `CanBeRestartedIfServerGoesDown=false`
-1. Same settings/instances as S16. The `CanBeRestarted` field was already added to the
-   copy's `DemoJobCommand` by the §2.1 speed setup (mapped to
-   `JobOpts.CanBeRestartedIfServerGoesDown`) — no rebuild needed; just TRUNCATE
-   `jobby_jobs` and ensure both instances are running.
+1. Same settings/instances as S16. The `CanBeRestarted` field is a permanent part of the
+   sample's `DemoJobCommand` (mapped to `JobOpts.CanBeRestartedIfServerGoesDown`) —
+   just TRUNCATE `jobby_jobs` and ensure both instances are running.
 2. Enqueue `{"Value":"s17","DelayMs":8000,"CanBeRestarted":false}` to instance 1; poll until `status=2`.
 3. Kill instance 1. Poll up to ~12 s: server removed as in S16, but the job is NOT restarted —
    it stays with the dead server's `server_id`, `started_count` stays 1, `can_be_restarted=false`.
@@ -664,8 +699,8 @@ Practical notes (verified in the first run):
 
 ### S25. Bulk load: thousands of jobs drain without stalls (run twice)
 Run this scenario twice: once with default `CompleteWithBatching=false` and once with
-`CompleteWithBatching=true` (edit the copy's `UseServerSettings` in `Program.cs` — a code
-edit, so kill→edit→build→start between runs; the appsettings no-rebuild shortcut does not apply).
+`CompleteWithBatching=true` (edit `Jobby:Server:CompleteWithBatching` in the copy's
+`appsettings.json` — config-only, kill→edit→restart between runs, NO rebuild).
 Default config otherwise (polling 500 ms, retry 3×[1,2] s, queues `default` + `heavy`).
 
 1. TRUNCATE `jobby_jobs`. Start BOTH instances (:5075 and :5076). Then remove the startup
@@ -759,4 +794,6 @@ and relevant log excerpt / DB rows. Report overall suite status.
   forwarding is broken, restart the container or ask the user.
 - `docker compose` (plugin) not found: use `docker-compose` (v1) — that's the installed one.
 - Two app instances share the DB — always check `server_id` when attributing log lines to an instance.
-- If a scenario needs a new command field, edit **the copy's** code only (see S17 pattern).
+- If a scenario needs a new command field, prefer adding it permanently to the sample's
+  `DemoJobCommand` (like `QueueName`/`CanBeRestarted`) so future runs need no rebuild;
+  as a stopgap, edit **the copy's** code only (then a rebuild is required).
