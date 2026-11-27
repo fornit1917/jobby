@@ -1,0 +1,276 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime Js
+@inject DashboardClientConfig Config
+@inject DashboardModeState Mode
+@inject NavigationManager Nav
+@inject DashboardApiClient Api
+@inject DateTimeDisplayState Dt
+@inject LanguageState L
+@inject IBrowserViewportService BrowserViewport
+@implements IDisposable
+@using Jobby.Dashboard.UI.Theme
+
+<MudThemeProvider @bind-IsDarkMode="_isDarkMode" Theme="JobbyTheme.Instance" ObserveSystemDarkModeChange="false" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <a href="#dashboard-main" class="jobby-skip-link" @onclick="SkipToMainAsync" @onclick:preventDefault="true">@L["nav.skipToMain"]</a>
+    <div class="jobby-visually-hidden" role="status" aria-live="polite" aria-atomic="true">@RouteAnnouncement</div>
+    <MudAppBar Elevation="0" Color="Color.Surface" Class="jobby-appbar">
+        <MudIconButton Icon="@Icons.Material.Outlined.ViewSidebar" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="ToggleDrawer" aria-label="@L["nav.toggleNavigation"]" data-testid="drawer-toggle" />
+        <div class="jobby-breadcrumb">
+            <span>@L["nav.dashboardTitle"]</span>
+            <span>/</span>
+            <span class="crumb-current">@CurrentSection</span>
+        </div>
+        <MudSpacer />
+        <div class="jobby-appbar-controls">
+            @if (Config.ManagementEnabled)
+            {
+                <MudToggleGroup T="DashboardMode" Value="Mode.Mode" ValueChanged="OnModeChanged"
+                                Size="Size.Small" Color="Color.Primary" CheckMark="false"
+                                data-testid="mode-toggle">
+                    <MudToggleItem Value="DashboardMode.Management">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Class="mr-1" />@L["common.management"]
+                    </MudToggleItem>
+                    <MudToggleItem Value="DashboardMode.ReadOnly">
+                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Class="mr-1" />@L["common.readOnly"]
+                    </MudToggleItem>
+                </MudToggleGroup>
+            }
+            else
+            {
+                <span class="jobby-tag jobby-tag-WaitingPrev" data-testid="readonly-chip">@L["common.readOnly"]</span>
+            }
+            <LanguageSelector />
+            <DateTimeSettings />
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit" OnClick="ToggleDarkModeAsync" aria-label="@L["nav.toggleTheme"]"
+                           data-testid="theme-toggle" />
+        </div>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Mini" OpenMiniOnHover="false" Elevation="0" Class="jobby-drawer">
+        <MudDrawerHeader Class="pa-0">
+            <div class="jobby-brand">
+                <span class="jobby-brand-mark"><MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" /></span>
+                <span class="jobby-brand-name">@L["nav.brand"]</span>
+            </div>
+        </MudDrawerHeader>
+        <MudNavMenu>
+            <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard">@L["nav.overview"]</MudNavLink>
+            <MudNavLink Href="recurrent" Icon="@Icons.Material.Filled.Schedule">@L["nav.recurrent"]</MudNavLink>
+            <MudNavLink Href="jobs" Icon="@Icons.Material.Filled.WorkOutline">@L["nav.jobs"]</MudNavLink>
+            <MudNavLink Href="queues" Icon="@Icons.Material.Filled.Layers">@L["nav.queues"]</MudNavLink>
+            <MudNavLink Href="locked-groups" Icon="@Icons.Material.Filled.Lock" Class="jobby-nav-locked">
+                <span class="jobby-nav-label">@L["nav.lockedGroups"]</span>
+                @if (_lockedCount > 0)
+                {
+                    <span class="jobby-nav-count" data-testid="locked-count-badge"
+                          title="@_lockedCount">@LockedCountLabel</span>
+                }
+            </MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent role="main">
+        <div id="dashboard-main" tabindex="-1" @ref="_mainFocus"></div>
+        <MudContainer MaxWidth="MaxWidth.False" Class="jobby-main-container px-3 px-sm-6 py-4" Style="max-width:1480px;">
+            <ErrorBoundary @ref="_errorBoundary">
+                <ChildContent>@Body</ChildContent>
+                <ErrorContent><MudAlert Severity="Severity.Error">@L["common.somethingWrong"]</MudAlert></ErrorContent>
+            </ErrorBoundary>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private const string ThemeStorageKey = "jobby-dashboard-dark";
+
+    // The nav badge has room for one digit; larger counts are shown as "9+".
+    private const int MaxLockedCountInBadge = 9;
+
+    private bool _isDarkMode = true;
+    private bool _drawerOpen = true;
+    private int _lockedCount;
+    private ErrorBoundary? _errorBoundary;
+
+    private string LockedCountLabel =>
+        _lockedCount > MaxLockedCountInBadge ? $"{MaxLockedCountInBadge}+" : _lockedCount.ToString();
+
+    private string CurrentSection
+    {
+        get
+        {
+            var path = Nav.ToBaseRelativePath(Nav.Uri);
+            var queryStart = path.IndexOf('?');
+            if (queryStart >= 0)
+            {
+                path = path[..queryStart];
+            }
+            path = path.Trim('/');
+            return path switch
+            {
+                "" => L["nav.overview"],
+                _ when path.StartsWith("jobs") => L["nav.jobs"],
+                _ when path.StartsWith("recurrent") => L["nav.recurrent"],
+                _ when path.StartsWith("queue") => L["nav.queues"],
+                _ when path.StartsWith("locked-group") => L["nav.lockedGroups"],
+                _ => L["nav.overview"],
+            };
+        }
+    }
+
+    private void OnModeChanged(DashboardMode mode) => Mode.Mode = mode;
+
+    private string RouteAnnouncement
+    {
+        get
+        {
+            var path = Nav.ToBaseRelativePath(Nav.Uri);
+            var queryStart = path.IndexOf('?');
+            if (queryStart >= 0)
+            {
+                path = path[..queryStart];
+            }
+            path = path.Trim('/');
+            return path switch
+            {
+                "" => L["nav.overview"],
+                "jobs" => L["nav.jobs"],
+                _ when path.StartsWith("jobs/") => L["route.jobDetails"],
+                "recurrent" => L["route.recurrentJobs"],
+                "queues" => L["nav.queues"],
+                _ when path.StartsWith("queue") => L["route.queueDetails"],
+                "locked-groups" => L["nav.lockedGroups"],
+                _ when path.StartsWith("locked-groups") => L["route.lockedGroupDetails"],
+                _ => L["nav.overview"],
+            };
+        }
+    }
+
+    private ElementReference _mainFocus;
+    private async Task SkipToMainAsync() => await _mainFocus.FocusAsync();
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        L.Changed += OnLanguageChanged;
+    }
+
+    // A page that failed to render must not leave its error on screen after the user navigates away.
+    protected override void OnParametersSet() => _errorBoundary?.Recover();
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(OnNavigatedAsync);
+
+    private async Task OnNavigatedAsync()
+    {
+        await CloseDrawerOnSmallScreenAsync();
+        StateHasChanged();
+        await LoadLockedCountAsync();
+    }
+
+    // Below the drawer's breakpoint an open drawer covers most of the page, so it closes once a link is followed.
+    private async Task CloseDrawerOnSmallScreenAsync()
+    {
+        if (!_drawerOpen)
+        {
+            return;
+        }
+
+        try
+        {
+            if (await BrowserViewport.GetCurrentBreakpointAsync() < Breakpoint.Md)
+            {
+                _drawerOpen = false;
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+        L.Changed -= OnLanguageChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+        try
+        {
+            var stored = await Js.InvokeAsync<string?>("localStorage.getItem", ThemeStorageKey);
+            if (stored is "true" or "false" && stored == "true" != _isDarkMode)
+            {
+                _isDarkMode = stored == "true";
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+
+        await ApplyThemeAttributeAsync();
+
+        await Dt.InitializeAsync(Js);
+
+        await L.InitializeAsync(Js);
+
+        await LoadLockedCountAsync();
+    }
+
+    private async Task LoadLockedCountAsync()
+    {
+        try
+        {
+            var count = (int)Math.Min(await Api.GetLockedGroupsCountAsync(), int.MaxValue);
+            if (count != _lockedCount)
+            {
+                _lockedCount = count;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private async Task ToggleDarkModeAsync()
+    {
+        _isDarkMode = !_isDarkMode;
+        await ApplyThemeAttributeAsync();
+        try
+        {
+            await Js.InvokeVoidAsync("localStorage.setItem", ThemeStorageKey, _isDarkMode ? "true" : "false");
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+
+    private async Task ApplyThemeAttributeAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("document.documentElement.setAttribute", "data-theme", _isDarkMode ? "dark" : "light");
+        }
+        catch
+        {
+            // ignored
+        }
+    }
+}

@@ -1,0 +1,17 @@
+<div class="jobby-state" data-testid="@TestId">
+    <div class="jobby-state-icon"><MudIcon Icon="@Icon" /></div>
+    <div class="jobby-state-title">@Title</div>
+    @if (!string.IsNullOrEmpty(Subtitle))
+    {
+        <div class="jobby-state-sub">@Subtitle</div>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string Icon { get; set; } = Icons.Material.Outlined.Inbox;
+    [Parameter] public string? TestId { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

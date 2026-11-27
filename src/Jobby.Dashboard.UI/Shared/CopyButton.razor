@@ -1,0 +1,39 @@
+@inherits LocalizedComponentBase
+@inject IJSRuntime Js
+@inject ISnackbar Snackbar
+
+<MudIconButton Icon="@Icons.Material.Outlined.ContentCopy"
+               Size="Size.Small"
+               Color="Color.Default"
+               OnClick="CopyAsync"
+               Disabled="@string.IsNullOrEmpty(Text)"
+               Class="@Class"
+               title="@(Tooltip ?? L["common.copy"])"
+               aria-label="@(Tooltip ?? L["common.copy"])"
+               data-testid="@TestId"/>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public string? Tooltip { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? TestId { get; set; }
+
+    private async Task CopyAsync()
+    {
+        if (string.IsNullOrEmpty(Text))
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Text);
+            Snackbar.Add(L["common.copied"], Severity.Success);
+        }
+        catch
+        {
+            Snackbar.Add(L["common.copyFailed"], Severity.Error);
+        }
+    }
+
+}

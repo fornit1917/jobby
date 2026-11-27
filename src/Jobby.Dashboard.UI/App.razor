@@ -1,0 +1,145 @@
+@inject HttpClient Http
+@inject DashboardClientConfig Config
+@inject LanguageState L
+@inject IJSRuntime Js
+@implements IDisposable
+
+@if (Config.LoadState == DashboardClientConfigLoadState.Ready)
+{
+    <Router @key="Config.Version" AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(DashboardLayout)"/>
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(DashboardLayout)">
+                <MudText Typo="Typo.h5">@L["common.pageNotFound"]</MudText>
+            </LayoutView>
+        </NotFound>
+    </Router>
+}
+else
+{
+    <main class="jobby-boot" data-testid="dashboard-boot">
+        <section class="jobby-boot-panel">
+            <div class="jobby-boot-mark" aria-hidden="true"></div>
+            <h1>@L["nav.dashboardTitle"]</h1>
+            @switch (Config.LoadState)
+            {
+                case DashboardClientConfigLoadState.Loading:
+                    <p>@L["boot.loading"]</p>
+                    break;
+                case DashboardClientConfigLoadState.RequiresAuthentication:
+                    <p>@L["boot.authRequired"]</p>
+                    <button type="button" @onclick="LoadConfigAsync">@L["common.retry"]</button>
+                    break;
+                case DashboardClientConfigLoadState.Ready:
+                case DashboardClientConfigLoadState.Failed:
+                default:
+                    <p>@L["boot.configFailed"]</p>
+                    <button type="button" @onclick="LoadConfigAsync">@L["common.retry"]</button>
+                    break;
+            }
+        </section>
+    </main>
+}
+
+<style>
+    .jobby-boot {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #0d0f13;
+        color: #e7e9ee;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .jobby-boot-panel {
+        width: min(420px, calc(100vw - 48px));
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+        text-align: center;
+    }
+
+    .jobby-boot-mark {
+        width: 42px;
+        height: 42px;
+        border: 4px solid #222730;
+        border-top-color: #a07cf5;
+        border-radius: 50%;
+        animation: jobby-boot-spin 0.9s linear infinite;
+    }
+
+    .jobby-boot h1 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 650;
+    }
+
+    .jobby-boot p {
+        margin: 0;
+        color: #99a0ab;
+    }
+
+    .jobby-boot button {
+        border: 0;
+        border-radius: 4px;
+        padding: 10px 18px;
+        background: #a07cf5;
+        color: #fff;
+        font: inherit;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    @@keyframes jobby-boot-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+@code {
+    private readonly CancellationTokenSource _cts = new();
+
+    protected override void OnInitialized()
+    {
+        Config.Changed += OnConfigChanged;
+        L.Changed += OnLanguageChanged;
+
+        if (Js is IJSInProcessRuntime jsInProcess)
+        {
+            L.SeedBootLanguage(jsInProcess.Invoke<string?>("__jobbyGetBootLang"));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await L.InitializeAsync(Js);
+            await LoadConfigAsync();
+        }
+    }
+
+    private Task LoadConfigAsync()
+    {
+        return Config.LoadAsync(Http, _cts.Token);
+    }
+
+    private void OnConfigChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnLanguageChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Config.Changed -= OnConfigChanged;
+        L.Changed -= OnLanguageChanged;
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+
+}

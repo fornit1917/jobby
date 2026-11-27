@@ -7,4 +7,5 @@ public class AppJobbySettings
     public bool UseMetrics { get; init; } = true;
     public bool UseTracing { get; init; }
     public JobbyTracingMode TracingMode { get; init; }
+    public bool SeedDashboardDemoData { get; init; }
 }

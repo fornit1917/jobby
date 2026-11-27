@@ -1,0 +1,130 @@
+@inherits LocalizedComponentBase
+@inject DashboardApiClient Api
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+@inject DashboardClientConfig Config
+@inject DashboardModeState Mode
+
+@if (Config.ManagementEnabled && Mode.IsManagementView && HasActions)
+{
+    <span class="jobby-actions-stop" @onclick:stopPropagation="true">
+    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Dense="true" Size="Size.Small"
+             AriaLabel="@L["actions.menu"]" data-testid="job-actions">
+        @if (Status == JobStatus.Scheduled)
+        {
+            <MudMenuItem Icon="@Icons.Material.Filled.PlayArrow"
+                         OnClick="TriggerAsync" data-testid="action-trigger">@L["actions.triggerNow"]</MudMenuItem>
+        }
+
+        @if (Recurrent)
+        {
+            @if (!IsGroupLocker)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                             OnClick="DeleteRecurrentAsync"
+                             data-testid="action-delete-recurrent">@L["common.delete"]</MudMenuItem>
+            }
+        }
+        else
+        {
+            @if (Status == JobStatus.Failed && !IsGroupLocker)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Replay"
+                             OnClick="RetryAsync" data-testid="action-retry">@L["common.retry"]</MudMenuItem>
+            }
+
+            @if (Status is (JobStatus.Scheduled or JobStatus.WaitingPrev) && !IsGroupLocker)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Cancel" IconColor="Color.Error"
+                             OnClick="CancelAsync" data-testid="action-cancel">@L["common.cancel"]</MudMenuItem>
+            }
+
+            @if (Status is (JobStatus.Failed or JobStatus.Frozen or JobStatus.Completed) && !IsGroupLocker)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                             OnClick="DeleteAsync" data-testid="action-delete">@L["common.delete"]</MudMenuItem>
+            }
+        }
+    </MudMenu>
+    </span>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid Id { get; set; }
+    [Parameter] public JobStatus Status { get; set; }
+
+    [Parameter] public bool IsGroupLocker { get; set; }
+
+    [Parameter] public bool Recurrent { get; set; }
+
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Mode.Changed += OnModeChanged;
+    }
+
+    private void OnModeChanged() => InvokeAsync(StateHasChanged);
+
+    private bool HasActions => (Recurrent && !IsGroupLocker)
+                               || Status == JobStatus.Scheduled
+                               || (!IsGroupLocker && Status is JobStatus.WaitingPrev or JobStatus.Failed or JobStatus.Frozen or JobStatus.Completed);
+
+    private Task TriggerAsync() =>
+        RunAsync(() => Api.TriggerJobAsync(Id), L["actions.scheduled"], confirm: null);
+
+    private Task RetryAsync() =>
+        RunAsync(() => Api.RetryJobAsync(Id), L["actions.queuedRetry"], confirm: null);
+
+    private Task CancelAsync() =>
+        RunAsync(() => Api.DeleteJobAsync(Id), L["actions.cancelled"],
+            confirm: L["actions.confirmCancel"]);
+
+    private Task DeleteAsync() =>
+        RunAsync(() => Api.DeleteJobAsync(Id), L["actions.jobDeleted"],
+            confirm: L["actions.confirmDeleteJob"]);
+
+    private Task DeleteRecurrentAsync() =>
+        RunAsync(() => Api.DeleteRecurrentJobAsync(Id), L["actions.recurrentDeleted"],
+            confirm: L["actions.confirmDeleteRecurrent"]);
+
+    // The request is not tied to this component's lifetime: a grid refresh may re-create the row
+    // (and this menu with it) while the confirmation dialog is still open.
+    private async Task RunAsync(Func<Task<bool>> action, string successMessage, string? confirm)
+    {
+        if (confirm is not null)
+        {
+            var confirmed = await Dialog.ShowMessageBoxAsync(L["common.confirm"], confirm, yesText: L["common.yes"], cancelText: L["common.cancel"]);
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            if (await action())
+            {
+                Snackbar.Add(successMessage, Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(L["actions.unavailable"], Severity.Warning);
+            }
+
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception)
+        {
+            Snackbar.Add(L["actions.failed"], Severity.Error);
+        }
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Mode.Changed -= OnModeChanged;
+    }
+
+}

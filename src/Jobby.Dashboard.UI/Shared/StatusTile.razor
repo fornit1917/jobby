@@ -1,0 +1,17 @@
+<a href="@Href" class="jobby-row-link" data-testid="@TestId">
+    <MudPaper Outlined="true" Class="pa-3">
+        <div class="d-flex align-center justify-space-between">
+            <StatusChip Status="Status"/>
+            <span class="jobby-mono" style="font-size:26px;line-height:1;color:var(--text-1);"
+                  data-testid="@CountTestId">@Count</span>
+        </div>
+    </MudPaper>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public JobStatus Status { get; set; }
+    [Parameter, EditorRequired] public long Count { get; set; }
+    [Parameter, EditorRequired] public string Href { get; set; } = "";
+    [Parameter, EditorRequired] public string TestId { get; set; } = "";
+    [Parameter, EditorRequired] public string CountTestId { get; set; } = "";
+}

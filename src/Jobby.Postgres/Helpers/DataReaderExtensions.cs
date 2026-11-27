@@ -100,4 +100,10 @@ internal static class DataReaderExtensions
         }
         return reader.GetGuid(index);
     }
+
+    public static bool GetBooleanOrFalse(this DbDataReader reader, string columnName)
+    {
+        var index = reader.GetOrdinal(columnName);
+        return !reader.IsDBNull(index) && reader.GetBoolean(index);
+    }
 }

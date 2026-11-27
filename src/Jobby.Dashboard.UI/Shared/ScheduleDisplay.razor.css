@@ -1,0 +1,27 @@
+.jobby-schedule {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.jobby-schedule-desc {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.jobby-schedule-badge {
+    display: inline-block;
+    max-width: 100%;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    padding: 1px 6px;
+    border-radius: var(--r-md);
+    background-color: var(--bg-2);
+    color: var(--text-3);
+    border: 1px solid var(--border);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
